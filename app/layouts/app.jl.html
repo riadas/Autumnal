@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Causal Discovery App</title>
+    <style>
+      body {
+        font-family: "Helvetica";
+      }
+      #content-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      #header {
+        width: 100%;
+        height: 50px;
+        align-items: center;
+        border: none;
+        display: flex;
+        padding-left: 23px;
+      }
+
+      #title {
+        font-size: 30px;
+      }
+
+      #dashboard {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        height: 100%;
+        border-top: 1px solid gray;
+      }
+
+      .dashboard-panel {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        width: 50%;
+        height: 90%;
+        background-color: white;
+        padding: 20px;
+        font-size: 20px;
+      }
+      
+      #container {
+        height: 80%;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .grid-container {
+        display: inline-block;
+        border: 1px solid black;
+        width: fit-content;
+        height: fit-content;
+      }
+      .grid {
+        display: grid;
+        grid-gap: 0;
+      }
+      .cell {
+        /* center the cell content */
+        justify-content: center;
+        align-items: center;
+        display: flex;
+        font-family: Arial;
+        font-weight: bold;
+        background: white;
+        border: 1px solid black;
+      }
+
+      form {
+        margin-top: 20px;
+      }
+
+    </style>
+  </head>
+  <body>
+    <%
+      @yield
+    %>
+  </body>
+</html>

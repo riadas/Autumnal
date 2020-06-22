@@ -1,0 +1,27 @@
+<div id="content-wrapper">
+  <div id="header">
+    <span id="title">Causal Discovery User Interface</span>
+  </div>
+  <div id="dashboard">
+    <div id="model-input" class="dashboard-panel" style="border-right: 1px solid black;">
+      Enter Autumn Model S-Expression:
+      <form>
+      <textarea id="w3review" name="w3review" rows="30" cols="50">
+      </textarea>
+      </form>
+      <input type="submit" style="width: 100px;" spellcheck="false">
+    </div>
+    <div id="grid-view" class="dashboard-panel">
+      Model Simulation
+      <div id="container">
+        <div class="grid-container">
+          <div class="grid" style="grid-template-columns: repeat($(floor(Int64, sqrt(length(size)))), 25px); grid-template-rows: repeat($(floor(Int64, sqrt(length(size)))), 25px);">
+            <% @foreach(size) do s %>
+              <div class="cell" id="$(s)"></div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
