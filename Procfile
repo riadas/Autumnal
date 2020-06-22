@@ -1,1 +1,1 @@
-web: bin/server
+worker: bin/server
