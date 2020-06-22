@@ -1,6 +1,5 @@
   cd(@__DIR__)
   import Pkg
-  Pkg.add("Pkg")
   Pkg.activate(".")
 
   function main()
