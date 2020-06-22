@@ -2,7 +2,7 @@ using Revise
 
 haskey(ENV, "GENIE_ENV") || (ENV["GENIE_ENV"] = "dev")
 if !haskey(ENV, "HOST")
-	ENV["HOST"] = (ENV["GENIE_ENV"] == "dev") ? "127.0.0.1" : "0.0.0.0"
+	ENV["HOST"] = (ENV["GENIE_ENV"] == "dev") ? "0.0.0.0" : "0.0.0.0"
 end
 
 
