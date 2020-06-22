@@ -5,14 +5,18 @@
   <div id="dashboard">
     <div id="model-input" class="dashboard-panel" style="border-right: 1px solid black;">
       Enter Autumn Model S-Expression:
-      <form>
-      <textarea id="w3review" name="w3review" rows="30" cols="50">
+      <form style="width: 40%;" action="$(Genie.Router.linkto(:compile_autumn))" method="POST">
+      <textarea id="autumn-string" name="autumnstring" rows="30" cols="50" placeholder="$(content)"
+      style="pointer-events: $(length(content) != 0 ? string(:none) : string())">
       </textarea>
+      <input 
+             type="submit" style="width: 100px; margin-top: 10px;" spellcheck="false" 
+             value="$(length(content) == 0 ? string(:Submit) : string(:Reset))">
       </form>
-      <input type="submit" style="width: 100px;" spellcheck="false">
     </div>
     <div id="grid-view" class="dashboard-panel">
       Model Simulation
+      <button style="width: 100px; margin-top: 10px; display: $(length(content) == 0 ? string(:none) : string())">Run</button>
       <div id="container">
         <div class="grid-container">
           <div class="grid" style="grid-template-columns: repeat($(floor(Int64, sqrt(length(size)))), 25px); grid-template-rows: repeat($(floor(Int64, sqrt(length(size)))), 25px);">
