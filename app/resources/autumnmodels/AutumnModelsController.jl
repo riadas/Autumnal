@@ -1,5 +1,6 @@
 module AutumnModelsController
-using Genie.Renderer.Html
+using Genie.Renderer
+using Genie.Renderer.Html: html
 using Genie.Router
 using CausalDiscovery
 
@@ -24,7 +25,11 @@ function compileautumn()
     global GRID_SIZE = 16
     global FORM_CONTENT = autumnString
   end
-  autumnmodels()
+  redirect(:get)
+end
+
+function runautumn()
+
 end
 
 end
