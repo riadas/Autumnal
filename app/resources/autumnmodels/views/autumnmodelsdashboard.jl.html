@@ -7,10 +7,10 @@
       Enter Autumn Model S-Expression:
       <form style="width: 90%;" action="$(Genie.Router.linkto(:compile_autumn))" method="POST">
       <textarea id="autumn-string" name="autumnstring" rows="30" cols="50" placeholder="$(content)"
-      style="width: 100%; pointer-events: $(length(content) != 0 ? string(:none) : string())">
+      style="width: 100%; pointer-events: $(length(content) != 0 ? string(:none) : string())" spellcheck="false">
       </textarea>
       <input 
-             type="submit" style="width: 100px; margin-top: 10px;" spellcheck="false" 
+             type="submit" style="width: 100px; margin-top: 10px;"
              value="$(length(content) == 0 ? string(:Submit) : string(:Reset))">
       </form>
     </div>
@@ -20,12 +20,43 @@
         <div class="grid-container">
           <div class="grid" style="grid-template-columns: repeat($(floor(Int64, sqrt(length(size)))), 25px); grid-template-rows: repeat($(floor(Int64, sqrt(length(size)))), 25px);">
             <% @foreach(size) do s %>
-              <div class="cell" id="$(s)"></div>
+              <form action="$(Genie.Router.linkto(:clicked))" method="POST" class="cell" id="$(s)">
+                   <textarea name="id" style="display: none;">"$(s)"</textarea>
+                   <input type="submit" style="pointer-events: $(length(content) == 0 ? string(:none) : string()); background-color: $(s in particles ? string(:red) : string(:white))">
+                   </input>
+              </form>
             <% end %>
           </div>
-          <button style="width: 100px; margin-top: 10px; display: $(length(content) == 0 ? string(:none) : string())">Run</button>
+          <div style="display: flex; margin-top: 10px;">
+            <form action="$(Genie.Router.linkto(:run_autumn))" method="POST"
+                  style="width: fit-content; height: fit-content;" id="simulation-controls-1">
+              <input type="submit" id="run" value="Run" style="width: 100px; display: $(length(content) == 0 ? string(:none) : string())"></input>
+            </form>
+            <form action="$(Genie.Router.linkto(:stop_autumn))" method="POST"
+                style="width: fit-content; height: fit-content;" id="simulation-controls-2">
+              <input type="submit" id="pause" value="Pause" style="width: 100px; display: $(length(content) == 0 ? string(:none) : string())"></input>
+            </form>
+            <form action="$(Genie.Router.linkto(:step))" method="POST"
+                style="width: fit-content; height: fit-content; visibility: hidden;" id="simulation-controls-3">
+              <input type="submit" id="step" style="width: 100px" value="$(running)"></input>
+            </form>
+          </div>
         </div>
       </div>
     </div>
   </div>
+  <script>
+
+    document.addEventListener("DOMContentLoaded", function() {
+      if (document.getElementById("step").value == "true") {
+        console.log("running is true");
+        setTimeout(function() {
+          console.log("about to click step button!")
+          document.getElementById("step").click()
+        }, 750);
+      } else {
+        console.log("running is false: "+document.getElementById("step").value);
+      }
+    })
+  </script>
 </div>
