@@ -1,20 +1,20 @@
 <div id="content-wrapper">
   <div id="header">
-    <span id="title">Causal Discovery</span>
+    <span id="title">autumn playground</span>
   </div>
   <div id="dashboard">
     <div id="model-input" class="dashboard-panel" style="border-right: 1px solid black;">
       Enter Autumn Model S-Expression:
-      <form style="width: 90%;" action="$(Genie.Router.linkto(:compile_autumn))" method="POST">
+      <form style="width: 90%; font-size: 13px !important; width: 95%; height: 100%;" action="$(Genie.Router.linkto(:compile_autumn))" method="POST">
       <textarea id="autumn-string" name="autumnstring" rows="30" cols="50" placeholder="$(content)"
-      style="width: 100%; pointer-events: $(length(content) != 0 ? string(:none) : string())" spellcheck="false">
+      style="height: 97%; width: 100%; pointer-events: $(length(content) != 0 ? string(:none) : string())" spellcheck="false">
       </textarea>
       <input 
-             type="submit" style="width: 100px; margin-top: 10px;"
-             value="$(length(content) == 0 ? string(:Submit) : string(:Reset))">
+             type="submit" style="width: 100px; margin-top: 10px; pointer-events: $(running ? string(:none) : string());"
+             value="$(!compiled ? string(:Submit) : string(:Reset))">
       </form>
     </div>
-    <div id="grid-view" class="dashboard-panel">
+    <div style="text-align: center;" id="grid-view" class="dashboard-panel">
       Model Simulation
       <div id="container">
         <div class="grid-container">
@@ -22,7 +22,7 @@
             <% @foreach(size) do s %>
               <form action="$(Genie.Router.linkto(:clicked))" method="POST" class="cell" id="$(s)">
                    <textarea name="id" style="display: none;">"$(s)"</textarea>
-                   <input type="submit" style="pointer-events: $(length(content) == 0 ? string(:none) : string()); background-color: $(s in particles ? string(:red) : string(:white))">
+                   <input type="submit" style="pointer-events: $(!running ? string(:none) : string()); background-color: $(s in particles ? string(:red) : string(:white))">
                    </input>
               </form>
             <% end %>
@@ -30,11 +30,15 @@
           <div style="display: flex; margin-top: 10px;">
             <form action="$(Genie.Router.linkto(:run_autumn))" method="POST"
                   style="width: fit-content; height: fit-content;" id="simulation-controls-1">
-              <input type="submit" id="run" value="Run" style="width: 100px; display: $(length(content) == 0 ? string(:none) : string())"></input>
+              <input type="submit" id="run" value="$(not_run_yet ? string(:Start) : string(:Restart))" 
+                     style="pointer-events: $(running ? string(:none) : string()); width: 100px; margin-right: 10px;
+                            display: $(!compiled ? string(:none) : string())"></input>
             </form>
             <form action="$(Genie.Router.linkto(:stop_autumn))" method="POST"
                 style="width: fit-content; height: fit-content;" id="simulation-controls-2">
-              <input type="submit" id="pause" value="Pause" style="width: 100px; display: $(length(content) == 0 ? string(:none) : string())"></input>
+              <input type="submit" value="$(running ? string(:Pause) : string(:Continue))" value="Pause" 
+                      style="pointer-events: $(not_run_yet ? string(:none) : string()); width: 100px; 
+                             display: $(!compiled ? string(:none) : string())"></input>
             </form>
             <form action="$(Genie.Router.linkto(:step))" method="POST"
                 style="width: fit-content; height: fit-content; visibility: hidden;" id="simulation-controls-3">
@@ -48,12 +52,20 @@
   <script>
 
     document.addEventListener("DOMContentLoaded", function() {
+
+      if ("$(compiled)" == "false") {
+        var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
+                                                                                             theme : "erlang-dark",
+                                                                                             lineNumbers: true});
+      }
+
+
       if (document.getElementById("step").value == "true") {
         console.log("running is true");
         setTimeout(function() {
           console.log("about to click step button!")
           document.getElementById("step").click()
-        }, 750);
+        }, 650);
       } else {
         console.log("running is false: "+document.getElementById("step").value);
       }
