@@ -1,6 +1,6 @@
 module CausalDiscoveryApp
 
-using Logging, LoggingExtras
+using Logging
 
 function main()
   Base.eval(Main, :(const UserApp = CausalDiscoveryApp))

@@ -53,6 +53,7 @@
 
     document.addEventListener("DOMContentLoaded", function() {
 
+      console.log("$(compiled)")
       if ("$(compiled)" == "false") {
         var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
                                                                                              theme : "erlang-dark",
