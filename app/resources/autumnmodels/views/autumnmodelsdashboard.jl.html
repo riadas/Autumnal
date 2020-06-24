@@ -1,6 +1,6 @@
 <div id="content-wrapper">
   <div id="header">
-    <span id="title">autumn playground</span>
+    <span id="title">autumn</span> <span id="playground">playground</span> <span id="challenges">challenges</span>
   </div>
   <div id="dashboard">
     <div id="model-input" class="dashboard-panel" style="border-right: 1px solid black;">
@@ -101,7 +101,8 @@
       } else {
         var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
                                                                                              theme : "erlang-dark",
-                                                                                             lineNumbers: true});
+                                                                                             lineNumbers: true, 
+                                                                                             readOnly: "nocursor"});
         myCodeMirror.setValue(`%% Compiled Autumn Code \n`+`$(content)`)
       }
 

@@ -25,7 +25,7 @@ end
 
 function compileautumn()
   autumnString = @params(:autumnstring)
-  if autumnString != ""
+  if !compiled
     try
       parsedAutumn = eval(Meta.parse("au\"\"\"$(autumnString)\"\"\""))
       println("PARSED SUCCESSFULLY")
