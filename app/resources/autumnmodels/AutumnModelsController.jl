@@ -2,7 +2,6 @@ module AutumnModelsController
 using Genie.Renderer
 using Genie.Renderer.Html: html
 using Genie.Router
-using Base
 using CausalDiscovery
 
 GRID_SIZE = 16;
