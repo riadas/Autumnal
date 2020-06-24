@@ -4,7 +4,6 @@ using Genie.Renderer.Html: html
 using Genie.Router
 using MLStyle
 using SExpressions
-import MacroTools: striplines
 
 GRID_SIZE = 16;
 FORM_CONTENT = "";
@@ -35,6 +34,7 @@ function compileautumn()
       global GRID_SIZE = MOD.GRID_SIZE
       global FORM_CONTENT = showstring(parsedAutumn)
     catch ErrorException
+      println("PARSING OR COMPILING FAILURE!")
       global FORM_CONTENT = "" 
       global GRID_SIZE = 16
       global MOD = nothing
@@ -84,74 +84,12 @@ function clicked()
 end
 
 # aexpr.jl
-const autumngrammar = """
-x           := a | b | ... | aa ...
-program     := statement*
-statement   := externaldecl | assignexpr | typedecl | typedef
-
-typedef     := type fields  #FIXME
-typealias   := "type alias" type fields
-fields      := field | fields field
-field       := constructor | constructor typesymbol*
-cosntructor := typesymbol
-
-typedecl    := x : typeexpr
-externaldecl:= external typedecl
-
-assignexpr  := x = valueexpr
-
-typeexpr    := typesymbol | paramtype | typevar | functiontype
-funtype     := typeexpr -> typeexpr
-producttype := typeexpr × typexexpr × ...
-typesymbol  := primtype | customtype
-primtype    := Int | Bool | Float
-customtype  := A | B | ... | Aa | ...
-
-valueexpr   := fappexpr | lambdaexpr | iteexpr | initnextexpr | letexpr |
-               this | lambdaexpr
-iteexpr     := if expr then expr else expr
-intextexpr  := init expr next expr
-fappexpr    := valueexpr valueexpr*
-letexpr     := let x = valueexpr in valueexpr
-lambdaexpr  := x --> expr
-"""
-
 "Autumn Expression"
 struct AExpr
   head::Symbol
   args::Vector{Any}
   AExpr(head::Symbol, @nospecialize args...) = new(head, [args...])
 end
-"Arguements of expression"
-function args end
-
-args(aex::AExpr) = aex.args
-head(aex::AExpr) = aex.head
-args(ex::Expr) = ex.args
-
-"Expr in ith location in arg"
-arg(aex, i) = args(aex)[i]
-
-Base.Expr(aex::AExpr) = Expr(aex.head, aex.args...)
-
-# wrap(expr::Expr) = AExpr(expr)
-# wrap(x) = x
-
-# AExpr(xs...) = AExpr(Expr(xs...))
-
-# function Base.getproperty(aexpr::AExpr, name::Symbol)
-#   expr = getfield(aexpr, :expr)
-#   if name == :expr
-#     expr
-#   elseif name == :head
-#     expr.head
-#   elseif name == :args
-#     expr.args
-#   else
-#     error("no property $name of AExpr")
-#   end
-# end
-
 
 # Expression types
 "Is `sym` a type symbol"
@@ -475,7 +413,7 @@ function compiletojulia(aexpr::AExpr)::Expr
       end
     end  
     expr.head = :toplevel
-    striplines(expr)
+    expr
   else
     throw(AutumnCompileError())
   end
