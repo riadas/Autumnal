@@ -39,8 +39,9 @@ function compileautumn()
       println("HERE 2")
       global FORM_CONTENT = showstring(parsedAutumn)
       println("HERE 3")
-    catch ErrorException
+    catch y
       println("PARSING OR COMPILING FAILURE!")
+      println(y)
       global FORM_CONTENT = "" 
       global GRID_SIZE = 16
       global MOD = nothing
