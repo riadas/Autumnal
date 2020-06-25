@@ -20,7 +20,7 @@ function autumnmodels()
        size=[0:GRID_SIZE*GRID_SIZE-1;], 
        content=FORM_CONTENT, 
        particles=map(particle -> GRID_SIZE*(particle.position.y) + particle.position.x, PARTICLES),
-       running=running, compiled=compiled, not_run_yet=not_run_yet)
+       compiled=compiled, mod = MOD, GRID_SIZE=GRID_SIZE, running=running, not_run_yet=not_run_yet)
 end
 
 function compileautumn()

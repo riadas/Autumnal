@@ -4,20 +4,21 @@
   </div>
   <div id="dashboard">
     <div id="model-input" class="dashboard-panel" style="border-right: 1px solid black;">
-      Enter Autumn Model S-Expression:
-      <form style="width: 90%; font-size: 13px !important; width: 95%; height: 100%;" action="$(Genie.Router.linkto(:compile_autumn))" method="POST">
+      <form style="width: 100%; margin: 0; font-size: 13px !important; height: 100%;" action="$(Genie.Router.linkto(:compile_autumn))" method="POST">
       <textarea id="autumn-string" name="autumnstring" rows="30" cols="50" placeholder="$(content)"
       style="height: 97%; width: 100%; pointer-events: $(length(content) != 0 ? string(:none) : string())" spellcheck="false">
       </textarea>
-      <input 
-             type="submit" style="width: 100px; margin-top: 10px; pointer-events: $(running ? string(:none) : string());"
+      <input id="compile-button" 
+             type="submit" style="width: 0; height: 0; border: none; padding: 0; margin: 0; pointer-events: $(running ? string(:none) : string());"
              value="$(!compiled ? string(:Submit) : string(:Reset))">
       </form>
     </div>
-    <div style="text-align: center;" id="grid-view" class="dashboard-panel">
-      Model Simulation
+    
+    <div id="grid-view" class="dashboard-panel">
+      <button style="width: 100px; pointer-events: $(running ? string(:none) : string());" 
+              onclick="document.getElementById('compile-button').click()">$(!compiled ? string(:Submit) : string(:Reset))</button>
       <div id="container">
-        <div class="grid-container">
+        <div class="grid-container" style="margin-right: 20px;">
           <div class="grid" style="grid-template-columns: repeat($(floor(Int64, sqrt(length(size)))), 25px); grid-template-rows: repeat($(floor(Int64, sqrt(length(size)))), 25px);">
             <% @foreach(size) do s %>
               <form action="$(Genie.Router.linkto(:clicked))" method="POST" class="cell" id="$(s)">
