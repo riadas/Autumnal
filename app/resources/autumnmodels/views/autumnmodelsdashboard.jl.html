@@ -48,9 +48,9 @@
         document.getElementById("restart-button").addEventListener("click", restartClick);
   
         // assign button styles
-        assignButtonStyles();
+        updateButtonStyles();
   
-        function assignButtonStyles() {
+        function updateButtonStyles() {
           compileButton = document.getElementById("compile-button");
           playButton = document.getElementById("play-button");
           restartButton = document.getElementById("restart-button");
@@ -78,6 +78,14 @@
             restartButton.style.display = "none";
           }
         }
+
+        function updateCellStyles(xml_response) {
+          Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.background = ""})
+          JSON.parse(xml_response).forEach(function (particle) {
+            cell = document.getElementById((particle[1]*$(GRID_SIZE) + particle[0]).toString())
+            cell.style.background = cell.style.background != "" ? ["linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")", cell.style.background].join(", ") : "linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")";
+          })
+        }
   
         function playOrPauseClick() {
           if (intervalID !== -1) { // pause
@@ -99,16 +107,9 @@
                     if (intervalID != -1) {
                       clearInterval(intervalID);
                     }
-                    Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.background = ""})
-                    JSON.parse(xhr.response).forEach(function (particle) {
-                      cell = document.getElementById((particle[1]*$(GRID_SIZE) + particle[0]).toString())
-                      
-                      cell.style.background = cell.style.background != "" ? ["linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")", cell.style.background].join(", ") : "linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")";
-                      console.log(cell.style.background)
-                    })
-
+                    updateCellStyles(xhr.response);
                     intervalID = setInterval(step, timestep);
-                    assignButtonStyles();
+                    updateButtonStyles();
                     console.log("here?")
                 }
               };
@@ -118,7 +119,7 @@
               intervalID = setInterval(step, timestep);
             }
           }
-          assignButtonStyles();
+          updateButtonStyles();
         }
   
         function restartClick() {
@@ -136,15 +137,9 @@
                 if (intervalID != -1) {
                   clearInterval(intervalID);
                 }
-                Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.background = ""})
-                JSON.parse(xhr.response).forEach(function (particle) {
-                  cell = document.getElementById((particle[1]*$(GRID_SIZE) + particle[0]).toString())
-                  cell.style.background = cell.style.background != "" ? ["linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")", cell.style.background].join(", ") : "linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")";
-                  console.log(cell.style.background)
-                })
-
+                updateCellStyles(xhr.response);
                 intervalID = setInterval(step, timestep);
-                assignButtonStyles();
+                updateButtonStyles();
                 console.log("here?")
             }
           };
@@ -166,13 +161,7 @@
                   // Request finished. Do processing here.
                   console.log("success!");
                   console.log("xhr.response: "+JSON.stringify(xhr.response));
-                  
-                  Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.background = ""})
-                  JSON.parse(xhr.response).forEach(function (particle) {
-                    cell = document.getElementById((particle[1]*$(GRID_SIZE) + particle[0]).toString())
-                    cell.style.background = cell.style.background != "" ? ["linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")", cell.style.background].join(", ") : "linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")";
-                    console.log(cell.style.background)
-                  })
+                  updateCellStyles(xhr.response);
               }
             };
             xhr.send();
@@ -198,15 +187,7 @@
                 }
                 console.log(typeof(JSON.parse(xhr.response)))
   
-                Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.background = ""})
-                JSON.parse(xhr.response).forEach(function (particle) {
-                  cell = document.getElementById((particle[1]*$(GRID_SIZE) + particle[0]).toString())
-                  console.log("hellooooooo");
-                  console.log(colorToRGBA(particle[2], 0.6))
-                  console.log(cell.style.background != "");
-                  cell.style.background = cell.style.background != "" ? ["linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")", cell.style.background].join(", ") : "linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")";
-                  console.log(cell.style.background)
-                })
+                updateCellStyles(xhr.response);
                 intervalID = setInterval(step, timestep);
             }
           };
