@@ -1,6 +1,7 @@
 module AutumnModelsController
 using Genie.Renderer
 using Genie.Renderer.Html: html
+using Genie.Renderer.Json: json
 using Genie.Router
 using MLStyle
 using SExpressions
@@ -12,15 +13,13 @@ CLICK = nothing;
 PARTICLES = []
 ERROR = ""
 compiled = false
-running = false
-not_run_yet = true
 
 function autumnmodels()
   html(:autumnmodels, :autumnmodelsdashboard, 
        size=[0:GRID_SIZE*GRID_SIZE-1;], 
        content=FORM_CONTENT, 
        particles=map(particle -> GRID_SIZE*(particle.position.y) + particle.position.x, PARTICLES),
-       compiled=compiled, mod = MOD, GRID_SIZE=GRID_SIZE, running=running, not_run_yet=not_run_yet)
+       compiled=compiled, GRID_SIZE=GRID_SIZE)
 end
 
 function compileautumn()
@@ -34,9 +33,7 @@ function compileautumn()
       global MOD = eval(compiledAutumn)
       println("EVALUATED SUCCESSFULLY")
       global compiled = true
-      println("HERE 1")
       global GRID_SIZE = MOD.GRID_SIZE
-      println("HERE 2")
       global FORM_CONTENT = showstring(parsedAutumn)
       println("HERE 3")
     catch y
@@ -52,42 +49,28 @@ function compileautumn()
     global MOD = nothing
     global CLICK = nothing
     global PARTICLES = []
-    global running = false
     global compiled = false
-    global not_run_yet = true;
   end
   redirect(:get)
 end
 
 function step()
-  if (MOD !== nothing)
-    global PARTICLES = MOD.next(CLICK)
-  end
-  global CLICK = nothing
-  redirect(:get)
+  println("step")
+  json(map(particle -> [particle.position.x, particle.position.y], MOD !== nothing ? MOD.next(nothing) : []))
 end
 
-function runautumn()
-  if (MOD !== nothing)
-    MOD.init(nothing)
-  end
-  global running = true
-  global not_run_yet = false;
-  redirect(:get)
-end
-
-function stopautumn()
-  println("stopautumn")
-  global running = !running;
-  redirect(:get)
+function startautumn()
+  println("startautumn")
+  json(map(particle -> [particle.position.x, particle.position.y], MOD !== nothing ? MOD.init(nothing) : []))
 end
 
 function clicked()
   println("clicked params:")
-  id = parse(Int, @params(:id)[2:(end-1)])
-  println(id)
-  global CLICK = MOD.Click(id % GRID_SIZE, floor(Int, id/GRID_SIZE))
-  redirect(:get)
+  println(@params(:x))
+  println(@params(:y))
+  
+  json(map(particle -> [particle.position.x, particle.position.y], MOD !== nothing ? MOD.next(MOD.Click(parse(Int64, @params(:x)), parse(Int64, @params(:y)))) : []))
+
 end
 
 # aexpr.jl

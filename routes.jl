@@ -5,10 +5,8 @@ route("/", AutumnModelsController.autumnmodels)
 
 route("/compileautumn", AutumnModelsController.compileautumn, method = POST, named=:compile_autumn)
 
-route("/runautumn", AutumnModelsController.runautumn, method = POST, named=:run_autumn)
+route("/startautumn", AutumnModelsController.startautumn, method = GET, named=:startautumn)
 
-route("/stopautumn", AutumnModelsController.stopautumn, method = POST, named=:stop_autumn)
+route("/clicked", AutumnModelsController.clicked, method = GET, named=:clicked)
 
-route("/clicked", AutumnModelsController.clicked, method = POST, named=:clicked)
-
-route("/step", AutumnModelsController.step, method = POST, named=:step)
+route("/step", AutumnModelsController.step, method = GET, named=:step)
