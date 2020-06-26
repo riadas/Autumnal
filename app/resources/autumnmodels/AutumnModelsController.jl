@@ -15,11 +15,23 @@ ERROR = ""
 compiled = false
 
 function autumnmodels()
+  redirect(:playground)
+end
+
+function playground()
   html(:autumnmodels, :autumnmodelsdashboard, 
-       size=[0:GRID_SIZE*GRID_SIZE-1;], 
-       content=FORM_CONTENT, 
-       particles=map(particle -> GRID_SIZE*(particle.position.y) + particle.position.x, PARTICLES),
-       compiled=compiled, GRID_SIZE=GRID_SIZE)
+  size=[0:GRID_SIZE*GRID_SIZE-1;], 
+  content=FORM_CONTENT, 
+  particles=map(particle -> GRID_SIZE*(particle.position.y) + particle.position.x, PARTICLES),
+  compiled=compiled, GRID_SIZE=GRID_SIZE, challenges=false)
+end
+
+function challenges()
+  html(:autumnmodels, :autumnmodelsdashboard, 
+  size=[0:GRID_SIZE*GRID_SIZE-1;], 
+  content=FORM_CONTENT, 
+  particles=map(particle -> GRID_SIZE*(particle.position.y) + particle.position.x, PARTICLES),
+  compiled=compiled, GRID_SIZE=GRID_SIZE, challenges=true)
 end
 
 function compileautumn()

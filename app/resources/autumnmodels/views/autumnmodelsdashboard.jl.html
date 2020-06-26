@@ -86,7 +86,7 @@
           } else { // play
             if (not_run_yet) {
               var xhr = new XMLHttpRequest();
-              xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn', true);
+              xhr.open("GET", 'http://localhost:8000/startautumn', true);
       
               //Send the proper header information along with the request
               xhr.setRequestHeader("Content-Type", "application/json");
@@ -117,7 +117,7 @@
   
         function restartClick() {
           var xhr = new XMLHttpRequest();
-          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn', true);
+          xhr.open("GET", 'http://localhost:8000/startautumn', true);
   
           //Send the proper header information along with the request
           xhr.setRequestHeader("Content-Type", "application/json");
@@ -145,7 +145,7 @@
           console.log("click");
           if (intervalID != -1) {
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/clicked?x='+(id % $(GRID_SIZE))+'&y='+Math.floor(id/$(GRID_SIZE)), true);
+            xhr.open("GET", 'http://localhost:8000/clicked?x='+(id % $(GRID_SIZE))+'&y='+Math.floor(id/$(GRID_SIZE)), true);
   
             //Send the proper header information along with the request
             xhr.setRequestHeader("Content-Type", "application/json");
@@ -171,7 +171,7 @@
           console.log("step");
           var xhr = new XMLHttpRequest();
   
-          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/step', true);
+          xhr.open("GET", 'http://localhost:8000/step', true);
   
           //Send the proper header information along with the request
           xhr.setRequestHeader("Content-Type", "application/json");
