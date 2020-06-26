@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.55.0/mode/erlang/erlang.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.32.0/codemirror.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.55.0/theme/erlang-dark.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     
     <style>
 
@@ -72,7 +73,7 @@
         justify-content: flex-start;
         width: 50%;
         height: 100%;
-        background-color: white;
+        background-color:#83dade78;
         
         font-size: 18px;
       }
@@ -101,7 +102,7 @@
         display: flex;
         font-family: Arial;
         font-weight: bold;
-        background: white;
+        background: transparent;
         border: 1px solid black;
         margin: 0;
         color: transparent;
@@ -110,13 +111,37 @@
       .cell input {
         height: 25px;
         width: 25px;
-        background-color: white;
+        background-color: transparent;
         border: 1px solid black;
         color: #ffffff00;
       }
 
       form {
         margin-top: 20px;
+      }
+
+      .control-button {
+        padding: 5px 20px;
+        width: fit-content;
+        border: none;
+        border-radius: 5px;
+        background-color: #3fd250;
+      }
+
+
+
+      .disabled {
+        pointer-events: none;
+        opacity: 0.6;
+        outline: none;
+      }
+
+      button:focus {
+        outline: 0;
+      }
+
+      input:focus {
+        outline: 0;
       }
 
     </style>

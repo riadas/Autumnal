@@ -61,6 +61,7 @@ end
 
 function startautumn()
   println("startautumn")
+  
   json(map(particle -> [particle.position.x, particle.position.y], MOD !== nothing ? MOD.init(nothing) : []))
 end
 

@@ -1,231 +1,253 @@
 <div id="content-wrapper">
-  <div id="header">
-    <span id="title">autumn</span> <span id="playground">playground</span> <span id="challenges">challenges</span>
-  </div>
-  <div id="dashboard">
-    <div id="model-input" class="dashboard-panel" style="border-right: 1px solid black;">
-      <form style="width: 100%; margin: 0; font-size: 13px !important; height: 100%;" action="$(Genie.Router.linkto(:compile_autumn))" method="POST">
-      <textarea id="autumn-string" name="autumnstring" rows="30" cols="50" placeholder="$(content)"
-      style="height: 97%; width: 100%; pointer-events: $(compiled ? string(:none) : string())" spellcheck="false">
-      </textarea>
-      <input id="compile" 
-             type="submit" style="width: 0; height: 0; border: none; padding: 0; margin: 0;"
-      >
-      </form>
+    <div id="header">
+      <span id="title">autumnal</span> <span id="playground">playground</span> <span id="challenges">challenges</span>
     </div>
-    
-    <div id="grid-view" class="dashboard-panel">
-      <button id="compile-button" style="margin-top: 10px; margin-left: 10px; width: 100px;" onclick="document.getElementById('compile').click()"></button>
-      <div id="container">
-        <div class="grid-container" style="margin-right: 20px;">
-          <div class="grid" style="grid-template-columns: repeat($(floor(Int64, sqrt(length(size)))), 25px); grid-template-rows: repeat($(floor(Int64, sqrt(length(size)))), 25px);">
-            <% @foreach(size) do s %>
-                   <input class="cell" id="$(s)" type="submit">
-                   </input>
-            <% end %>
-          </div>
-          <div style="display: flex; margin-top: 10px;">
-              <button id="start-button" type="submit" id="run" style="width: 100px; margin-right: 10px;"></button>
-              <button id="pause-button" type="submit" style="width: 100px;"></button>
+    <div id="dashboard">
+      <div id="model-input" class="dashboard-panel" style="border-right: 1px solid black;">
+        <form style="width: 100%; margin: 0; font-size: 13px !important; height: 100%;" action="$(Genie.Router.linkto(:compile_autumn))" method="POST">
+        <textarea id="autumn-string" name="autumnstring" rows="30" cols="50" placeholder="$(content)"
+        style="height: 97%; width: 100%; pointer-events: $(compiled ? string(:none) : string())" spellcheck="false">
+        </textarea>
+        <input id="compile" 
+               type="submit" style="width: 0; height: 0; border: none; padding: 0; margin: 0;"
+        >
+        </form>
+      </div>
+      
+      <div id="grid-view" class="dashboard-panel">
+        <button id="compile-button" class="control-button" style="margin-top: 10px; margin-left: 10px; font-weight: bold;" onclick="document.getElementById('compile').click()"></button>
+        <div id="container">
+          <div class="grid-container" >
+            <div class="grid" style="grid-template-columns: repeat($(floor(Int64, sqrt(length(size)))), 25px); grid-template-rows: repeat($(floor(Int64, sqrt(length(size)))), 25px);">
+              <% @foreach(size) do s %>
+                     <input class="cell" id="$(s)" type="submit">
+                     </input>
+              <% end %>
+            </div>
+            <div style="display: flex; margin-top: 10px;">
+                <button id="play-button" class="control-button" type="submit" id="run" style="margin-right: 10px;">▶</button>
+                <button id="restart-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;">↻</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-  <script>
-
-    document.addEventListener("DOMContentLoaded", function() {
-      // global frontend variables
-      var not_run_yet = true;
-      var intervalID = -1;
-      var timestep = 1000;
+    <script>
   
-      // attach event listeners to buttons
-      Array.from(document.getElementsByClassName("cell")).forEach(function (cell) {
-        cell.addEventListener("click", function () { click(parseInt(cell.id)); });
-      })
-      document.getElementById("start-button").addEventListener("click", startOrRestartClick);
-      document.getElementById("pause-button").addEventListener("click", pauseOrContinueClick);
-
-      // assign button styles
-      assignButtonStyles();
-
-      function assignButtonStyles() {
-        compileButton = document.getElementById("compile-button");
-        startButton = document.getElementById("start-button");
-        pauseButton = document.getElementById("pause-button");
-
-        if ($(compiled)) {
-          compileButton.innerText = "Reset";
-          startButton.style.display = "";
-          pauseButton.style.display = "";
-
-          if (not_run_yet) {
-            startButton.innerText = "Start";
-            pauseButton.innerText = "Pause";
-            pauseButton.style.pointerEvents = "none";         
-          } else {
-            startButton.innerText = "Restart";
+      document.addEventListener("DOMContentLoaded", function() {
+        // global frontend variables
+        var not_run_yet = true;
+        var intervalID = -1;
+        var timestep = 1000;
+    
+        // attach event listeners to buttons
+        Array.from(document.getElementsByClassName("cell")).forEach(function (cell) {
+          cell.addEventListener("click", function () { click(parseInt(cell.id)); });
+        })
+        document.getElementById("play-button").addEventListener("click", playOrPauseClick);
+        document.getElementById("restart-button").addEventListener("click", restartClick);
+  
+        // assign button styles
+        assignButtonStyles();
+  
+        function assignButtonStyles() {
+          compileButton = document.getElementById("compile-button");
+          playButton = document.getElementById("play-button");
+          restartButton = document.getElementById("restart-button");
+  
+          if ($(compiled)) {
+            compileButton.innerHTML = "RESET <i style='font-size: medium' class='fa fa-code' aria-hidden='true'></i>";
+            playButton.style.display = "";
+            restartButton.style.display = "";
+  
             if (intervalID == -1) {
-              compileButton.style.pointerEvents = "";
-              startButton.style.pointerEvents = "";
-              pauseButton.innerText = "Continue";
-              pauseButton.style.pointerEvents = "";
+                compileButton.classList.remove("disabled");
+                playButton.innerText = "▶";
+                playButton.style.fontSize = "13px";
+                restartButton.classList.remove("disabled");
+              } else {
+                compileButton.classList.add("disabled");
+                playButton.innerText = "▌▌";
+                playButton.style.fontSize = "9px";
+                restartButton.classList.add("disabled");
+              }
+  
+          } else {
+            compileButton.innerHTML = "COMPILE <i style='font-size: medium' class='fa fa-code' aria-hidden='true'></i>";
+            playButton.style.display = "none";
+            restartButton.style.display = "none";
+          }
+        }
+  
+        function playOrPauseClick() {
+          if (intervalID !== -1) { // pause
+            clearInterval(intervalID);
+            intervalID = -1;
+          } else { // play
+            if (not_run_yet) {
+              var xhr = new XMLHttpRequest();
+              xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn', true);
+      
+              //Send the proper header information along with the request
+              xhr.setRequestHeader("Content-Type", "application/json");
+      
+              xhr.onreadystatechange = function () { // Call a function when the state changes.
+                if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                    // Request finished. Do processing here.
+                    console.log("success!");
+                    console.log("xhr.response: "+JSON.stringify(xhr.response));
+                    if (intervalID != -1) {
+                      clearInterval(intervalID);
+                    }
+                    Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.backgroundColor = "transparent"})
+
+                    intervalID = setInterval(step, timestep);
+                    assignButtonStyles();
+                    console.log("here?")
+                }
+              };
+              not_run_yet = false;
+              xhr.send();
             } else {
-              compileButton.style.pointerEvents = "none";
-              startButton.style.pointerEvents = "none";
-              pauseButton.innerText = "Pause";
-              pauseButton.style.pointerEvents = "";
+              intervalID = setInterval(step, timestep);
             }
           }
-        } else {
-          compileButton.innerText = "Compile";
-          startButton.style.display = "none";
-          pauseButton.style.display = "none";
+          assignButtonStyles();
         }
-      }
-
-      function startOrRestartClick() {
-        not_run_yet = false;
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn', true);
-
-        //Send the proper header information along with the request
-        xhr.setRequestHeader("Content-Type", "application/json");
-
-        xhr.onreadystatechange = function () { // Call a function when the state changes.
-          if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
-              // Request finished. Do processing here.
-              console.log("success!");
-              console.log("xhr.response: "+JSON.stringify(xhr.response));
-              if (intervalID != -1) {
-                clearInterval(intervalID);
-              }
-
-              intervalID = setInterval(step, timestep);
-              assignButtonStyles();
-              console.log("here?")
-          }
-        };
-        xhr.send();
-      }
-
-      function pauseOrContinueClick() {
-        if (intervalID != -1) { // pause pressed
-          clearInterval(intervalID);
-          intervalID = -1;
-        } else { // continue pressed
-          intervalID = setInterval(step, timestep);
-        }
-        assignButtonStyles();
-      }
-
-      function click(id) {
-        console.log("click");
-        if (intervalID != -1) {
+  
+        function restartClick() {
           var xhr = new XMLHttpRequest();
-          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/clicked?x='+(id % $(GRID_SIZE))+'&y='+Math.floor(id/$(GRID_SIZE)), true);
-
+          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn', true);
+  
           //Send the proper header information along with the request
           xhr.setRequestHeader("Content-Type", "application/json");
-
+  
           xhr.onreadystatechange = function () { // Call a function when the state changes.
             if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
                 // Request finished. Do processing here.
                 console.log("success!");
                 console.log("xhr.response: "+JSON.stringify(xhr.response));
-                
-                Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.backgroundColor = "white"})
+                if (intervalID != -1) {
+                  clearInterval(intervalID);
+                }
+                Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.backgroundColor = "transparent"})
 
-                JSON.parse(xhr.response).forEach(function (particle) {
-                  document.getElementById((particle[1]*$(GRID_SIZE) + particle[0]).toString()).style.backgroundColor = "red";
-                })
+                intervalID = setInterval(step, timestep);
+                assignButtonStyles();
+                console.log("here?")
             }
           };
           xhr.send();
         }
-      }
-
-      function step() {
-        console.log("step");
-        var xhr = new XMLHttpRequest();
-
-        xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/step', true);
-
-        //Send the proper header information along with the request
-        xhr.setRequestHeader("Content-Type", "application/json");
-
-        xhr.onreadystatechange = function () { // Call a function when the state changes.
-          if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
-              // Request finished. Do processing here.
-              console.log("success!");
-              console.log("xhr.response: "+JSON.stringify(xhr.response));
-              if (intervalID != -1) {
-                clearInterval(intervalID);
+        
+  
+        function click(id) {
+          console.log("click");
+          if (intervalID != -1) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/clicked?x='+(id % $(GRID_SIZE))+'&y='+Math.floor(id/$(GRID_SIZE)), true);
+  
+            //Send the proper header information along with the request
+            xhr.setRequestHeader("Content-Type", "application/json");
+  
+            xhr.onreadystatechange = function () { // Call a function when the state changes.
+              if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                  // Request finished. Do processing here.
+                  console.log("success!");
+                  console.log("xhr.response: "+JSON.stringify(xhr.response));
+                  
+                  Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.backgroundColor = "transparent"})
+  
+                  JSON.parse(xhr.response).forEach(function (particle) {
+                    document.getElementById((particle[1]*$(GRID_SIZE) + particle[0]).toString()).style.backgroundColor = "red";
+                  })
               }
-              console.log(typeof(JSON.parse(xhr.response)))
-
-              Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.backgroundColor = "white"})
-              JSON.parse(xhr.response).forEach(function (particle) {
-                document.getElementById((particle[1]*$(GRID_SIZE) + particle[0]).toString()).style.backgroundColor = "red";
-              })
-              intervalID = setInterval(step, timestep);
+            };
+            xhr.send();
           }
-        };
-        xhr.send();
-      }
-
-      if ($(compiled) == false) {
-        var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
-                                                                                             theme : "erlang-dark",
-                                                                                             lineNumbers: true});
-        myCodeMirror.setValue(`(program
-  (const (= GRID_SIZE 16))
-
-  (type alias Position ((: x Int) (: y Int)))
-  (type alias Particle ((: position Position)))
-
-  (external (: click Click))
-
-  (: particles (List Particle))
-  (= particles (initnext (list) (if (occurred click) 
-                               then (push! (prev particles) (particleGen (Position 1 1))) 
-                               else (map nextParticle particles))))
+        }
   
-  (= nparticles (length particles))
+        function step() {
+          console.log("step");
+          var xhr = new XMLHttpRequest();
   
-  (: isFree (-> Position Bool))
-  (= isFree (fn (position) 
-                (== (length (filter (--> particle (== (.. particle position) position)) particles)) 0)))
-
-  (: isWithinBounds (-> Position Bool))
-  (= isWithinBounds (fn (position) 
-                        (& (>= (.. position x) 0) (& (< (.. position x) GRID_SIZE) (& (>= (.. position y) 0) (< (.. position y) GRID_SIZE))))))
+          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/step', true);
   
-  (: adjacentPositions (-> Position (List Position)))
-  (= adjacentPositions (fn (position) 
-                           (let ((= x (.. position x)) 
-                                 (= y (.. position y)) 
-                                 (= positions (filter isWithinBounds (list (Position (+ x 1) y) (Position (- x 1) y) (Position x (+ y 1)) (Position x (- y 1))))))
-                                positions)))
-
-  (: nextParticle (-> Particle Particle))
-  (= nextParticle (fn (particle) 
-                      (let ((= freePositions (filter isFree (adjacentPositions (.. particle position))))) 
-                           (case freePositions
-                                (=> (list) particle)
-                                (=> _ (Particle (uniformChoice freePositions)))))))
-
-  (: particleGen (-> Position Particle))
-  (= particleGen (fn (initPosition) (Particle initPosition)))
-)`)
-      } else {
-        var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
-                                                                                             theme : "erlang-dark",
-                                                                                             lineNumbers: true, 
-                                                                                             readOnly: "nocursor"});
-        myCodeMirror.setValue(`%% Compiled Autumn Code \n`+`$(content)`)
-      }
-    })
-  </script>
-</div>
+          //Send the proper header information along with the request
+          xhr.setRequestHeader("Content-Type", "application/json");
+  
+          xhr.onreadystatechange = function () { // Call a function when the state changes.
+            if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                // Request finished. Do processing here.
+                console.log("success!");
+                console.log("xhr.response: "+JSON.stringify(xhr.response));
+                if (intervalID != -1) {
+                  clearInterval(intervalID);
+                }
+                console.log(typeof(JSON.parse(xhr.response)))
+  
+                Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.backgroundColor = "transparent"})
+                JSON.parse(xhr.response).forEach(function (particle) {
+                  document.getElementById((particle[1]*$(GRID_SIZE) + particle[0]).toString()).style.backgroundColor = "red";
+                })
+                intervalID = setInterval(step, timestep);
+            }
+          };
+          xhr.send();
+        }
+  
+        if ($(compiled) == false) {
+          var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
+                                                                                               theme : "erlang-dark",
+                                                                                               lineNumbers: true});
+          myCodeMirror.setValue(`(program
+    (const (= GRID_SIZE 16))
+  
+    (type alias Position ((: x Int) (: y Int)))
+    (type alias Particle ((: position Position)))
+  
+    (external (: click Click))
+  
+    (: particles (List Particle))
+    (= particles (initnext (list) (if (occurred click) 
+                                 then (push! (prev particles) (particleGen (Position 1 1))) 
+                                 else (map nextParticle particles))))
+    
+    (= nparticles (length particles))
+    
+    (: isFree (-> Position Bool))
+    (= isFree (fn (position) 
+                  (== (length (filter (--> particle (== (.. particle position) position)) particles)) 0)))
+  
+    (: isWithinBounds (-> Position Bool))
+    (= isWithinBounds (fn (position) 
+                          (& (>= (.. position x) 0) (& (< (.. position x) GRID_SIZE) (& (>= (.. position y) 0) (< (.. position y) GRID_SIZE))))))
+    
+    (: adjacentPositions (-> Position (List Position)))
+    (= adjacentPositions (fn (position) 
+                             (let ((= x (.. position x)) 
+                                   (= y (.. position y)) 
+                                   (= positions (filter isWithinBounds (list (Position (+ x 1) y) (Position (- x 1) y) (Position x (+ y 1)) (Position x (- y 1))))))
+                                  positions)))
+  
+    (: nextParticle (-> Particle Particle))
+    (= nextParticle (fn (particle) 
+                        (let ((= freePositions (filter isFree (adjacentPositions (.. particle position))))) 
+                             (case freePositions
+                                  (=> (list) particle)
+                                  (=> _ (Particle (uniformChoice freePositions)))))))
+  
+    (: particleGen (-> Position Particle))
+    (= particleGen (fn (initPosition) (Particle initPosition)))
+  )`)
+        } else {
+          var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
+                                                                                               theme : "erlang-dark",
+                                                                                               lineNumbers: true, 
+                                                                                               readOnly: "nocursor"});
+          myCodeMirror.setValue(`%% Compiled Autumn Code \n`+`$(content)`)
+        }
+      })
+    </script>
+  </div>
+  
