@@ -68,13 +68,13 @@ end
 
 function step()
   println("step")
-  json(map(particle -> [particle.position.x, particle.position.y], MOD !== nothing ? MOD.next(nothing) : []))
+  json(map(particle -> [particle.position.x, particle.position.y, particle.color], MOD !== nothing ? MOD.next(nothing) : []))
 end
 
 function startautumn()
   println("startautumn")
   
-  json(map(particle -> [particle.position.x, particle.position.y], MOD !== nothing ? MOD.init(nothing) : []))
+  json(map(particle -> [particle.position.x, particle.position.y, particle.color], MOD !== nothing ? MOD.init(nothing) : []))
 end
 
 function clicked()
@@ -82,7 +82,7 @@ function clicked()
   println(@params(:x))
   println(@params(:y))
   
-  json(map(particle -> [particle.position.x, particle.position.y], MOD !== nothing ? MOD.next(MOD.Click(parse(Int64, @params(:x)), parse(Int64, @params(:y)))) : []))
+  json(map(particle -> [particle.position.x, particle.position.y, particle.color], MOD !== nothing ? MOD.next(MOD.Click(parse(Int64, @params(:x)), parse(Int64, @params(:y)))) : []))
 
 end
 
