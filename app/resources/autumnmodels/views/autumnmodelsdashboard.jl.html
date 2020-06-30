@@ -38,7 +38,7 @@
         var timestep = 1000;
         var compiled = false;
         var client_id = getRandomInt(1, 10000);
-        console.log("client_id: "+client_id);
+        // console.log("client_id: "+client_id);
         var grid_size = 16;
     
         // attach event listeners to buttons
@@ -90,7 +90,7 @@
         }
 
         function compileClick() {
-          console.log("compileClick")
+          // console.log("compileClick")
           var xhr = new XMLHttpRequest();
           xhr.open("POST", 'http://causal-discovery.herokuapp.com:80/compileautumn', true);
   
@@ -99,12 +99,13 @@
             if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
               grid_size = JSON.parse(xhr.response)[0];
               content = JSON.parse(xhr.response)[1];
-              console.log("grid_size: "+grid_size);
-              console.log("content: "+content);
+              // console.log("grid_size: "+grid_size);
+              // console.log("content: "+content);
 
               // update grid
               Array.from(document.getElementsByClassName("grid")).forEach(function (grid) {
                 grid.innerHTML = "";
+                grid.style = "grid-template-columns: repeat("+grid_size+", 25px); grid-template-rows: repeat("+grid_size+", 25px);"
                 for (i=0; i < grid_size*grid_size; i++) {
                   button = document.createElement("button")
                   button.classList.add("cell");
@@ -166,8 +167,8 @@
               updateButtonStyles();
             }
           };
-          console.log("client_id: "+client_id);
-          console.log("autumn-string: "+myCodeMirror.getValue());
+          // console.log("client_id: "+client_id);
+          // console.log("autumn-string: "+myCodeMirror.getValue());
           formData = new FormData();
           formData.append("autumnstring", compiled ? "" : myCodeMirror.getValue());
           formData.append("clientid", client_id);
@@ -195,15 +196,15 @@
               xhr.onreadystatechange = function () { // Call a function when the state changes.
                 if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
                     // Request finished. Do processing here.
-                    console.log("success!");
-                    console.log("xhr.response: "+JSON.stringify(xhr.response));
+                    // console.log("success!");
+                    // console.log("xhr.response: "+JSON.stringify(xhr.response));
                     if (intervalID != -1) {
                       clearInterval(intervalID);
                     }
                     updateCellStyles(xhr.response);
                     intervalID = setInterval(step, timestep);
                     updateButtonStyles();
-                    console.log("here?")
+                    // console.log("here?")
                 }
               };
               not_run_yet = false;
@@ -225,15 +226,15 @@
           xhr.onreadystatechange = function () { // Call a function when the state changes.
             if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
                 // Request finished. Do processing here.
-                console.log("success!");
-                console.log("xhr.response: "+JSON.stringify(xhr.response));
+                // console.log("success!");
+                // console.log("xhr.response: "+JSON.stringify(xhr.response));
                 if (intervalID != -1) {
                   clearInterval(intervalID);
                 }
                 updateCellStyles(xhr.response);
                 intervalID = setInterval(step, timestep);
                 updateButtonStyles();
-                console.log("here?")
+                // console.log("here?")
             }
           };
           xhr.send();
@@ -241,7 +242,7 @@
         
   
         function click(id) {
-          console.log("click");
+          // console.log("click");
           if (intervalID != -1) {
             var xhr = new XMLHttpRequest();
             xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/clicked?x='+(id % grid_size)+'&y='+Math.floor(id/grid_size)+'&clientid='+client_id, true);
@@ -252,8 +253,8 @@
             xhr.onreadystatechange = function () { // Call a function when the state changes.
               if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
                   // Request finished. Do processing here.
-                  console.log("success!");
-                  console.log("xhr.response: "+JSON.stringify(xhr.response));
+                  // console.log("success!");
+                  // console.log("xhr.response: "+JSON.stringify(xhr.response));
                   updateCellStyles(xhr.response);
               }
             };
@@ -262,7 +263,7 @@
         }
   
         function step() {
-          console.log("step");
+          // console.log("step");
           var xhr = new XMLHttpRequest();
   
           xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/step?clientid='+client_id, true);
@@ -273,12 +274,12 @@
           xhr.onreadystatechange = function () { // Call a function when the state changes.
             if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
                 // Request finished. Do processing here.
-                console.log("success!");
-                console.log("xhr.response: "+JSON.stringify(xhr.response));
+                // console.log("success!");
+                // console.log("xhr.response: "+JSON.stringify(xhr.response));
                 if (intervalID != -1) {
                   clearInterval(intervalID);
                 }
-                console.log(typeof(JSON.parse(xhr.response)))
+                // console.log(typeof(JSON.parse(xhr.response)))
   
                 updateCellStyles(xhr.response);
                 intervalID = setInterval(step, timestep);
@@ -333,14 +334,14 @@
       updateCellStyles("[]");
 
       function colorToRGBA(color, a) {
-        console.log("colorToRGBA")
-        console.log(color);
+        // console.log("colorToRGBA")
+        // console.log(color);
         if (color[0] != "#") {
           hex = colors[color];
         } else {
           hex = color;
         }
-        console.log("hex: "+hex)
+        // console.log("hex: "+hex)
         return hexToRGB(hex, a)
       }
 
