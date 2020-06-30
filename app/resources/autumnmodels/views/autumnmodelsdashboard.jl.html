@@ -4,7 +4,7 @@
     </div>
     <div id="dashboard">
       <div id="model-input" class="dashboard-panel" style="border-right: 1px solid black;">
-        <form style="width: 100%; margin: 0; font-size: 13px !important; height: 100%;" action="$(Genie.Router.linkto(:compile_autumn))" method="POST">
+        <form style="width: 100%; margin: 0; font-size: 13px !important; height: 100%;">
         <textarea id="autumn-string" name="autumnstring" rows="30" cols="50"
         style="height: 97%; width: 100%;" spellcheck="false">
         </textarea>
@@ -37,7 +37,7 @@
         var intervalID = -1;
         var timestep = 1000;
         var compiled = false;
-        var client_id = getRandomInt(1, 1000);
+        var client_id = getRandomInt(1, 10000);
         console.log("client_id: "+client_id);
         var grid_size = 16;
     
@@ -101,16 +101,28 @@
               content = JSON.parse(xhr.response)[1];
               console.log("grid_size: "+grid_size);
               console.log("content: "+content);
+
+              // update grid
+              Array.from(document.getElementsByClassName("grid")).forEach(function (grid) {
+                grid.innerHTML = "";
+                for (i=0; i < grid_size*grid_size; i++) {
+                  button = document.createElement("button")
+                  button.classList.add("cell");
+                  button.id = i.toString();
+                  button.addEventListener("click", function () { click(i); });
+                  grid.appendChild(button);
+                }
+              });
+
               if (content == "") {
                 compiled = false;
                 not_run_yet = true;
-                myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
-                                                                                              theme : "erlang-dark",                                                                                              lineNumbers: true});
+                myCodeMirror.setOption("readOnly", false);
                 myCodeMirror.setValue(`(program
   (const (= GRID_SIZE 16))
 
   (type alias Position ((: x Int) (: y Int)))
-  (type alias Particle ((: position Position)))
+  (type alias Particle ((: position Position) (: color String)))
 
   (external (: click Click))
 
@@ -141,17 +153,14 @@
                       (let ((= freePositions (filter isFree (adjacentPositions (.. particle position))))) 
                            (case freePositions
                                 (=> (list) particle)
-                                (=> _ (Particle (uniformChoice freePositions)))))))
+                                (=> _ (Particle (uniformChoice freePositions) (.. particle color)))))))
 
   (: particleGen (-> Position Particle))
-  (= particleGen (fn (initPosition) (Particle initPosition)))
+  (= particleGen (fn (initPosition) (Particle initPosition "blue")))
 )`);
               } else {
                 compiled = true;
-                myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
-                                                                                               theme : "erlang-dark",
-                                                                                               lineNumbers: true, 
-                                                                                               readOnly: "nocursor"});
+                myCodeMirror.setOption("readonly", "nocursor");
                 myCodeMirror.setValue(`%% Compiled Autumn Code \n` + content);
               }
               updateButtonStyles();
@@ -284,7 +293,7 @@
   (const (= GRID_SIZE 16))
 
   (type alias Position ((: x Int) (: y Int)))
-  (type alias Particle ((: position Position)))
+  (type alias Particle ((: position Position) (: color String)))
 
   (external (: click Click))
 
@@ -315,10 +324,10 @@
                       (let ((= freePositions (filter isFree (adjacentPositions (.. particle position))))) 
                            (case freePositions
                                 (=> (list) particle)
-                                (=> _ (Particle (uniformChoice freePositions)))))))
+                                (=> _ (Particle (uniformChoice freePositions) (.. particle color)))))))
 
   (: particleGen (-> Position Particle))
-  (= particleGen (fn (initPosition) (Particle initPosition)))
+  (= particleGen (fn (initPosition) (Particle initPosition "blue")))
 )`);
 
       updateCellStyles("[]");

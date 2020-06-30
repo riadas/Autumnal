@@ -33,7 +33,8 @@ function compileautumn()
       mod = eval(compiledAutumn)
       println("EVALUATED SUCCESSFULLY")
       grid_size = mod.GRID_SIZE
-      content = autumnString
+      content = showstring(parsedAutumn)
+      
       MODS[clientid] = mod
       println("HERE 3")
     catch y
@@ -150,7 +151,7 @@ istypesymbol(sym) = (q = string(sym); length(q) > 0 && isuppercase(q[1]))
 istypevarsymbol(sym) = (q = string(sym); length(q) > 0 && islowercase(q[1]))
 
 # ## Printing
-isinfix(f::Symbol) = f ∈ [:+, :-, :/, :*, :&&, :||, :>=, :<=, :>, :<, :(==). :&]
+isinfix(f::Symbol) = f ∈ [:+, :-, :/, :*, :&&, :||, :>=, :<=, :>, :<, :(==), :&]
 isinfix(f) = false
 
 
@@ -266,7 +267,7 @@ end
 
 # compile.jl
 
-binaryOperators = [:+, :-, :/, :*, :&, :||, :>=, :<=, :>, :<, :(==), :!=]
+binaryOperators = [:+, :-, :/, :*, :&&, :||, :>=, :<=, :>, :<, :(==), :!=, :&]
 
 struct AutumnCompileError <: Exception
   msg
