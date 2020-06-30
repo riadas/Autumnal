@@ -3,87 +3,75 @@ using Genie.Renderer
 using Genie.Renderer.Html: html
 using Genie.Renderer.Json: json
 using Genie.Router
+using Genie.Requests
 using MLStyle
 using SExpressions
 
-GRID_SIZE = 16;
-FORM_CONTENT = "";
-MOD = nothing
-CLICK = nothing;
-PARTICLES = []
-ERROR = ""
-compiled = false
+MODS = Dict{Int, Any}();
 
 function autumnmodels()
   redirect(:playground)
 end
 
 function playground()
-  html(:autumnmodels, :autumnmodelsdashboard, 
-  size=[0:GRID_SIZE*GRID_SIZE-1;], 
-  content=FORM_CONTENT, 
-  particles=map(particle -> GRID_SIZE*(particle.position.y) + particle.position.x, PARTICLES),
-  compiled=compiled, GRID_SIZE=GRID_SIZE, challenges=false)
-end
-
-function challenges()
-  html(:autumnmodels, :autumnmodelsdashboard, 
-  size=[0:GRID_SIZE*GRID_SIZE-1;], 
-  content=FORM_CONTENT, 
-  particles=map(particle -> GRID_SIZE*(particle.position.y) + particle.position.x, PARTICLES),
-  compiled=compiled, GRID_SIZE=GRID_SIZE, challenges=true)
+  html(:autumnmodels, :autumnmodelsdashboard, size=[0:255;])
 end
 
 function compileautumn()
-  autumnString = @params(:autumnstring)
-  if !compiled
+  println("compileautumn")
+  autumnString = postpayload(:autumnstring, "(program (= GRID_SIZE 12))")
+  clientid = parse(Int64, postpayload(:clientid, 0))
+  println(string("autumnstring: ", autumnString))
+  println(string("clientid: ", clientid))
+  println(typeof(clientid))
+  if !haskey(MODS, clientid)
     try
       parsedAutumn = eval(Meta.parse("au\"\"\"$(autumnString)\"\"\""))
       println("PARSED SUCCESSFULLY")
       compiledAutumn = compiletojulia(parsedAutumn)
       println("COMPILED SUCCESSFULLY")
-      global MOD = eval(compiledAutumn)
+      mod = eval(compiledAutumn)
       println("EVALUATED SUCCESSFULLY")
-      global compiled = true
-      global GRID_SIZE = MOD.GRID_SIZE
-      global FORM_CONTENT = showstring(parsedAutumn)
+      grid_size = mod.GRID_SIZE
+      content = autumnString
+      MODS[clientid] = mod
       println("HERE 3")
     catch y
       println("PARSING OR COMPILING FAILURE!")
       println(y)
-      global FORM_CONTENT = "" 
-      global GRID_SIZE = 16
-      global MOD = nothing
+      grid_size = 16 
+      content = ""
     end
   else
-    global GRID_SIZE = 16
-    global FORM_CONTENT = autumnString
-    global MOD = nothing
-    global CLICK = nothing
-    global PARTICLES = []
-    global compiled = false
+    println("RESET")
+    grid_size = 16
+    content = autumnString
+    delete!(MODS, clientid)
   end
-  redirect(:get)
+  json([grid_size, content])
 end
 
 function step()
   println("step")
-  json(map(particle -> [particle.position.x, particle.position.y, particle.color], MOD !== nothing ? MOD.next(nothing) : []))
+  clientid = parse(Int64, @params(:clientid))
+  json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? MODS[clientid].next(nothing) : []))
 end
 
 function startautumn()
   println("startautumn")
-  
-  json(map(particle -> [particle.position.x, particle.position.y, particle.color], MOD !== nothing ? MOD.init(nothing) : []))
+  clientid = parse(Int64, @params(:clientid))
+  json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? MODS[clientid].init(nothing) : []))
 end
 
 function clicked()
   println("clicked params:")
   println(@params(:x))
   println(@params(:y))
-  
-  json(map(particle -> [particle.position.x, particle.position.y, particle.color], MOD !== nothing ? MOD.next(MOD.Click(parse(Int64, @params(:x)), parse(Int64, @params(:y)))) : []))
-
+  clientid = typeof(@params(:clientid)) == String ? parse(Int64, @params(:clientid)) : @params(:clientid)
+  println("clientid")
+  println(typeof(clientid))
+  println(clientid) 
+  json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y)))) : []))
 end
 
 # aexpr.jl
@@ -162,7 +150,7 @@ istypesymbol(sym) = (q = string(sym); length(q) > 0 && isuppercase(q[1]))
 istypevarsymbol(sym) = (q = string(sym); length(q) > 0 && islowercase(q[1]))
 
 # ## Printing
-isinfix(f::Symbol) = f ∈ [:+, :-, :/, :*, :&&, :||, :>=, :<=, :>, :<, :(==)]
+isinfix(f::Symbol) = f ∈ [:+, :-, :/, :*, :&&, :||, :>=, :<=, :>, :<, :(==). :&]
 isinfix(f) = false
 
 
