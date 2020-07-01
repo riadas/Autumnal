@@ -5,6 +5,7 @@ using Genie.Renderer.Json: json
 using Genie.Router
 using Genie.Requests
 using MLStyle
+import Base.min
 using SExpressions
 
 MODS = Dict{Int, Any}(); 
@@ -420,9 +421,9 @@ function compiletojulia(aexpr::AExpr)::Expr
      end
     nextFunction = quote
       function next($(map(x -> compile(x), data["externalVars"])...))
-        global time += 1
         $(map(x -> :(global $(compile(x.args[1])) = $(compile(x.args[2].args[2]))), data["initnextVars"])...)
         $(map(x -> :(global $(compile(x.args[1])) = $(compile(x.args[2]))), data["liftedVars"])...)
+        global time += 1
         $(map(x -> :($(Symbol(string(x[1]) * "History"))[time] = deepcopy($(compile(x[1])))), data["historyVars"])...)
         particles
       end
