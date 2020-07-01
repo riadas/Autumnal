@@ -330,7 +330,7 @@
   (external (: click Click))
   
   (: particles (List Particle))
-  (= particles (initnext (antGen 6) (if (& (occurred click) noFoodRemaining) 
+  (= particles (initnext (antGen 6) (if (occurred click) 
                                       then (vcat (prev particles) (foodGen 4)) 
                                       else (map nextParticle particles))))
   
