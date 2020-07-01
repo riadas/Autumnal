@@ -66,13 +66,7 @@ function startautumn()
 end
 
 function clicked()
-  println("clicked params:")
-  println(@params(:x))
-  println(@params(:y))
-  clientid = typeof(@params(:clientid)) == String ? parse(Int64, @params(:clientid)) : @params(:clientid)
-  println("clientid")
-  println(typeof(clientid))
-  println(clientid) 
+  clientid = parse(Int64, @params(:clientid))
   json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))))) : []))
 end
 
@@ -427,9 +421,9 @@ function compiletojulia(aexpr::AExpr)::Expr
      end
     nextFunction = quote
       function next($(map(x -> compile(x), data["externalVars"])...))
+        global time += 1
         $(map(x -> :(global $(compile(x.args[1])) = $(compile(x.args[2].args[2]))), data["initnextVars"])...)
         $(map(x -> :(global $(compile(x.args[1])) = $(compile(x.args[2]))), data["liftedVars"])...)
-        global time += 1
         $(map(x -> :($(Symbol(string(x[1]) * "History"))[time] = deepcopy($(compile(x[1])))), data["historyVars"])...)
         particles
       end

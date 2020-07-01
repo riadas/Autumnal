@@ -218,11 +218,6 @@
         
   
         function click(id) {
-          console.log("click");
-          console.log("id: "+id);
-          console.log("grid_size: "+grid_size);
-          console.log("x: "+(id % grid_size));
-          console.log("y: "+(Math.floor(id/grid_size)));
           if (intervalID != -1) {
             var xhr = new XMLHttpRequest();
             xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/clicked?x='+(id % grid_size)+'&y='+Math.floor(id/grid_size)+'&clientid='+client_id, true);
