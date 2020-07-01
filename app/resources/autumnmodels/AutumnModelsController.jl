@@ -315,7 +315,13 @@ function compiletojulia(aexpr::AExpr)::Expr
   end
 
   function compile(expr, parent=nothing)
-    expr
+    if (string(expr) == "true") 
+      :(1 == 1)
+    elseif (string(expr) == "false")
+      :(1 == 2)
+    else
+      expr
+    end
   end
   
   function compileassign(expr::AExpr, parent::Union{AExpr, Nothing}, data::Dict{String, Any})
