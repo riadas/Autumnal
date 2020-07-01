@@ -7,7 +7,7 @@ using Genie.Requests
 using MLStyle
 using SExpressions
 
-MODS = Dict{Int, Any}();
+MODS = Dict{Int, Any}(); 
 
 function autumnmodels()
   redirect(:playground)
