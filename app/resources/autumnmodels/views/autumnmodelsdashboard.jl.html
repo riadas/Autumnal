@@ -12,7 +12,11 @@
       </div>
       
       <div id="grid-view" class="dashboard-panel">
-        <button id="compile-button" class="control-button" style="margin-top: 10px; margin-left: 10px; font-weight: bold;"></button>
+        <div style="display: flex; margin-top: 10px; margin-left: 10px;">
+          <button id="compile-button" class="control-button" style="font-weight:bold; margin-right: 10px;"></button>
+          <button id="particles-button" class="control-button" style="font-weight:bold; margin-right: 10px; background-color: #f7e67a !important">PARTICLES</button>
+          <button id="ants-button" class="control-button" style="font-weight:bold; background-color: #f7e67a !important">ANTS</button>
+        </div>
         <div id="container">
           <div class="grid-container" >
             <div class="grid" style="grid-template-columns: repeat($(floor(Int64, sqrt(length(size)))), 25px); grid-template-rows: repeat($(floor(Int64, sqrt(length(size)))), 25px);">
@@ -35,7 +39,7 @@
         // global frontend variables
         var not_run_yet = true;
         var intervalID = -1;
-        var timestep = 1000;
+        var timestep = 800;
         var compiled = false;
         var client_id = getRandomInt(1, 10000);
         console.log("client_id: "+client_id);
@@ -49,12 +53,16 @@
         document.getElementById("play-button").addEventListener("click", playOrPauseClick);
         document.getElementById("restart-button").addEventListener("click", restartClick);
         document.getElementById("compile-button").addEventListener("click", compileClick);
+        document.getElementById("particles-button").addEventListener("click", particlesClick);
+        document.getElementById("ants-button").addEventListener("click", antsClick);
   
         // assign button styles
         updateButtonStyles();
   
         function updateButtonStyles() {
           compileButton = document.getElementById("compile-button");
+          antsButton = document.getElementById("ants-button");
+          particlesButton = document.getElementById("particles-button");
           playButton = document.getElementById("play-button");
           restartButton = document.getElementById("restart-button");
   
@@ -62,6 +70,9 @@
             compileButton.innerHTML = "RESET <i style='font-size: medium' class='fa fa-code' aria-hidden='true'></i>";
             playButton.style.display = "";
             restartButton.style.display = "";
+
+            antsButton.classList.add("disabled");
+            particlesButton.classList.add("disabled");
   
             if (intervalID == -1) {
                 compileButton.classList.remove("disabled");
@@ -79,6 +90,9 @@
             compileButton.innerHTML = "COMPILE <i style='font-size: medium' class='fa fa-code' aria-hidden='true'></i>";
             playButton.style.display = "none";
             restartButton.style.display = "none";
+
+            antsButton.classList.remove("disabled");
+            particlesButton.classList.remove("disabled");
           }
         }
 
@@ -120,46 +134,7 @@
                 compiled = false;
                 not_run_yet = true;
                 myCodeMirror.setOption("readOnly", false);
-                myCodeMirror.setValue(`(program
-  (const (= GRID_SIZE 16))
-
-  (type alias Position ((: x Int) (: y Int)))
-  (type alias Particle ((: position Position) (: color String)))
-
-  (external (: click Click))
-
-  (: particles (List Particle))
-  (= particles (initnext (list) (if (occurred click) 
-                               then (push! (prev particles) (particleGen (Position 1 1))) 
-                               else (map nextParticle particles))))
-  
-  (= nparticles (length particles))
-  
-  (: isFree (-> Position Bool))
-  (= isFree (fn (position) 
-                (== (length (filter (--> particle (== (.. particle position) position)) particles)) 0)))
-
-  (: isWithinBounds (-> Position Bool))
-  (= isWithinBounds (fn (position) 
-                        (& (>= (.. position x) 0) (& (< (.. position x) GRID_SIZE) (& (>= (.. position y) 0) (< (.. position y) GRID_SIZE))))))
-  
-  (: adjacentPositions (-> Position (List Position)))
-  (= adjacentPositions (fn (position) 
-                           (let ((= x (.. position x)) 
-                                 (= y (.. position y)) 
-                                 (= positions (filter isWithinBounds (list (Position (+ x 1) y) (Position (- x 1) y) (Position x (+ y 1)) (Position x (- y 1))))))
-                                positions)))
-
-  (: nextParticle (-> Particle Particle))
-  (= nextParticle (fn (particle) 
-                      (let ((= freePositions (filter isFree (adjacentPositions (.. particle position))))) 
-                           (case freePositions
-                                (=> (list) particle)
-                                (=> _ (Particle (uniformChoice freePositions) (.. particle color)))))))
-
-  (: particleGen (-> Position Particle))
-  (= particleGen (fn (initPosition) (Particle initPosition "blue")))
-)`);
+                particlesClick();
               } else {
                 compiled = true;
                 myCodeMirror.setOption("readonly", "nocursor");
@@ -294,47 +269,10 @@
         }
 
         var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
-                                                                                              theme : "erlang-dark",                                                                                              lineNumbers: true});
-                myCodeMirror.setValue(`(program
-  (const (= GRID_SIZE 16))
-
-  (type alias Position ((: x Int) (: y Int)))
-  (type alias Particle ((: position Position) (: color String)))
-
-  (external (: click Click))
-
-  (: particles (List Particle))
-  (= particles (initnext (list) (if (occurred click) 
-                               then (push! (prev particles) (particleGen (Position 1 1))) 
-                               else (map nextParticle particles))))
-  
-  (= nparticles (length particles))
-  
-  (: isFree (-> Position Bool))
-  (= isFree (fn (position) 
-                (== (length (filter (--> particle (== (.. particle position) position)) particles)) 0)))
-
-  (: isWithinBounds (-> Position Bool))
-  (= isWithinBounds (fn (position) 
-                        (& (>= (.. position x) 0) (& (< (.. position x) GRID_SIZE) (& (>= (.. position y) 0) (< (.. position y) GRID_SIZE))))))
-  
-  (: adjacentPositions (-> Position (List Position)))
-  (= adjacentPositions (fn (position) 
-                           (let ((= x (.. position x)) 
-                                 (= y (.. position y)) 
-                                 (= positions (filter isWithinBounds (list (Position (+ x 1) y) (Position (- x 1) y) (Position x (+ y 1)) (Position x (- y 1))))))
-                                positions)))
-
-  (: nextParticle (-> Particle Particle))
-  (= nextParticle (fn (particle) 
-                      (let ((= freePositions (filter isFree (adjacentPositions (.. particle position))))) 
-                           (case freePositions
-                                (=> (list) particle)
-                                (=> _ (Particle (uniformChoice freePositions) (.. particle color)))))))
-
-  (: particleGen (-> Position Particle))
-  (= particleGen (fn (initPosition) (Particle initPosition "blue")))
-)`);
+                                                                                              theme : "erlang-dark",                                                                                              
+                                                                                              lineNumbers: true,
+                                                                                              viewportMargin: 0});
+        particlesClick();
 
       updateCellStyles("[]");
 
@@ -387,7 +325,137 @@
         "wheat":"#f5deb3","white":"#ffffff","whitesmoke":"#f5f5f5",
         "yellow":"#ffff00","yellowgreen":"#9acd32"};
 
-      })
+        function antsClick() {
+        myCodeMirror.setValue(`(program
+  (const (= GRID_SIZE 16))
+
+  (type alias Position ((: x BigInt) (: y BigInt)))
+  (type alias Particle ((: position Position) (: color String) (: render Bool)))
+
+  (external (: click Click))
+  
+  (: particles (List Particle))
+  (= particles (initnext (antGen 6) (if (& (occurred click) noFoodRemaining) 
+                                      then (vcat (prev particles) (foodGen 4)) 
+                                      else (map nextParticle particles))))
+  
+  (: manhattanDistance (-> Particle Particle BigInt))
+  (= manhattanDistance (fn (particle1 particle2) 
+                            (+ 
+                              (abs
+                                (-
+                                  (.. (.. particle1 position) x)
+                                  (.. (.. particle2 position) x)
+                                )
+                              ) 
+                              (abs
+                                (-
+                                  (.. (.. particle1 position) y)
+                                  (.. (.. particle2 position) y)
+                                )
+                              )
+                            )
+                          ))
+  
+  (: createAnt (-> Position Particle))
+  (= createAnt (fn (initPosition) 
+                   (Particle initPosition "gray" true)))
+  
+  (: createFood (-> Position Particle))
+  (= createFood (fn (initPosition)
+                    (Particle initPosition "red" true)))
+  
+  (: antGen (-> BigInt (List Particle)))
+  (= antGen (fn (count) 
+                (let ((= coords (uniformChoice (range 0 (- (* GRID_SIZE GRID_SIZE) 1)) count))
+                      (= positions (map (--> coord (Position (% coord GRID_SIZE) (floor BigInt (/ coord GRID_SIZE)))) coords))
+                      (= ants (map createAnt positions))) 
+                     ants)))
+    
+  (: foodGen (-> BigInt (List Particle)))
+  (= foodGen (fn (count) 
+                (let ((= coords (uniformChoice (range 0 (- (* GRID_SIZE GRID_SIZE) 1)) count))
+                      (= positions (map (--> coord (Position (% coord GRID_SIZE) (floor BigInt (/ coord GRID_SIZE)))) coords))
+                      (= food (map createFood positions))) 
+                     food))) 
+
+  (: nextParticle (-> Particle Particle))
+  (= nextParticle (fn (particle) 
+                      (if (== (.. particle color) "gray") 
+                       then (nextAntParticle particle) 
+                       else (nextFoodParticle particle))))
+
+  (: nextAntParticle (-> Particle Particle))
+  (= nextAntParticle (fn (ant)  
+                         (let ((= x (.. (.. ant position) x))
+                               (= y (.. (.. ant position) y))
+                               (= foods (filter (--> particle (& (== (.. particle color) "red") (.. particle render))) particles))
+                               (= closestDistance (if (== (length foods) 0) then -1 else (min (map (--> food (manhattanDistance ant food)) foods))))
+                               (= closestFoods (filter (--> food (== closestDistance (manhattanDistance ant food))) foods))
+                               (= closestFoodPosition (if (== 0 (length closestFoods)) then (Position -1 -1) else (.. (first closestFoods) position)))
+                               (= delta (if (| (== -1 (.. closestFoodPosition x)) (& (== (.. closestFoodPosition x) x) (== (.. closestFoodPosition y) y)))
+                                         then (Position 0 0)
+                                         else (if (& (== x (.. closestFoodPosition x)) (!= y (.. closestFoodPosition y))) 
+                                               then (Position (- (.. closestFoodPosition x) x) (/ (- (.. closestFoodPosition y) y) (abs (- (.. closestFoodPosition y) y))))
+                                               else (Position (/ (- (.. closestFoodPosition x) x) (abs (- (.. closestFoodPosition x) x))) 0))))) 
+                              (createAnt (Position (+ x (.. delta x)) (+ y (.. delta y)))))))
+
+  (: nextFoodParticle (-> Particle Particle))
+  (= nextFoodParticle (fn (food) 
+                          (let ((= antsWithSamePosition (filter (--> particle (& (== (.. particle color) "gray") (& (== (string (.. particle position)) (string (.. food position))) (.. particle render)))) particles))
+                                (= newFood (if (== (length antsWithSamePosition) 0) then food else (Particle (.. food position) "red" false))) 
+                               ) newFood)))
+
+  (= noFoodRemaining (== (length (filter (--> particle (& (== (.. particle color) "red") (.. particle render))) particles)) 0))
+)`);
+      }
+
+      function particlesClick() {
+        myCodeMirror.setValue(`(program
+  (const (= GRID_SIZE 16))
+
+  (type alias Position ((: x Int) (: y Int)))
+  (type alias Particle ((: position Position) (: color String) (: render Bool)))
+
+  (external (: click Click))
+
+  (: particles (List Particle))
+  (= particles (initnext (list) (if (occurred click) 
+                               then (push! (prev particles) (particleGen (Position 1 1))) 
+                               else (map nextParticle particles))))
+  
+  (= nparticles (length particles))
+  
+  (: isFree (-> Position Bool))
+  (= isFree (fn (position) 
+                (== (length (filter (--> particle (== (.. particle position) position)) particles)) 0)))
+
+  (: isWithinBounds (-> Position Bool))
+  (= isWithinBounds (fn (position) 
+                        (& (>= (.. position x) 0) (& (< (.. position x) GRID_SIZE) (& (>= (.. position y) 0) (< (.. position y) GRID_SIZE))))))
+  
+  (: adjacentPositions (-> Position (List Position)))
+  (= adjacentPositions (fn (position) 
+                           (let ((= x (.. position x)) 
+                                 (= y (.. position y)) 
+                                 (= positions (filter isWithinBounds (list (Position (+ x 1) y) (Position (- x 1) y) (Position x (+ y 1)) (Position x (- y 1))))))
+                                positions)))
+
+  (: nextParticle (-> Particle Particle))
+  (= nextParticle (fn (particle) 
+                      (let ((= freePositions (filter isFree (adjacentPositions (.. particle position))))) 
+                           (case freePositions
+                                (=> (list) particle)
+                                (=> _ (Particle (uniformChoice freePositions) (.. particle color) true))))))
+
+  (: particleGen (-> Position Particle))
+  (= particleGen (fn (initPosition) (Particle initPosition "blue" true)))
+)`);
+      }
+
+
+      }
+      )
     </script>
   </div>
   

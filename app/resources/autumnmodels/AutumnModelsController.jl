@@ -55,13 +55,13 @@ end
 function step()
   println("step")
   clientid = parse(Int64, @params(:clientid))
-  json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? MODS[clientid].next(nothing) : []))
+  json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].next(nothing)) : []))
 end
 
 function startautumn()
   println("startautumn")
   clientid = parse(Int64, @params(:clientid))
-  json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? MODS[clientid].init(nothing) : []))
+  json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].init(nothing)) : []))
 end
 
 function clicked()
@@ -72,7 +72,7 @@ function clicked()
   println("clientid")
   println(typeof(clientid))
   println(clientid) 
-  json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y)))) : []))
+  json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))))) : []))
 end
 
 # aexpr.jl
@@ -267,7 +267,7 @@ end
 
 # compile.jl
 
-binaryOperators = [:+, :-, :/, :*, :&&, :||, :>=, :<=, :>, :<, :(==), :!=, :&]
+binaryOperators = [:+, :-, :/, :*, :&, :|, :>=, :<=, :>, :<, :(==), :!=, :%, :&&]
 
 struct AutumnCompileError <: Exception
   msg
@@ -317,14 +317,14 @@ function compiletojulia(aexpr::AExpr)::Expr
     expr
   end
   
-  function compileassign(expr::AExpr, parent::AExpr, data::Dict{String, Any})
+  function compileassign(expr::AExpr, parent::Union{AExpr, Nothing}, data::Dict{String, Any})
     # get type, if declared
     type = haskey(data["types"], (expr.args[1], parent)) ? data["types"][(expr.args[1], parent)] : nothing
     if (typeof(expr.args[2]) == AExpr && expr.args[2].head == :fn)
       if type !== nothing # handle function with typed arguments/return type
         args = compile(expr.args[2].args[1]).args # function args
         argTypes = map(compile, type.args[1:(end-1)]) # function arg types
-        tuples = [(arg, type) for arg in args, type in argTypes]
+        tuples = [(args[i], argTypes[i]) for i in [1:length(args);]]
         typedArgExprs = map(x -> :($(x[1])::$(x[2])), tuples)
         quote 
           function $(compile(expr.args[1]))($(typedArgExprs...))::$(compile(type.args[end]))
@@ -462,6 +462,7 @@ function compiletojulia(aexpr::AExpr)::Expr
     expr = quote
       module CompiledProgram
         export init, next
+        import Base.min
         using Distributions
         using MLStyle: @match 
         $(lines...)
@@ -502,8 +503,11 @@ end
 function compilebuiltin()
   occurredFunction = builtInDict["occurred"]
   uniformChoiceFunction = builtInDict["uniformChoice"]
+  uniformChoiceFunction2 = builtInDict["uniformChoice2"]
+  minFunction = builtInDict["min"]
   clickType = builtInDict["clickType"]
-  [occurredFunction, uniformChoiceFunction, clickType]
+  rangeFunction = builtInDict["range"]
+  [occurredFunction, uniformChoiceFunction, uniformChoiceFunction2, minFunction, clickType, rangeFunction]
 end
 
 builtInDict = Dict([
@@ -517,14 +521,28 @@ builtInDict = Dict([
                           freePositions[rand(Categorical(ones(length(freePositions))/length(freePositions)))]
                         end
                       end,
+"uniformChoice2"   =>  quote
+                        function uniformChoice(freePositions, n)
+                          map(idx -> freePositions[idx], rand(Categorical(ones(length(freePositions))/length(freePositions)), n))
+                        end
+                      end,
+"min"              => quote
+                        function min(arr)
+                          min(arr...)
+                        end
+                      end,
 "clickType"       =>  quote
                         struct Click
-                          x::Int
-                          y::Int                    
+                          x::BigInt
+                          y::BigInt                    
                         end     
+                      end,
+"range"           => quote
+                      function range(start::BigInt, stop::BigInt)
+                        [start:stop;]
                       end
+                     end
 ])
-
 
 
 
