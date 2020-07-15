@@ -13,9 +13,10 @@
       
       <div id="grid-view" class="dashboard-panel">
         <div style="display: flex; margin-top: 10px; margin-left: 10px;">
-          <button id="compile-button" class="control-button" style="font-weight:bold; margin-right: 10px;"></button>
-          <button id="particles-button" class="control-button" style="font-weight:bold; margin-right: 10px; background-color: #f7e67a !important">PARTICLES</button>
+          <button id="compile-button" class="control-button" style="font-weight:bold;"></button>
+          <button id="particles-button" class="control-button" style="font-weight:bold; background-color: #f7e67a !important">PARTICLES</button>
           <button id="ants-button" class="control-button" style="font-weight:bold; background-color: #f7e67a !important">ANTS</button>
+          <button id="light-button" class="control-button" style="font-weight:bold; background-color: #f7e67a !important">LIGHTS</button>
         </div>
         <div id="container">
           <div class="grid-container" >
@@ -55,7 +56,8 @@
         document.getElementById("compile-button").addEventListener("click", compileClick);
         document.getElementById("particles-button").addEventListener("click", particlesClick);
         document.getElementById("ants-button").addEventListener("click", antsClick);
-  
+        document.getElementById("light-button").addEventListener("click", lightClick);
+
         // assign button styles
         updateButtonStyles();
   
@@ -63,6 +65,7 @@
           compileButton = document.getElementById("compile-button");
           antsButton = document.getElementById("ants-button");
           particlesButton = document.getElementById("particles-button");
+          lightButton = document.getElementById("light-button");
           playButton = document.getElementById("play-button");
           restartButton = document.getElementById("restart-button");
   
@@ -73,6 +76,7 @@
 
             antsButton.classList.add("disabled");
             particlesButton.classList.add("disabled");
+            lightButton.classList.add("disabled");
   
             if (intervalID == -1) {
                 compileButton.classList.remove("disabled");
@@ -93,6 +97,7 @@
 
             antsButton.classList.remove("disabled");
             particlesButton.classList.remove("disabled");
+            lightButton.classList.remove("disabled");
           }
         }
 
@@ -446,6 +451,43 @@
   (: particleGen (-> Position Particle))
   (= particleGen (fn (initPosition) (Particle initPosition "blue" true)))
 )`);
+      }
+
+      function lightClick() {
+        myCodeMirror.setValue(`(program
+  (const (= GRID_SIZE 5))
+  
+  (type alias Position ((: x BigInt) (: y BigInt)))
+  (type alias Particle ((: position Position) (: color String) (: render Bool)))
+  
+  (external (: click Click))
+  
+  (: particles (List Particle))
+  (= particles (initnext (vcat (map (--> num (Particle (Position (% num GRID_SIZE) (floor BigInt (/ num GRID_SIZE))) "black" true)) (range 1 (- (* GRID_SIZE GRID_SIZE) 1))) (list (Particle (Position 0 0) "black" true))) 
+                         (if (occurred click) 
+                          then (if (& (== (.. click x) 0) (== (.. click y) 0))
+                                then (map nextParticle particles) 
+                                else particles) 
+                          else particles)
+               )
+  )
+  
+
+  (: nextParticle (-> Particle Particle))
+  (= nextParticle (fn (particle) 
+                      (if (& (== (.. (.. particle position) x) 0) 
+							 (== (.. (.. particle position) y) 0)) 
+					   then particle 
+					   else (if (== (.. particle color) "black") 
+							 then (Particle (.. particle position) "yellow" true) 
+							 else (
+                                   Particle (.. particle position) "black" true
+                                  )
+                             )
+                      )
+                  )
+  )
+)`)
       }
 
 
