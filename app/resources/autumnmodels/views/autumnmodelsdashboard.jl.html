@@ -101,7 +101,7 @@
           }
         }
 
-        function updateCellStyles(xml_response) {
+        function updateCellStyles(xml_response) { 
           Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.background = ""})
           JSON.parse(xml_response).forEach(function (particle) {
             cell = document.getElementById((particle[1]*grid_size + particle[0]).toString())
