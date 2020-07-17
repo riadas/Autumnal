@@ -71,6 +71,13 @@ function clicked()
   json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))))) : []))
 end
 
+function replay()
+  println("replay")
+  clientid = parse(Int64, @params(:clientid))
+  history = MODS[clientid].particlesHistory
+  json(Dict(key => map(particle -> [particle.position.x, particle.position.y, particle.color], filter(particle -> particle.render, particles)) for (key, particles) in history))
+end
+
 # aexpr.jl
 const autumngrammar = """
 x           := a | b | ... | aa ...

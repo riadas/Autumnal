@@ -1,181 +1,246 @@
 <div id="content-wrapper">
-    <div id="header">
-      <span id="title">autumnal</span> <span id="playground">playground</span> <span id="challenges">challenges</span>
+  <div id="header">
+    <span id="title">autumnal</span> <span id="playground">playground</span> <span id="challenges">challenges</span>
+  </div>
+  <div id="dashboard">
+    <div id="model-input" class="dashboard-panel" style="border-right: 1px solid black;">
+      <form style="width: 100%; margin: 0; font-size: 13px !important; height: 100%;">
+      <textarea id="autumn-string" name="autumnstring" rows="30" cols="50"
+      style="height: 97%; width: 100%;" spellcheck="false">
+      </textarea>
+      </form>
     </div>
-    <div id="dashboard">
-      <div id="model-input" class="dashboard-panel" style="border-right: 1px solid black;">
-        <form style="width: 100%; margin: 0; font-size: 13px !important; height: 100%;">
-        <textarea id="autumn-string" name="autumnstring" rows="30" cols="50"
-        style="height: 97%; width: 100%;" spellcheck="false">
-        </textarea>
-        </form>
+    
+    <div id="grid-view" class="dashboard-panel">
+      <div style="display: flex; margin-top: 10px; margin-left: 10px;">
+        <button id="compile-button" class="control-button"></button>
+        <button id="particles-button" class="control-button example-button">PARTICLES</button>
+        <button id="ants-button" class="control-button example-button">ANTS</button>
+        <button id="light-button" class="control-button example-button">LIGHTS</button>
+        <button id="magnets-button" class="control-button example-button">MAGNETS</button>
       </div>
-      
-      <div id="grid-view" class="dashboard-panel">
-        <div style="display: flex; margin-top: 10px; margin-left: 10px;">
-          <button id="compile-button" class="control-button"></button>
-          <button id="particles-button" class="control-button example-button">PARTICLES</button>
-          <button id="ants-button" class="control-button example-button">ANTS</button>
-          <button id="light-button" class="control-button example-button">LIGHTS</button>
-          <button id="magnets-button" class="control-button example-button">MAGNETS</button>
-        </div>
-        <div id="container">
-          <div class="grid-container" >
-            <div class="grid" style="grid-template-columns: repeat($(floor(Int64, sqrt(length(size)))), 25px); grid-template-rows: repeat($(floor(Int64, sqrt(length(size)))), 25px);">
-              <% @foreach(size) do s %>
-                     <button class="cell" id="$(s)" type="submit">
-                     </button>
-              <% end %>
-            </div>
-            <div style="display: flex; margin-top: 10px;">
-                <button id="play-button" class="control-button" type="submit" id="run" style="margin-right: 10px;">▶</button>
-                <button id="restart-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;">↻</button>
-            </div>
+      <div id="container">
+        <div class="grid-container" >
+          <div class="grid" style="grid-template-columns: repeat($(floor(Int64, sqrt(length(size)))), 25px); grid-template-rows: repeat($(floor(Int64, sqrt(length(size)))), 25px);">
+            <% @foreach(size) do s %>
+                   <button class="cell" id="$(s)" type="submit">
+                   </button>
+            <% end %>
+          </div>
+          <div style="display: flex; margin-top: 10px;">
+              <button id="play-button" class="control-button" type="submit" id="run" style="margin-right: 10px;">▶</button>
+              <button id="restart-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;">↻</button>
+              <button id="save-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;"><i class="fa fa-floppy-o" aria-hidden="true"></i></button>
+              <button id="history-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;"><i class="fa fa-history" aria-hidden="true"></i></button>
           </div>
         </div>
       </div>
     </div>
-    <script>
+  </div>
+  <script>
+
+    document.addEventListener("DOMContentLoaded", function() {
+      // global frontend variables
+      var not_run_yet = true;
+      var intervalID = -1;
+      var timestep = 600;
+      var historytimestep = 500;
+      var compiled = false;
+      var client_id = getRandomInt(1, 10000);
+      console.log("client_id: "+client_id);
+      var grid_size = 16;
+      var history_mode = false;
+      var historyIntervalID = -1;
+      var history_response = '{}';
+      var history_index = -1;
   
-      document.addEventListener("DOMContentLoaded", function() {
-        // global frontend variables
-        var not_run_yet = true;
-        var intervalID = -1;
-        var timestep = 600;
-        var compiled = false;
-        var client_id = getRandomInt(1, 10000);
-        console.log("client_id: "+client_id);
-        var grid_size = 16;
-    
-        // attach event listeners to buttons
-        Array.from(document.getElementsByClassName("cell")).forEach(function (cell) {
-          console.log(cell.id)
-          cell.addEventListener("click", function () { click(parseInt(cell.id)); });
-        })
-        document.getElementById("play-button").addEventListener("click", playOrPauseClick);
-        document.getElementById("restart-button").addEventListener("click", restartClick);
-        document.getElementById("compile-button").addEventListener("click", compileClick);
-        document.getElementById("particles-button").addEventListener("click", particlesClick);
-        document.getElementById("ants-button").addEventListener("click", antsClick);
-        document.getElementById("light-button").addEventListener("click", lightClick);
-        document.getElementById("magnets-button").addEventListener("click", magnetsClick);
+      // attach event listeners to buttons
+      Array.from(document.getElementsByClassName("cell")).forEach(function (cell) {
+        console.log(cell.id)
+        cell.addEventListener("click", function () { click(parseInt(cell.id)); });
+      })
+      document.getElementById("play-button").addEventListener("click", playOrPauseClick);
+      document.getElementById("restart-button").addEventListener("click", restartClick);
+      document.getElementById("compile-button").addEventListener("click", compileClick);
+      document.getElementById("particles-button").addEventListener("click", particlesClick);
+      document.getElementById("ants-button").addEventListener("click", antsClick);
+      document.getElementById("light-button").addEventListener("click", lightClick);
+      document.getElementById("magnets-button").addEventListener("click", magnetsClick);
+      document.getElementById("history-button").addEventListener("click", historyClick);
 
 
-        // assign button styles
-        updateButtonStyles();
-  
-        function updateButtonStyles() {
-          compileButton = document.getElementById("compile-button");
-          antsButton = document.getElementById("ants-button");
-          particlesButton = document.getElementById("particles-button");
-          lightButton = document.getElementById("light-button");
-          magnetsButton = document.getElementById("magnets-button");
-          playButton = document.getElementById("play-button");
-          restartButton = document.getElementById("restart-button");
-  
-          if (compiled) {
-            compileButton.innerHTML = "RESET <i style='font-size: medium' class='fa fa-code' aria-hidden='true'></i>";
-            playButton.style.display = "";
-            restartButton.style.display = "";
+      // assign button styles
+      updateButtonStyles();
 
-            antsButton.classList.add("disabled");
-            particlesButton.classList.add("disabled");
-            lightButton.classList.add("disabled");
-            magnetsButton.classList.add("disabled");
+      function updateButtonStyles() {
+        compileButton = document.getElementById("compile-button");
+        antsButton = document.getElementById("ants-button");
+        particlesButton = document.getElementById("particles-button");
+        lightButton = document.getElementById("light-button");
+        magnetsButton = document.getElementById("magnets-button");
+        playButton = document.getElementById("play-button");
+        restartButton = document.getElementById("restart-button");
+        saveButton = document.getElementById("save-button");
+        historyButton = document.getElementById("history-button");
 
+        if (compiled) {
+          compileButton.innerHTML = "RESET <i style='font-size: medium' class='fa fa-code' aria-hidden='true'></i>";
+          playButton.style.display = "";
+          restartButton.style.display = "";
+          saveButton.style.display = "";
+          historyButton.style.display = "";
+
+          antsButton.classList.add("disabled");
+          particlesButton.classList.add("disabled");
+          lightButton.classList.add("disabled");
+          magnetsButton.classList.add("disabled");
+          
+          if (!history_mode) {
+            playButton.classList.remove("history-mode");
+            restartButton.classList.remove("history-mode");
+            saveButton.classList.remove("history-mode");
+            historyButton.classList.remove("history-mode");
+            compileButton.classList.remove("history-mode");
+
+            playButton.classList.remove("disabled");
             if (intervalID == -1) {
-                compileButton.classList.remove("disabled");
-                playButton.innerText = "▶";
-                playButton.style.fontSize = "13px";
-                if (not_run_yet) {
-                  restartButton.classList.add("disabled");
-                } else {
-                  restartButton.classList.remove("disabled");
-                }
-              } else {
-                compileButton.classList.add("disabled");
-                playButton.innerText = "▌▌";
-                playButton.style.fontSize = "9px";
+              compileButton.classList.remove("disabled");
+              playButton.innerText = "▶";
+              playButton.style.fontSize = "13px";
+              if (not_run_yet) {
                 restartButton.classList.add("disabled");
+                saveButton.classList.add("disabled");
+                historyButton.classList.add("disabled");
+              } else {
+                restartButton.classList.remove("disabled");
+                saveButton.classList.remove("disabled");
+                historyButton.classList.remove("disabled");
               }
-  
-          } else {
-            compileButton.innerHTML = "COMPILE <i style='font-size: medium' class='fa fa-code' aria-hidden='true'></i>";
-            playButton.style.display = "none";
-            restartButton.style.display = "none";
-
-            antsButton.classList.remove("disabled");
-            particlesButton.classList.remove("disabled");
-            lightButton.classList.remove("disabled");
-            magnetsButton.classList.remove("disabled");
-          }
-        }
-
-        function updateCellStyles(xml_response) { 
-          Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.background = ""})
-          JSON.parse(xml_response).forEach(function (particle) {
-            cell = document.getElementById((particle[1]*grid_size + particle[0]).toString())
-            cell.style.background = cell.style.background != "" ? ["linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")", cell.style.background].join(", ") : "linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")";
-          })
-        }
-
-        function compileClick() {
-          console.log("compileClick")
-          var xhr = new XMLHttpRequest();
-          xhr.open("POST", 'http://causal-discovery.herokuapp.com:80/compileautumn', true);
-  
-          //Send the proper header information along with the request
-          xhr.onreadystatechange = function () { // Call a function when the state changes.
-            if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
-              grid_size = JSON.parse(xhr.response)[0];
-              content = JSON.parse(xhr.response)[1];
-              console.log("grid_size: "+grid_size);
-              console.log("content: "+content);
-
-              // update grid
-              Array.from(document.getElementsByClassName("grid")).forEach(function (grid) {
-                grid.innerHTML = "";
-                grid.style = "grid-template-columns: repeat("+grid_size+", 25px); grid-template-rows: repeat("+grid_size+", 25px);"
-                for (i=0; i < grid_size*grid_size; i++) {
-                  const button = document.createElement("button")
-                  button.classList.add("cell");
-                  button.id = i.toString();
-                  button.onclick = function() { console.log(button.id); click(parseInt(button.id));};
-                  grid.appendChild(button);
-                }
-              });
-
-              if (content == "") {
-                compiled = false;
-                not_run_yet = true;
-                myCodeMirror.setOption("readOnly", false);
-                particlesClick();
-              } else { 
-                compiled = true;
-                myCodeMirror.setOption("readOnly", "nocursor");
-                myCodeMirror.setValue(`%% Compiled Autumn Code \n` + content);
-              }
-              updateButtonStyles(); 
+            } else {
+              compileButton.classList.add("disabled");
+              playButton.innerText = "▌▌";
+              playButton.style.fontSize = "9px";
+              restartButton.classList.add("disabled");
+              saveButton.classList.add("disabled");
+              historyButton.classList.add("disabled");
             }
-          };
-          console.log("client_id: "+client_id);
-          console.log("autumn-string: "+myCodeMirror.getValue());
-          formData = new FormData();
-          formData.append("autumnstring", compiled ? "" : myCodeMirror.getValue());
-          formData.append("clientid", client_id);
-          xhr.send(formData);
-        }
+          } else {
+            playButton.classList.add("history-mode");
+            restartButton.classList.add("history-mode");
+            saveButton.classList.add("history-mode");
+            historyButton.classList.add("history-mode");
+            compileButton.classList.add("history-mode");
 
-        function getRandomInt(min, max) {
-          min = Math.ceil(min);
-          max = Math.floor(max);
-          return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
+            if (historyIntervalID == -1) {
+              console.log("updateButtonStyles historyIntervalID == -1");
+              if (history_index < Object.keys(JSON.parse(history_response)).length) {
+                console.log("here 1");
+                playButton.classList.remove("disabled");
+              } else {
+                console.log("here 2");
+                playButton.classList.add("disabled");
+              }
+              playButton.innerText = "▶";
+              playButton.style.fontSize = "13px";
+              restartButton.classList.remove("disabled");
+              saveButton.classList.remove("disabled");
+              historyButton.classList.remove("disabled");
+              compileButton.classList.remove("disabled");
+            } else {
+              playButton.innerText = "▌▌";
+              playButton.style.fontSize = "9px";
+              playButton.classList.remove("disabled");
+              restartButton.classList.add("disabled");
+              saveButton.classList.add("disabled");
+              historyButton.classList.add("disabled");
+              compileButton.classList.add("disabled");
+            }
+          }
+        } else {
+          compileButton.classList.remove("history-mode")
+          compileButton.innerHTML = "COMPILE <i style='font-size: medium' class='fa fa-code' aria-hidden='true'></i>";
+          playButton.style.display = "none";
+          restartButton.style.display = "none";
+          saveButton.style.display = "none";
+          historyButton.style.display = "none";
+
+          antsButton.classList.remove("disabled");
+          particlesButton.classList.remove("disabled");
+          lightButton.classList.remove("disabled");
+          magnetsButton.classList.remove("disabled");
         }
-  
-        function playOrPauseClick() {
+      }
+
+      function updateCellStyles(xml_response) { 
+        console.log(xml_response);
+        Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { cell.style.background = ""})
+        JSON.parse(xml_response).forEach(function (particle) {
+          cell = document.getElementById((particle[1]*grid_size + particle[0]).toString())
+          cell.style.background = cell.style.background != "" ? ["linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")", cell.style.background].join(", ") : "linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")";
+        })
+      }
+
+      function compileClick() {
+        history_mode = false;
+
+        console.log("compileClick")
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", 'http://causal-discovery.herokuapp.com:80/compileautumn', true);
+
+        //Send the proper header information along with the request
+        xhr.onreadystatechange = function () { // Call a function when the state changes.
+          if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+            grid_size = JSON.parse(xhr.response)[0];
+            content = JSON.parse(xhr.response)[1];
+            console.log("grid_size: "+grid_size);
+            console.log("content: "+content);
+
+            // update grid
+            Array.from(document.getElementsByClassName("grid")).forEach(function (grid) {
+              grid.innerHTML = "";
+              grid.style = "grid-template-columns: repeat("+grid_size+", 25px); grid-template-rows: repeat("+grid_size+", 25px);"
+              for (i=0; i < grid_size*grid_size; i++) {
+                const button = document.createElement("button")
+                button.classList.add("cell");
+                button.id = i.toString();
+                button.onclick = function() { console.log(button.id); click(parseInt(button.id));};
+                grid.appendChild(button);
+              }
+            });
+
+            if (content == "") {
+              compiled = false;
+              not_run_yet = true;
+              myCodeMirror.setOption("readOnly", false);
+              particlesClick();
+            } else { 
+              compiled = true;
+              myCodeMirror.setOption("readOnly", "nocursor");
+              myCodeMirror.setValue(`%% Compiled Autumn Code \n` + content);
+            }
+            updateButtonStyles(); 
+          }
+        };
+        console.log("client_id: "+client_id);
+        console.log("autumn-string: "+myCodeMirror.getValue());
+        formData = new FormData();
+        formData.append("autumnstring", compiled ? "" : myCodeMirror.getValue());
+        formData.append("clientid", client_id);
+        xhr.send(formData);
+      }
+
+      function getRandomInt(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
+      }
+
+      function playOrPauseClick() {
+        if (!history_mode) {
           if (intervalID !== -1) { // pause
             clearInterval(intervalID);
             intervalID = -1;
+            updateButtonStyles();
           } else { // play
             if (not_run_yet) {
               var xhr = new XMLHttpRequest();
@@ -202,18 +267,29 @@
               xhr.send();
             } else {
               intervalID = setInterval(step, timestep);
+              updateButtonStyles();
             }
+          }
+        } else {
+          if (historyIntervalID == -1) {
+            historyIntervalID = setInterval(historyStep, historytimestep);
+          } else {
+            clearInterval(historyIntervalID);
+            historyIntervalID = -1;
           }
           updateButtonStyles();
         }
-  
-        function restartClick() {
+
+      }
+
+      function restartClick() {
+        if (!history_mode) {
           var xhr = new XMLHttpRequest();
           xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn?clientid='+client_id, true);
-  
+
           //Send the proper header information along with the request
           xhr.setRequestHeader("Content-Type", "application/json");
-  
+
           xhr.onreadystatechange = function () { // Call a function when the state changes.
             if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
                 // Request finished. Do processing here.
@@ -229,17 +305,23 @@
             }
           };
           xhr.send();
+        } else {
+          history_index = 0;
+          historyIntervalID = setInterval(historyStep, historytimestep);
+          updateButtonStyles();
         }
-        
-  
-        function click(id) {
+      }
+      
+
+      function click(id) {
+        if (!history_mode) {
           if (intervalID != -1) {
             var xhr = new XMLHttpRequest();
             xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/clicked?x='+(id % grid_size)+'&y='+Math.floor(id/grid_size)+'&clientid='+client_id, true);
-  
+
             //Send the proper header information along with the request
             xhr.setRequestHeader("Content-Type", "application/json");
-  
+
             xhr.onreadystatechange = function () { // Call a function when the state changes.
               if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
                   // Request finished. Do processing here.
@@ -251,441 +333,485 @@
             xhr.send();
           }
         }
-  
-        function step() {
-          console.log("step");
+      }
+
+      function step() {
+        console.log("step");
+        var xhr = new XMLHttpRequest();
+
+        xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/step?clientid='+client_id, true);
+
+        //Send the proper header information along with the request
+        xhr.setRequestHeader("Content-Type", "application/json");
+
+        xhr.onreadystatechange = function () { // Call a function when the state changes.
+          if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+              // Request finished. Do processing here.
+              console.log("success!");
+              console.log("xhr.response: "+JSON.stringify(xhr.response));
+              console.log(typeof(JSON.parse(xhr.response)))
+
+
+
+              updateCellStyles(xhr.response);
+              clearInterval(intervalID);
+              intervalID = setInterval(step, timestep);
+          }
+        };
+        xhr.send();
+      }
+
+      function historyClick() {
+        if (!history_mode) {
+          history_mode = true;
           var xhr = new XMLHttpRequest();
-  
-          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/step?clientid='+client_id, true);
-  
-          //Send the proper header information along with the request
-          xhr.setRequestHeader("Content-Type", "application/json");
-  
+
+          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/replay?clientid='+client_id, true);
+                  //Send the proper header information along with the request
+                  xhr.setRequestHeader("Content-Type", "application/json");
+
           xhr.onreadystatechange = function () { // Call a function when the state changes.
             if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
                 // Request finished. Do processing here.
                 console.log("success!");
                 console.log("xhr.response: "+JSON.stringify(xhr.response));
-                if (intervalID != -1) {
-                  clearInterval(intervalID);
-                }
-                console.log(typeof(JSON.parse(xhr.response)))
-  
-                updateCellStyles(xhr.response);
-                intervalID = setInterval(step, timestep);
+
+                history_response = xhr.response;
+                history_index = 0;
+                historyIntervalID = setInterval(historyStep, historytimestep);
+                updateButtonStyles();
             }
           };
           xhr.send();
-        }
 
-        var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
-                                                                                              theme : "erlang-dark",                                                                                              
-                                                                                              lineNumbers: true,
-                                                                                              viewportMargin: 0});
-        particlesClick();
-
-      updateCellStyles("[]");
-
-      function colorToRGBA(color, a) {
-        console.log("colorToRGBA")
-        console.log(color);
-        if (color[0] != "#") {
-          hex = colors[color];
         } else {
-          hex = color;
+          history_mode = false;
+          history_response = '{}';
+          updateButtonStyles();
+          updateCellStyles("[]");
         }
-        console.log("hex: "+hex)
-        return hexToRGB(hex, a)
+
       }
 
-      function hexToRGB(hex, alpha) {
-        var r = parseInt(hex.slice(1, 3), 16),
-            g = parseInt(hex.slice(3, 5), 16),
-            b = parseInt(hex.slice(5, 7), 16);
-
-        if (alpha) {
-            return "rgba(" + r + ", " + g + ", " + b + ", " + alpha + ")";
+      function historyStep() {
+        if (history_index < Object.keys(JSON.parse(history_response)).length) {
+          console.log(history_response);
+          console.log(JSON.parse(history_response)[history_index])
+          updateCellStyles(JSON.stringify(JSON.parse(history_response)[history_index]));
+          history_index++;
         } else {
-            return "rgb(" + r + ", " + g + ", " + b + ")";
+          clearInterval(historyIntervalID);
+          historyIntervalID = -1;
+          updateButtonStyles();
         }
       }
 
-      var colors = {"aliceblue":"#f0f8ff","antiquewhite":"#faebd7","aqua":"#00ffff","aquamarine":"#7fffd4","azure":"#f0ffff",
-        "beige":"#f5f5dc","bisque":"#ffe4c4","black":"#000000","blanchedalmond":"#ffebcd","blue":"#0000ff","blueviolet":"#8a2be2","brown":"#a52a2a","burlywood":"#deb887",
-        "cadetblue":"#5f9ea0","chartreuse":"#7fff00","chocolate":"#d2691e","coral":"#ff7f50","cornflowerblue":"#6495ed","cornsilk":"#fff8dc","crimson":"#dc143c","cyan":"#00ffff",
-        "darkblue":"#00008b","darkcyan":"#008b8b","darkgoldenrod":"#b8860b","darkgray":"#a9a9a9","darkgreen":"#006400","darkkhaki":"#bdb76b","darkmagenta":"#8b008b","darkolivegreen":"#556b2f",
-        "darkorange":"#ff8c00","darkorchid":"#9932cc","darkred":"#8b0000","darksalmon":"#e9967a","darkseagreen":"#8fbc8f","darkslateblue":"#483d8b","darkslategray":"#2f4f4f","darkturquoise":"#00ced1",
-        "darkviolet":"#9400d3","deeppink":"#ff1493","deepskyblue":"#00bfff","dimgray":"#696969","dodgerblue":"#1e90ff",
-        "firebrick":"#b22222","floralwhite":"#fffaf0","forestgreen":"#228b22","fuchsia":"#ff00ff",
-        "gainsboro":"#dcdcdc","ghostwhite":"#f8f8ff","gold":"#ffd700","goldenrod":"#daa520","gray":"#808080","green":"#008000","greenyellow":"#adff2f",
-        "honeydew":"#f0fff0","hotpink":"#ff69b4",
-        "indianred ":"#cd5c5c","indigo":"#4b0082","ivory":"#fffff0","khaki":"#f0e68c",
-        "lavender":"#e6e6fa","lavenderblush":"#fff0f5","lawngreen":"#7cfc00","lemonchiffon":"#fffacd","lightblue":"#add8e6","lightcoral":"#f08080","lightcyan":"#e0ffff","lightgoldenrodyellow":"#fafad2",
-        "lightgrey":"#d3d3d3","lightgreen":"#90ee90","lightpink":"#ffb6c1","lightsalmon":"#ffa07a","lightseagreen":"#20b2aa","lightskyblue":"#87cefa","lightslategray":"#778899","lightsteelblue":"#b0c4de",
-        "lightyellow":"#ffffe0","lime":"#00ff00","limegreen":"#32cd32","linen":"#faf0e6",
-        "magenta":"#ff00ff","maroon":"#800000","mediumaquamarine":"#66cdaa","mediumblue":"#0000cd","mediumorchid":"#ba55d3","mediumpurple":"#9370d8","mediumseagreen":"#3cb371","mediumslateblue":"#7b68ee",
-        "mediumspringgreen":"#00fa9a","mediumturquoise":"#48d1cc","mediumvioletred":"#c71585","midnightblue":"#191970","mintcream":"#f5fffa","mistyrose":"#ffe4e1","moccasin":"#ffe4b5",
-        "navajowhite":"#ffdead","navy":"#000080",
-        "oldlace":"#fdf5e6","olive":"#808000","olivedrab":"#6b8e23","orange":"#ffa500","orangered":"#ff4500","orchid":"#da70d6",
-        "palegoldenrod":"#eee8aa","palegreen":"#98fb98","paleturquoise":"#afeeee","palevioletred":"#d87093","papayawhip":"#ffefd5","peachpuff":"#ffdab9","peru":"#cd853f","pink":"#ffc0cb","plum":"#dda0dd","powderblue":"#b0e0e6","purple":"#800080",
-        "rebeccapurple":"#663399","red":"#ff0000","rosybrown":"#bc8f8f","royalblue":"#4169e1",
-        "saddlebrown":"#8b4513","salmon":"#fa8072","sandybrown":"#f4a460","seagreen":"#2e8b57","seashell":"#fff5ee","sienna":"#a0522d","silver":"#c0c0c0","skyblue":"#87ceeb","slateblue":"#6a5acd","slategray":"#708090","snow":"#fffafa","springgreen":"#00ff7f","steelblue":"#4682b4",
-        "tan":"#d2b48c","teal":"#008080","thistle":"#d8bfd8","tomato":"#ff6347","turquoise":"#40e0d0",
-        "violet":"#ee82ee",
-        "wheat":"#f5deb3","white":"#ffffff","whitesmoke":"#f5f5f5",
-        "yellow":"#ffff00","yellowgreen":"#9acd32"};
+      var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
+                                                                                            theme : "erlang-dark",                                                                                              
+                                                                                            lineNumbers: true,
+                                                                                            viewportMargin: 0});
+      particlesClick();
 
-        function antsClick() {
-        myCodeMirror.setValue(`(program
-  (const (= GRID_SIZE 16))
+    updateCellStyles("[]");
 
-  (type alias Position ((: x BigInt) (: y BigInt)))
-  (type alias Particle ((: position Position) (: color String) (: render Bool)))
+    function colorToRGBA(color, a) {
+      console.log("colorToRGBA")
+      console.log(color);
+      if (color[0] != "#") {
+        hex = colors[color];
+      } else {
+        hex = color;
+      }
+      console.log("hex: "+hex)
+      return hexToRGB(hex, a)
+    }
 
-  (external (: click Click))
-  
-  (: particles (List Particle))
-  (= particles (initnext (antGen 6) (if (occurred click) 
-                                      then (vcat (prev particles) (foodGen 4)) 
-                                      else (map nextParticle particles))))
-  
-  (: manhattanDistance (-> Particle Particle BigInt))
-  (= manhattanDistance (fn (particle1 particle2) 
-                            (+ 
-                              (abs
-                                (-
-                                  (.. (.. particle1 position) x)
-                                  (.. (.. particle2 position) x)
-                                )
-                              ) 
-                              (abs
-                                (-
-                                  (.. (.. particle1 position) y)
-                                  (.. (.. particle2 position) y)
-                                )
+    function hexToRGB(hex, alpha) {
+      var r = parseInt(hex.slice(1, 3), 16),
+          g = parseInt(hex.slice(3, 5), 16),
+          b = parseInt(hex.slice(5, 7), 16);
+
+      if (alpha) {
+          return "rgba(" + r + ", " + g + ", " + b + ", " + alpha + ")";
+      } else {
+          return "rgb(" + r + ", " + g + ", " + b + ")";
+      }
+    }
+
+    var colors = {"aliceblue":"#f0f8ff","antiquewhite":"#faebd7","aqua":"#00ffff","aquamarine":"#7fffd4","azure":"#f0ffff",
+      "beige":"#f5f5dc","bisque":"#ffe4c4","black":"#000000","blanchedalmond":"#ffebcd","blue":"#0000ff","blueviolet":"#8a2be2","brown":"#a52a2a","burlywood":"#deb887",
+      "cadetblue":"#5f9ea0","chartreuse":"#7fff00","chocolate":"#d2691e","coral":"#ff7f50","cornflowerblue":"#6495ed","cornsilk":"#fff8dc","crimson":"#dc143c","cyan":"#00ffff",
+      "darkblue":"#00008b","darkcyan":"#008b8b","darkgoldenrod":"#b8860b","darkgray":"#a9a9a9","darkgreen":"#006400","darkkhaki":"#bdb76b","darkmagenta":"#8b008b","darkolivegreen":"#556b2f",
+      "darkorange":"#ff8c00","darkorchid":"#9932cc","darkred":"#8b0000","darksalmon":"#e9967a","darkseagreen":"#8fbc8f","darkslateblue":"#483d8b","darkslategray":"#2f4f4f","darkturquoise":"#00ced1",
+      "darkviolet":"#9400d3","deeppink":"#ff1493","deepskyblue":"#00bfff","dimgray":"#696969","dodgerblue":"#1e90ff",
+      "firebrick":"#b22222","floralwhite":"#fffaf0","forestgreen":"#228b22","fuchsia":"#ff00ff",
+      "gainsboro":"#dcdcdc","ghostwhite":"#f8f8ff","gold":"#ffd700","goldenrod":"#daa520","gray":"#808080","green":"#008000","greenyellow":"#adff2f",
+      "honeydew":"#f0fff0","hotpink":"#ff69b4",
+      "indianred ":"#cd5c5c","indigo":"#4b0082","ivory":"#fffff0","khaki":"#f0e68c",
+      "lavender":"#e6e6fa","lavenderblush":"#fff0f5","lawngreen":"#7cfc00","lemonchiffon":"#fffacd","lightblue":"#add8e6","lightcoral":"#f08080","lightcyan":"#e0ffff","lightgoldenrodyellow":"#fafad2",
+      "lightgrey":"#d3d3d3","lightgreen":"#90ee90","lightpink":"#ffb6c1","lightsalmon":"#ffa07a","lightseagreen":"#20b2aa","lightskyblue":"#87cefa","lightslategray":"#778899","lightsteelblue":"#b0c4de",
+      "lightyellow":"#ffffe0","lime":"#00ff00","limegreen":"#32cd32","linen":"#faf0e6",
+      "magenta":"#ff00ff","maroon":"#800000","mediumaquamarine":"#66cdaa","mediumblue":"#0000cd","mediumorchid":"#ba55d3","mediumpurple":"#9370d8","mediumseagreen":"#3cb371","mediumslateblue":"#7b68ee",
+      "mediumspringgreen":"#00fa9a","mediumturquoise":"#48d1cc","mediumvioletred":"#c71585","midnightblue":"#191970","mintcream":"#f5fffa","mistyrose":"#ffe4e1","moccasin":"#ffe4b5",
+      "navajowhite":"#ffdead","navy":"#000080",
+      "oldlace":"#fdf5e6","olive":"#808000","olivedrab":"#6b8e23","orange":"#ffa500","orangered":"#ff4500","orchid":"#da70d6",
+      "palegoldenrod":"#eee8aa","palegreen":"#98fb98","paleturquoise":"#afeeee","palevioletred":"#d87093","papayawhip":"#ffefd5","peachpuff":"#ffdab9","peru":"#cd853f","pink":"#ffc0cb","plum":"#dda0dd","powderblue":"#b0e0e6","purple":"#800080",
+      "rebeccapurple":"#663399","red":"#ff0000","rosybrown":"#bc8f8f","royalblue":"#4169e1",
+      "saddlebrown":"#8b4513","salmon":"#fa8072","sandybrown":"#f4a460","seagreen":"#2e8b57","seashell":"#fff5ee","sienna":"#a0522d","silver":"#c0c0c0","skyblue":"#87ceeb","slateblue":"#6a5acd","slategray":"#708090","snow":"#fffafa","springgreen":"#00ff7f","steelblue":"#4682b4",
+      "tan":"#d2b48c","teal":"#008080","thistle":"#d8bfd8","tomato":"#ff6347","turquoise":"#40e0d0",
+      "violet":"#ee82ee",
+      "wheat":"#f5deb3","white":"#ffffff","whitesmoke":"#f5f5f5",
+      "yellow":"#ffff00","yellowgreen":"#9acd32"};
+
+      function antsClick() {
+      myCodeMirror.setValue(`(program
+(const (= GRID_SIZE 16))
+
+(type alias Position ((: x BigInt) (: y BigInt)))
+(type alias Particle ((: position Position) (: color String) (: render Bool)))
+
+(external (: click Click))
+
+(: particles (List Particle))
+(= particles (initnext (antGen 6) (if (occurred click) 
+                                    then (vcat (prev particles) (foodGen 4)) 
+                                    else (map nextParticle particles))))
+
+(: manhattanDistance (-> Particle Particle BigInt))
+(= manhattanDistance (fn (particle1 particle2) 
+                          (+ 
+                            (abs
+                              (-
+                                (.. (.. particle1 position) x)
+                                (.. (.. particle2 position) x)
+                              )
+                            ) 
+                            (abs
+                              (-
+                                (.. (.. particle1 position) y)
+                                (.. (.. particle2 position) y)
                               )
                             )
-                          ))
+                          )
+                        ))
+
+(: createAnt (-> Position Particle))
+(= createAnt (fn (initPosition) 
+                 (Particle initPosition "gray" true)))
+
+(: createFood (-> Position Particle))
+(= createFood (fn (initPosition)
+                  (Particle initPosition "red" true)))
+
+(: antGen (-> BigInt (List Particle)))
+(= antGen (fn (count) 
+              (let ((= coords (uniformChoice (range 0 (- (* GRID_SIZE GRID_SIZE) 1)) count))
+                    (= positions (map (--> coord (Position (% coord GRID_SIZE) (floor BigInt (/ coord GRID_SIZE)))) coords))
+                    (= ants (map createAnt positions))) 
+                   ants)))
   
-  (: createAnt (-> Position Particle))
-  (= createAnt (fn (initPosition) 
-                   (Particle initPosition "gray" true)))
-  
-  (: createFood (-> Position Particle))
-  (= createFood (fn (initPosition)
-                    (Particle initPosition "red" true)))
-  
-  (: antGen (-> BigInt (List Particle)))
-  (= antGen (fn (count) 
-                (let ((= coords (uniformChoice (range 0 (- (* GRID_SIZE GRID_SIZE) 1)) count))
-                      (= positions (map (--> coord (Position (% coord GRID_SIZE) (floor BigInt (/ coord GRID_SIZE)))) coords))
-                      (= ants (map createAnt positions))) 
-                     ants)))
-    
-  (: foodGen (-> BigInt (List Particle)))
-  (= foodGen (fn (count) 
-                (let ((= coords (uniformChoice (range 0 (- (* GRID_SIZE GRID_SIZE) 1)) count))
-                      (= positions (map (--> coord (Position (% coord GRID_SIZE) (floor BigInt (/ coord GRID_SIZE)))) coords))
-                      (= food (map createFood positions))) 
-                     food))) 
+(: foodGen (-> BigInt (List Particle)))
+(= foodGen (fn (count) 
+              (let ((= coords (uniformChoice (range 0 (- (* GRID_SIZE GRID_SIZE) 1)) count))
+                    (= positions (map (--> coord (Position (% coord GRID_SIZE) (floor BigInt (/ coord GRID_SIZE)))) coords))
+                    (= food (map createFood positions))) 
+                   food))) 
 
-  (: nextParticle (-> Particle Particle))
-  (= nextParticle (fn (particle) 
-                      (if (== (.. particle color) "gray") 
-                       then (nextAntParticle particle) 
-                       else (nextFoodParticle particle))))
+(: nextParticle (-> Particle Particle))
+(= nextParticle (fn (particle) 
+                    (if (== (.. particle color) "gray") 
+                     then (nextAntParticle particle) 
+                     else (nextFoodParticle particle))))
 
-  (: nextAntParticle (-> Particle Particle))
-  (= nextAntParticle (fn (ant)  
-                         (let ((= x (.. (.. ant position) x))
-                               (= y (.. (.. ant position) y))
-                               (= foods (filter (--> particle (& (== (.. particle color) "red") (.. particle render))) particles))
-                               (= closestDistance (if (== (length foods) 0) then -1 else (min (map (--> food (manhattanDistance ant food)) foods))))
-                               (= closestFoods (filter (--> food (== closestDistance (manhattanDistance ant food))) foods))
-                               (= closestFoodPosition (if (== 0 (length closestFoods)) then (Position -1 -1) else (.. (first closestFoods) position)))
-                               (= delta (if (| (== -1 (.. closestFoodPosition x)) (& (== (.. closestFoodPosition x) x) (== (.. closestFoodPosition y) y)))
-                                         then (Position 0 0)
-                                         else (if (& (== x (.. closestFoodPosition x)) (!= y (.. closestFoodPosition y))) 
-                                               then (Position (- (.. closestFoodPosition x) x) (/ (- (.. closestFoodPosition y) y) (abs (- (.. closestFoodPosition y) y))))
-                                               else (Position (/ (- (.. closestFoodPosition x) x) (abs (- (.. closestFoodPosition x) x))) 0))))) 
-                              (createAnt (Position (+ x (.. delta x)) (+ y (.. delta y)))))))
+(: nextAntParticle (-> Particle Particle))
+(= nextAntParticle (fn (ant)  
+                       (let ((= x (.. (.. ant position) x))
+                             (= y (.. (.. ant position) y))
+                             (= foods (filter (--> particle (& (== (.. particle color) "red") (.. particle render))) particles))
+                             (= closestDistance (if (== (length foods) 0) then -1 else (min (map (--> food (manhattanDistance ant food)) foods))))
+                             (= closestFoods (filter (--> food (== closestDistance (manhattanDistance ant food))) foods))
+                             (= closestFoodPosition (if (== 0 (length closestFoods)) then (Position -1 -1) else (.. (first closestFoods) position)))
+                             (= delta (if (| (== -1 (.. closestFoodPosition x)) (& (== (.. closestFoodPosition x) x) (== (.. closestFoodPosition y) y)))
+                                       then (Position 0 0)
+                                       else (if (& (== x (.. closestFoodPosition x)) (!= y (.. closestFoodPosition y))) 
+                                             then (Position (- (.. closestFoodPosition x) x) (/ (- (.. closestFoodPosition y) y) (abs (- (.. closestFoodPosition y) y))))
+                                             else (Position (/ (- (.. closestFoodPosition x) x) (abs (- (.. closestFoodPosition x) x))) 0))))) 
+                            (createAnt (Position (+ x (.. delta x)) (+ y (.. delta y)))))))
 
-  (: nextFoodParticle (-> Particle Particle))
-  (= nextFoodParticle (fn (food) 
-                          (let ((= antsWithSamePosition (filter (--> particle (& (== (.. particle color) "gray") (& (== (string (.. particle position)) (string (.. food position))) (.. particle render)))) particles))
-                                (= newFood (if (== (length antsWithSamePosition) 0) then food else (Particle (.. food position) "red" false))) 
-                               ) newFood)))
+(: nextFoodParticle (-> Particle Particle))
+(= nextFoodParticle (fn (food) 
+                        (let ((= antsWithSamePosition (filter (--> particle (& (== (.. particle color) "gray") (& (== (string (.. particle position)) (string (.. food position))) (.. particle render)))) particles))
+                              (= newFood (if (== (length antsWithSamePosition) 0) then food else (Particle (.. food position) "red" false))) 
+                             ) newFood)))
 
-  (= noFoodRemaining (== (length (filter (--> particle (& (== (.. particle color) "red") (.. particle render))) particles)) 0))
+(= noFoodRemaining (== (length (filter (--> particle (& (== (.. particle color) "red") (.. particle render))) particles)) 0))
 )`);
-      }
+    }
 
-      function particlesClick() {
-        myCodeMirror.setValue(`(program
-  (const (= GRID_SIZE 16))
+    function particlesClick() {
+      myCodeMirror.setValue(`(program
+(const (= GRID_SIZE 16))
 
-  (type alias Position ((: x Int) (: y Int)))
-  (type alias Particle ((: position Position) (: color String) (: render Bool)))
+(type alias Position ((: x Int) (: y Int)))
+(type alias Particle ((: position Position) (: color String) (: render Bool)))
 
-  (external (: click Click))
+(external (: click Click))
 
-  (: particles (List Particle))
-  (= particles (initnext (list) (if (occurred click) 
-                               then (push! (prev particles) (particleGen (Position 1 1))) 
-                               else (map nextParticle particles))))
+(: particles (List Particle))
+(= particles (initnext (list) (if (occurred click) 
+                             then (push! (prev particles) (particleGen (Position 1 1))) 
+                             else (map nextParticle particles))))
+
+(= nparticles (length particles))
+
+(: isFree (-> Position Bool))
+(= isFree (fn (position) 
+              (== (length (filter (--> particle (== (.. particle position) position)) particles)) 0)))
+
+(: isWithinBounds (-> Position Bool))
+(= isWithinBounds (fn (position) 
+                      (& (>= (.. position x) 0) (& (< (.. position x) GRID_SIZE) (& (>= (.. position y) 0) (< (.. position y) GRID_SIZE))))))
+
+(: adjacentPositions (-> Position (List Position)))
+(= adjacentPositions (fn (position) 
+                         (let ((= x (.. position x)) 
+                               (= y (.. position y)) 
+                               (= positions (filter isWithinBounds (list (Position (+ x 1) y) (Position (- x 1) y) (Position x (+ y 1)) (Position x (- y 1))))))
+                              positions)))
+
+(: nextParticle (-> Particle Particle))
+(= nextParticle (fn (particle) 
+                    (let ((= freePositions (filter isFree (adjacentPositions (.. particle position))))) 
+                         (case freePositions
+                              (=> (list) particle)
+                              (=> _ (Particle (uniformChoice freePositions) (.. particle color) true))))))
+
+(: particleGen (-> Position Particle))
+(= particleGen (fn (initPosition) (Particle initPosition "blue" true)))
+)`);
+    }
+
+    function lightClick() {
+      myCodeMirror.setValue(`(program
+(const (= GRID_SIZE 10))
+
+(type alias Position ((: x BigInt) (: y BigInt)))
+(type alias Particle ((: position Position) (: color String) (: render Bool)))
+
+(external (: click Click))
+
+(: particles (List Particle))
+(= particles (initnext (vcat (map (--> num (Particle (Position (% num GRID_SIZE) (floor BigInt (/ num GRID_SIZE))) "black" true)) (range 1 (- (* GRID_SIZE GRID_SIZE) 1))) (list (Particle (Position 0 0) "black" true))) 
+                       (if (occurred click) 
+                        then (if (== (.. click x) (.. click y))
+                              then (map nextParticle particles) 
+                              else particles) 
+                        else particles)
+             )
+)
+
+
+(: nextParticle (-> Particle Particle))
+(= nextParticle (fn (particle) 
+                    (if (== (.. (.. particle position) x) (.. (.. particle position) y)) 
+           then particle 
+           else (if (== (.. particle color) "black") 
+             then (Particle (.. particle position) "yellow" true) 
+             else (
+                                 Particle (.. particle position) "black" true
+                                )
+                           )
+                    )
+                )
+)
+)`)
+    }
+
+    function magnetsClick() {
+      myCodeMirror.setValue(`(program
+(const (= GRID_SIZE 16))
+
+(type alias Position ((: x Int) (: y Int)))
+(type alias Particle ((: position Position) (: color String) (: render Bool)))
+(type alias Magnet ((: plusPosition Position) (: minusPosition Position)))
+
+(external (: click Click))
+
+(= mobileMagnet (initnext (Magnet (Position 4 7) (Position 4 8)) 
+                          (if (occurred click) 
+                               then (nextMagnet mobileMagnet click)
+                               else mobileMagnet)))
+
+(= moveRight (list (Magnet (Position 5 8) (Position 4 8)) 
+                  (Magnet (Position 5 8) (Position 5 9)) 
+                   (Magnet (Position 4 7) (Position 5 7)) 
+                   (Magnet (Position 5 6) (Position 5 7))
+                   (Magnet (Position 5 8) (Position 5 7))))
+
+(= moveLeft (list (Magnet (Position 9 6) (Position 9 7)) 
+                 (Magnet (Position 10 7) (Position 9 7)) 
+                  (Magnet (Position 9 8) (Position 9 7)) 
+                  (Magnet (Position 9 8) (Position 10 8))
+                  (Magnet (Position 9 8) (Position 9 9))))
+
+(= moveUp (list (Magnet (Position 7 10) (Position 7 11)) 
+                (Magnet (Position 7 10) (Position 6 10)) 
+                (Magnet (Position 7 10) (Position 8 10))))
+
+(= moveDown (list (Magnet (Position 7 4) (Position 7 5)) 
+                  (Magnet (Position 6 5) (Position 7 5)) 
+                  (Magnet (Position 8 5) (Position 7 5))))
   
-  (= nparticles (length particles))
-  
-  (: isFree (-> Position Bool))
-  (= isFree (fn (position) 
-                (== (length (filter (--> particle (== (.. particle position) position)) particles)) 0)))
+(= plusInvalid (list (Position 6 7) (Position 7 6) (Position 8 7)))
+(= minusInvalid (list (Position 7 9) (Position 6 8) (Position 8 8)))
+
+
+(: nextMagnet (-> Magnet Click Magnet))
+(= nextMagnet (fn (magnet click) 
+                  (let (
+                        (= upPressed (& (occurred click) (& (== (.. click x) 7) (== (.. click y) 0))))
+                        (= downPressed (& (occurred click) (& (== (.. click x) 7) (== (.. click y) 15))))
+                        (= leftPressed (& (occurred click) (& (== (.. click x) 0) (== (.. click y) 7))))
+                        (= rightPressed (& (occurred click) (& (== (.. click x) 15) (== (.. click y) 7))))
+                        (= rotatePressed (& (occurred click) (| (& (== (.. click x) 7) (== (.. click y) 7)) (& (== (.. click x) 7) (== (.. click y) 8)))))
+                        (= buttonPressed (| upPressed (| downPressed (| leftPressed (| rightPressed rotatePressed)))))
+                        
+            (= mobileMagnetPlusX (.. (.. magnet plusPosition) x))
+            (= mobileMagnetPlusY (.. (.. magnet plusPosition) y))
+            (= mobileMagnetMinusX (.. (.. magnet minusPosition) x))
+            (= mobileMagnetMinusY (.. (.. magnet minusPosition) y))
+            
+            (= proposedMinusY (if (& rotatePressed (!= mobileMagnetMinusY mobileMagnetPlusY))
+                                           then mobileMagnetPlusY
+                                           else (if (& rotatePressed (> mobileMagnetMinusX mobileMagnetPlusX))
+                                                 then (- mobileMagnetPlusY 1)
+                                                 else (if (& rotatePressed (< mobileMagnetMinusX mobileMagnetPlusX))
+                                                       then (+ mobileMagnetPlusY 1)
+                                                       else (if upPressed
+                                                             then (- mobileMagnetMinusY 1)
+                                                             else (if downPressed
+                                                                   then (+ mobileMagnetMinusY 1)
+                                                                   else mobileMagnetMinusY))))))
+            (= proposedMinusX (if (& rotatePressed (!= mobileMagnetMinusX mobileMagnetPlusX))
+                                           then mobileMagnetPlusX
+                                           else (if (& rotatePressed (> mobileMagnetMinusY mobileMagnetPlusY))
+                                                 then (+ mobileMagnetPlusX 1)
+                                                 else (if (& rotatePressed (< mobileMagnetMinusY mobileMagnetPlusY))
+                                                       then (- mobileMagnetPlusX 1)
+                                                       else (if rightPressed
+                                                             then (+ mobileMagnetMinusX 1)
+                                                             else (if leftPressed
+                                                                   then (- mobileMagnetMinusX 1)
+                                                                   else mobileMagnetMinusX))))))
+            
+            (= proposedPlusY (if upPressed 
+                                          then (- mobileMagnetPlusY 1)
+                                          else (if downPressed
+                                                then (+ mobileMagnetPlusY 1) 
+                                                else mobileMagnetPlusY)))
+
+                        (= proposedPlusX (if leftPressed 
+                                          then (- mobileMagnetPlusX 1)
+                                          else (if rightPressed
+                                                then (+ mobileMagnetPlusX 1) 
+                                                else mobileMagnetPlusX)))
+          
+            (= proposed (Magnet (Position proposedPlusX proposedPlusY) (Position proposedMinusX proposedMinusY)))
+            
+            (= invalid (| (in (Position proposedPlusX proposedPlusY) (list (Position 7 7) (Position 7 8))) (in (Position proposedMinusX proposedMinusY) (list (Position 7 7) (Position 7 8)))))
+                        
+                  (= finalPlusX (if (in proposed moveRight)
+                                       then (+ proposedPlusX 1)
+                                       else (if (in proposed moveLeft)
+                                             then (- proposedPlusX 1)
+                                             else (if invalid
+                                                   then mobileMagnetPlusX
+                                                   else (if (in (.. proposed plusPosition) plusInvalid)
+                                                         then mobileMagnetPlusX
+                                                         else (if (in (.. proposed minusPosition) minusInvalid)
+                                                               then mobileMagnetPlusX
+                                                               else proposedPlusX))))))
+
+                  (= finalPlusY (if (in proposed moveUp)
+                                       then (- proposedPlusY 1)
+                                       else (if (in proposed moveDown)
+                                             then (+ proposedPlusY 1)
+                                             else (if invalid
+                                                   then mobileMagnetPlusY
+                                                   else (if (in (.. proposed plusPosition) plusInvalid)
+                                                         then mobileMagnetPlusY
+                                                         else (if (in (.. proposed minusPosition) minusInvalid) 
+                                                               then mobileMagnetPlusY
+                                                               else proposedPlusY))))))
+                       
+            (= finalMinusX (if (in proposed moveRight) 
+                                        then (+ proposedMinusX 1)
+                                        else (if (in proposed moveLeft)
+                                              then (- proposedMinusX 1)
+                                              else (if invalid
+                                                    then mobileMagnetMinusX
+                                                    else (if (in (.. proposed plusPosition) plusInvalid) 
+                                                          then mobileMagnetMinusX
+                                                          else (if (in (.. proposed minusPosition) minusInvalid)
+                                                                then mobileMagnetMinusX
+                                                                else proposedMinusX))))))
+                       
+            (= finalMinusY (if (in proposed moveUp) 
+                                        then (- proposedMinusY 1)
+                                        else (if (in proposed moveDown)
+                                              then (+ proposedMinusY 1)
+                                              else (if invalid
+                                                    then mobileMagnetMinusY
+                                                    else (if (in (.. proposed plusPosition) plusInvalid) 
+                                                          then mobileMagnetMinusY
+                                                          else (if (in (.. proposed minusPosition) minusInvalid)
+                                                                then mobileMagnetMinusY
+                                                                else proposedMinusY))))))
+
+           (= newMagnet  (if (& (isWithinBounds (Position finalPlusX finalPlusY)) (isWithinBounds (Position finalMinusX finalMinusY)))
+                                      then (Magnet (Position finalPlusX finalPlusY) (Position finalMinusX finalMinusY))
+                                else magnet)
+                       )
+                       
+                       ) 
+                       newMagnet                    
+                  )))
+
+
+(: particles (List Particle))
+(= particles (initnext (list
+                           (Particle (Position 7 0) "green" true)
+                            (Particle (Position 7 15) "green" true)
+                            (Particle (Position 15 7) "green" true)
+                            (Particle (Position 0 7) "green" true)
+                            (Particle (Position 7 7) "red" true)
+                            (Particle (Position 7 8) "blue" true)
+                            (Particle (Position 4 7) "red" true)
+                            (Particle (Position 4 8) "blue" true)
+                       ) 
+                    (if (occurred click) 
+                        then (map nextParticle particles)
+                        else particles)))
+
+(: nextParticle (-> Particle Particle))
+(= nextParticle (fn (particle) 
+                    (if (& (== (.. particle color) "red") (!= (.. particle position) (Position 7 7))) 
+                     then (Particle (.. mobileMagnet plusPosition) "red" true) 
+                     else (if (& (== (.. particle color) "blue") (!= (.. particle position) (Position 7 8)))
+                           then (Particle (.. mobileMagnet minusPosition) "blue" true)
+                           else particle))
+                ))
 
   (: isWithinBounds (-> Position Bool))
   (= isWithinBounds (fn (position) 
-                        (& (>= (.. position x) 0) (& (< (.. position x) GRID_SIZE) (& (>= (.. position y) 0) (< (.. position y) GRID_SIZE))))))
-  
-  (: adjacentPositions (-> Position (List Position)))
-  (= adjacentPositions (fn (position) 
-                           (let ((= x (.. position x)) 
-                                 (= y (.. position y)) 
-                                 (= positions (filter isWithinBounds (list (Position (+ x 1) y) (Position (- x 1) y) (Position x (+ y 1)) (Position x (- y 1))))))
-                                positions)))
-
-  (: nextParticle (-> Particle Particle))
-  (= nextParticle (fn (particle) 
-                      (let ((= freePositions (filter isFree (adjacentPositions (.. particle position))))) 
-                           (case freePositions
-                                (=> (list) particle)
-                                (=> _ (Particle (uniformChoice freePositions) (.. particle color) true))))))
-
-  (: particleGen (-> Position Particle))
-  (= particleGen (fn (initPosition) (Particle initPosition "blue" true)))
-)`);
-      }
-
-      function lightClick() {
-        myCodeMirror.setValue(`(program
-  (const (= GRID_SIZE 5))
-  
-  (type alias Position ((: x BigInt) (: y BigInt)))
-  (type alias Particle ((: position Position) (: color String) (: render Bool)))
-  
-  (external (: click Click))
-  
-  (: particles (List Particle))
-  (= particles (initnext (vcat (map (--> num (Particle (Position (% num GRID_SIZE) (floor BigInt (/ num GRID_SIZE))) "black" true)) (range 1 (- (* GRID_SIZE GRID_SIZE) 1))) (list (Particle (Position 0 0) "black" true))) 
-                         (if (occurred click) 
-                          then (if (& (== (.. click x) 0) (== (.. click y) 0))
-                                then (map nextParticle particles) 
-                                else particles) 
-                          else particles)
-               )
-  )
-  
-
-  (: nextParticle (-> Particle Particle))
-  (= nextParticle (fn (particle) 
-                      (if (& (== (.. (.. particle position) x) 0) 
-							 (== (.. (.. particle position) y) 0)) 
-					   then particle 
-					   else (if (== (.. particle color) "black") 
-							 then (Particle (.. particle position) "yellow" true) 
-							 else (
-                                   Particle (.. particle position) "black" true
-                                  )
-                             )
-                      )
-                  )
-  )
-)`)
-      }
-
-      function magnetsClick() {
-        myCodeMirror.setValue(`(program
-  (const (= GRID_SIZE 16))
-
-  (type alias Position ((: x Int) (: y Int)))
-  (type alias Particle ((: position Position) (: color String) (: render Bool)))
-  (type alias Magnet ((: plusPosition Position) (: minusPosition Position)))
-  
-  (external (: click Click))
-  
-  (= mobileMagnet (initnext (Magnet (Position 4 7) (Position 4 8)) 
-                    		    (if (occurred click) 
-                                 then (nextMagnet mobileMagnet click)
-                                 else mobileMagnet)))
-  
-  (= moveRight (list (Magnet (Position 5 8) (Position 4 8)) 
-                 	 (Magnet (Position 5 8) (Position 5 9)) 
-                     (Magnet (Position 4 7) (Position 5 7)) 
-                     (Magnet (Position 5 6) (Position 5 7))
-                     (Magnet (Position 5 8) (Position 5 7))))
-  
-  (= moveLeft (list (Magnet (Position 9 6) (Position 9 7)) 
-                 	(Magnet (Position 10 7) (Position 9 7)) 
-                    (Magnet (Position 9 8) (Position 9 7)) 
-                    (Magnet (Position 9 8) (Position 10 8))
-                    (Magnet (Position 9 8) (Position 9 9))))
-  
-  (= moveUp (list (Magnet (Position 7 10) (Position 7 11)) 
-                  (Magnet (Position 7 10) (Position 6 10)) 
-                  (Magnet (Position 7 10) (Position 8 10))))
-
-  (= moveDown (list (Magnet (Position 7 4) (Position 7 5)) 
-                    (Magnet (Position 6 5) (Position 7 5)) 
-                    (Magnet (Position 8 5) (Position 7 5))))
-    
-  (= plusInvalid (list (Position 6 7) (Position 7 6) (Position 8 7)))
-  (= minusInvalid (list (Position 7 9) (Position 6 8) (Position 8 8)))
-
-  
-  (: nextMagnet (-> Magnet Click Magnet))
-  (= nextMagnet (fn (magnet click) 
-                    (let (
-                          (= upPressed (& (occurred click) (& (== (.. click x) 7) (== (.. click y) 0))))
-                          (= downPressed (& (occurred click) (& (== (.. click x) 7) (== (.. click y) 15))))
-                          (= leftPressed (& (occurred click) (& (== (.. click x) 0) (== (.. click y) 7))))
-                          (= rightPressed (& (occurred click) (& (== (.. click x) 15) (== (.. click y) 7))))
-                          (= rotatePressed (& (occurred click) (| (& (== (.. click x) 7) (== (.. click y) 7)) (& (== (.. click x) 7) (== (.. click y) 8)))))
-                          (= buttonPressed (| upPressed (| downPressed (| leftPressed (| rightPressed rotatePressed)))))
-                          
-						  (= mobileMagnetPlusX (.. (.. magnet plusPosition) x))
-						  (= mobileMagnetPlusY (.. (.. magnet plusPosition) y))
-						  (= mobileMagnetMinusX (.. (.. magnet minusPosition) x))
-						  (= mobileMagnetMinusY (.. (.. magnet minusPosition) y))
-							
-						  (= proposedMinusY (if (& rotatePressed (!= mobileMagnetMinusY mobileMagnetPlusY))
-                                             then mobileMagnetPlusY
-                                             else (if (& rotatePressed (> mobileMagnetMinusX mobileMagnetPlusX))
-                                                   then (- mobileMagnetPlusY 1)
-                                                   else (if (& rotatePressed (< mobileMagnetMinusX mobileMagnetPlusX))
-                                                         then (+ mobileMagnetPlusY 1)
-                                                         else (if upPressed
-                                                               then (- mobileMagnetMinusY 1)
-                                                               else (if downPressed
-                                                                     then (+ mobileMagnetMinusY 1)
-                                                                     else mobileMagnetMinusY))))))
-						  (= proposedMinusX (if (& rotatePressed (!= mobileMagnetMinusX mobileMagnetPlusX))
-                                             then mobileMagnetPlusX
-                                             else (if (& rotatePressed (> mobileMagnetMinusY mobileMagnetPlusY))
-                                                   then (+ mobileMagnetPlusX 1)
-                                                   else (if (& rotatePressed (< mobileMagnetMinusY mobileMagnetPlusY))
-                                                         then (- mobileMagnetPlusX 1)
-                                                         else (if rightPressed
-                                                               then (+ mobileMagnetMinusX 1)
-                                                               else (if leftPressed
-                                                                     then (- mobileMagnetMinusX 1)
-                                                                     else mobileMagnetMinusX))))))
-						  
-						  (= proposedPlusY (if upPressed 
-                                            then (- mobileMagnetPlusY 1)
-                                            else (if downPressed
-                                                  then (+ mobileMagnetPlusY 1) 
-                                                  else mobileMagnetPlusY)))
-
-                          (= proposedPlusX (if leftPressed 
-                                            then (- mobileMagnetPlusX 1)
-                                            else (if rightPressed
-                                                  then (+ mobileMagnetPlusX 1) 
-                                                  else mobileMagnetPlusX)))
-						
-						  (= proposed (Magnet (Position proposedPlusX proposedPlusY) (Position proposedMinusX proposedMinusY)))
-						  
-						  (= invalid (| (in (Position proposedPlusX proposedPlusY) (list (Position 7 7) (Position 7 8))) (in (Position proposedMinusX proposedMinusY) (list (Position 7 7) (Position 7 8)))))
-                          
-          				  (= finalPlusX (if (in proposed moveRight)
-                                         then (+ proposedPlusX 1)
-                                         else (if (in proposed moveLeft)
-                                               then (- proposedPlusX 1)
-                                               else (if invalid
-                                                     then mobileMagnetPlusX
-                                                     else (if (in (.. proposed plusPosition) plusInvalid)
-                                                           then mobileMagnetPlusX
-                                                           else (if (in (.. proposed minusPosition) minusInvalid)
-                                                                 then mobileMagnetPlusX
-                                                                 else proposedPlusX))))))
-
-          				  (= finalPlusY (if (in proposed moveUp)
-                                         then (- proposedPlusY 1)
-                                         else (if (in proposed moveDown)
-                                               then (+ proposedPlusY 1)
-                                               else (if invalid
-                                                     then mobileMagnetPlusY
-                                                     else (if (in (.. proposed plusPosition) plusInvalid)
-                                                           then mobileMagnetPlusY
-                                                           else (if (in (.. proposed minusPosition) minusInvalid) 
-                                                                 then mobileMagnetPlusY
-                                                                 else proposedPlusY))))))
-                         
-						  (= finalMinusX (if (in proposed moveRight) 
-                                          then (+ proposedMinusX 1)
-                                          else (if (in proposed moveLeft)
-                                                then (- proposedMinusX 1)
-                                                else (if invalid
-                                                      then mobileMagnetMinusX
-                                                      else (if (in (.. proposed plusPosition) plusInvalid) 
-                                                            then mobileMagnetMinusX
-                                                            else (if (in (.. proposed minusPosition) minusInvalid)
-                                                                  then mobileMagnetMinusX
-                                                                  else proposedMinusX))))))
-                         
-						  (= finalMinusY (if (in proposed moveUp) 
-                                          then (- proposedMinusY 1)
-                                          else (if (in proposed moveDown)
-                                                then (+ proposedMinusY 1)
-                                                else (if invalid
-                                                      then mobileMagnetMinusY
-                                                      else (if (in (.. proposed plusPosition) plusInvalid) 
-                                                            then mobileMagnetMinusY
-                                                            else (if (in (.. proposed minusPosition) minusInvalid)
-                                                                  then mobileMagnetMinusY
-                                                                  else proposedMinusY))))))
-
-						 (= newMagnet  (if (& (isWithinBounds (Position finalPlusX finalPlusY)) (isWithinBounds (Position finalMinusX finalMinusY)))
-                                        then (Magnet (Position finalPlusX finalPlusY) (Position finalMinusX finalMinusY))
-                            			else magnet)
-                         )
-                         
-                         ) 
-                         newMagnet                    
-                    )))
-
-
-  (: particles (List Particle))
-  (= particles (initnext (list
-                         	  (Particle (Position 7 0) "green" true)
-                              (Particle (Position 7 15) "green" true)
-                              (Particle (Position 15 7) "green" true)
-                              (Particle (Position 0 7) "green" true)
-                              (Particle (Position 7 7) "red" true)
-                              (Particle (Position 7 8) "blue" true)
-                              (Particle (Position 4 7) "red" true)
-                              (Particle (Position 4 8) "blue" true)
-                         ) 
-                 		 (if (occurred click) 
-                          then (map nextParticle particles)
-                          else particles)))
-  
-  (: nextParticle (-> Particle Particle))
-  (= nextParticle (fn (particle) 
-                      (if (& (== (.. particle color) "red") (!= (.. particle position) (Position 7 7))) 
-                       then (Particle (.. mobileMagnet plusPosition) "red" true) 
-                       else (if (& (== (.. particle color) "blue") (!= (.. particle position) (Position 7 8)))
-                             then (Particle (.. mobileMagnet minusPosition) "blue" true)
-                             else particle))
-                  ))
-
-    (: isWithinBounds (-> Position Bool))
-  	(= isWithinBounds (fn (position) 
-                        (& (>= (.. position x) 0) (& (< (.. position x) GRID_SIZE) (& (>= (.. position y) 0) (< (.. position y) GRID_SIZE))))))
+                      (& (>= (.. position x) 0) (& (< (.. position x) GRID_SIZE) (& (>= (.. position y) 0) (< (.. position y) GRID_SIZE))))))
 
 )
 `);
-      }
+    }
 
 
-      }
-      )
-    </script>
-  </div>
-  
+    }
+    )
+  </script>
+</div>

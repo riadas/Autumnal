@@ -12,3 +12,5 @@ route("/startautumn", AutumnModelsController.startautumn, method = GET, named=:s
 route("/clicked", AutumnModelsController.clicked, method = GET, named=:clicked)
 
 route("/step", AutumnModelsController.step, method = GET, named=:step)
+
+route("/replay", AutumnModelsController.replay, method = GET, named=:replay)
