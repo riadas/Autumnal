@@ -66,6 +66,7 @@ function startautumn()
 end
 
 function clicked()
+  println("click")
   clientid = parse(Int64, @params(:clientid))
   json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))))) : []))
 end
