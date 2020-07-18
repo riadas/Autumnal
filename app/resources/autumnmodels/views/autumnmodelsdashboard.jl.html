@@ -194,7 +194,7 @@
             content = JSON.parse(xhr.response)[1];
             console.log("grid_size: "+grid_size);
             console.log("content: "+content);
-
+ 
             // update grid
             Array.from(document.getElementsByClassName("grid")).forEach(function (grid) {
               grid.innerHTML = "";
@@ -293,15 +293,12 @@
           xhr.onreadystatechange = function () { // Call a function when the state changes.
             if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
                 // Request finished. Do processing here.
-                console.log("success!");
-                console.log("xhr.response: "+JSON.stringify(xhr.response));
                 if (intervalID != -1) {
                   clearInterval(intervalID);
                 }
                 updateCellStyles(xhr.response);
                 intervalID = setInterval(step, timestep);
                 updateButtonStyles();
-                console.log("here?")
             }
           };
           xhr.send();
@@ -325,8 +322,6 @@
             xhr.onreadystatechange = function () { // Call a function when the state changes.
               if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
                   // Request finished. Do processing here.
-                  console.log("success!");
-                  console.log("xhr.response: "+JSON.stringify(xhr.response));
                   updateCellStyles(xhr.response);
               }
             };
