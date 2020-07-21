@@ -3,7 +3,7 @@
     <span id="title">autumnal</span> <span id="playground">playground</span> <span id="challenges">challenges</span>
   </div>
   <div id="dashboard">
-    <div id="model-input" class="dashboard-panel" style="border-right: 1px solid black;">
+    <div id="model-input" class="dashboard-panel" style="border-right: 3px solid white;">
       <form style="width: 100%; margin: 0; font-size: 13px !important; height: 100%;">
       <textarea id="autumn-string" name="autumnstring" rows="30" cols="50"
       style="height: 97%; width: 100%;" spellcheck="false">
@@ -11,7 +11,7 @@
       </form>
     </div>
     
-    <div id="grid-view" class="dashboard-panel">
+    <div id="grid-view" class="dashboard-panel" style="border-left: 3px solid white;">
       <div style="display: flex; margin-top: 10px; margin-left: 10px;">
         <button id="compile-button" class="control-button"></button>
         <button id="particles-button" class="control-button example-button">PARTICLES</button>
@@ -185,7 +185,7 @@
 
         console.log("compileClick")
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", 'http://causal-discovery.herokuapp.com:80/compileautumn', true);
+        xhr.open("POST", 'http://localhost:8000/compileautumn', true);
 
         //Send the proper header information along with the request
         xhr.onreadystatechange = function () { // Call a function when the state changes.
@@ -244,7 +244,7 @@
           } else { // play
             if (not_run_yet) {
               var xhr = new XMLHttpRequest();
-              xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn?clientid='+client_id, true);
+              xhr.open("GET", 'http://localhost:8000/startautumn?clientid='+client_id, true);
       
               //Send the proper header information along with the request
               xhr.setRequestHeader("Content-Type", "application/json");
@@ -285,7 +285,7 @@
       function restartClick() {
         if (!history_mode) {
           var xhr = new XMLHttpRequest();
-          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn?clientid='+client_id, true);
+          xhr.open("GET", 'http://localhost:8000/startautumn?clientid='+client_id, true);
 
           //Send the proper header information along with the request
           xhr.setRequestHeader("Content-Type", "application/json");
@@ -314,7 +314,7 @@
         if (!history_mode) {
           if (intervalID != -1) {
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/clicked?x='+(id % grid_size)+'&y='+Math.floor(id/grid_size)+'&clientid='+client_id, true);
+            xhr.open("GET", 'http://localhost:8000/clicked?x='+(id % grid_size)+'&y='+Math.floor(id/grid_size)+'&clientid='+client_id, true);
 
             //Send the proper header information along with the request
             xhr.setRequestHeader("Content-Type", "application/json");
@@ -334,7 +334,7 @@
         console.log("step");
         var xhr = new XMLHttpRequest();
 
-        xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/step?clientid='+client_id, true);
+        xhr.open("GET", 'http://localhost:8000/step?clientid='+client_id, true);
 
         //Send the proper header information along with the request
         xhr.setRequestHeader("Content-Type", "application/json");
@@ -361,7 +361,7 @@
           history_mode = true;
           var xhr = new XMLHttpRequest();
 
-          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/replay?clientid='+client_id, true);
+          xhr.open("GET", 'http://localhost:8000/replay?clientid='+client_id, true);
                   //Send the proper header information along with the request
                   xhr.setRequestHeader("Content-Type", "application/json");
 
@@ -404,7 +404,12 @@
       var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("autumn-string"), { mode : "erlang",
                                                                                             theme : "erlang-dark",                                                                                              
                                                                                             lineNumbers: true,
-                                                                                            viewportMargin: 0});
+                                                                                            viewportMargin: 0,
+                                                                                            autoCloseBrackets: true,
+                                                                                            matchBrackets: true,
+                                                                                            scrollbarStyle: "overlay",
+                                                                                            styleActiveLine: {nonEmpty: true},
+                                                                                            });
       particlesClick();
 
     updateCellStyles("[]");
