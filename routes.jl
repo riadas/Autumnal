@@ -11,6 +11,14 @@ route("/startautumn", AutumnModelsController.startautumn, method = GET, named=:s
 
 route("/clicked", AutumnModelsController.clicked, method = GET, named=:clicked)
 
+route("/left", AutumnModelsController.left, method = GET, named=:left)
+
+route("/right", AutumnModelsController.right, method = GET, named=:right)
+
+route("/up", AutumnModelsController.up, method = GET, named=:up)
+
+route("/down", AutumnModelsController.down, method = GET, named=:down)
+
 route("/step", AutumnModelsController.step, method = GET, named=:step)
 
 route("/replay", AutumnModelsController.replay, method = GET, named=:replay)
