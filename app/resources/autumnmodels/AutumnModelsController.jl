@@ -61,7 +61,7 @@ function step()
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
   STATES[clientid] = next_state
-  HISTORY[clientid][next_state.time] = cells
+  #HISTORY[clientid][next_state.time] = cells
   json(vcat(background, cells))
 end
 
@@ -75,8 +75,8 @@ function startautumn()
   background = :backgroundHistory in fieldnames(typeof(state)) ? state.backgroundHistory[state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(state.scene))
   STATES[clientid] = state
-  HISTORY[clientid] = Dict{Int, Any}()
-  HISTORY[clientid][state.time] = cells
+  #HISTORY[clientid] = Dict{Int, Any}()
+  #HISTORY[clientid][state.time] = cells
   json(vcat(grid_size, background, cells))
   # json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].init(nothing)) : []))
 end
@@ -91,7 +91,7 @@ function clicked()
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
   STATES[clientid] = next_state
-  HISTORY[clientid][next_state.time] = cells
+  #HISTORY[clientid][next_state.time] = cells
   json(vcat(background, cells))
   #json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))))) : []))
 end
@@ -105,7 +105,7 @@ function up()
   STATES[clientid] = next_state
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  HISTORY[clientid][next_state.time] = cells
+  #HISTORY[clientid][next_state.time] = cells
   json(vcat(background, cells))
 end
 
@@ -118,7 +118,7 @@ function down()
   STATES[clientid] = next_state
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  HISTORY[clientid][next_state.time] = cells
+  #HISTORY[clientid][next_state.time] = cells
   json(vcat(background, cells))
 end
 
@@ -131,7 +131,7 @@ function right()
   STATES[clientid] = next_state
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  HISTORY[clientid][next_state.time] = cells
+  #HISTORY[clientid][next_state.time] = cells
   json(vcat(background, cells))
 end
 
@@ -144,7 +144,7 @@ function left()
   STATES[clientid] = next_state
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  HISTORY[clientid][next_state.time] = vcat(background, cells)
+  #HISTORY[clientid][next_state.time] = vcat(background, cells)
   json(vcat(background, cells))
 end
 
@@ -366,6 +366,10 @@ end
 function compile(expr, data::Dict{String, Any}, parent::Union{AExpr, Nothing}=nothing)
   if expr isa BigInt
     floor(Int, expr)
+  elseif expr == :true
+    :(1 == 1)
+  elseif expr == :false
+    :(1 == 2)
   else
     expr
   end
@@ -415,6 +419,8 @@ end
 
 function compiletypedecl(expr::AExpr, data::Dict{String, Any}, parent::Union{AExpr, Nothing})
   if (parent !== nothing && (parent.head == :program || parent.head == :external))
+    println(expr.args[1])
+    println(expr.args[2])
     data["types"][expr.args[1]] = expr.args[2]
     :()
   else
@@ -423,6 +429,8 @@ function compiletypedecl(expr::AExpr, data::Dict{String, Any}, parent::Union{AEx
 end
 
 function compileexternal(expr::AExpr, data::Dict{String, Any})
+  println("here: ")
+  println(expr.args[1])
   if !(expr.args[1] in data["external"])
     push!(data["external"], expr.args[1])
   end
@@ -494,7 +502,17 @@ function compileobject(expr::AExpr, data::Dict{String, Any})
 end
 
 function compileon(expr::AExpr, data::Dict{String, Any})
-  data["on"][compile(expr.args[1], data)] = compile(expr.args[2], data)
+  println("here")
+  println(typeof(expr.args[1]) == AExpr ? expr.args[1].args[1] : expr.args[1])
+  event = compile(expr.args[1], data)
+  if event in [:click, :left, :right, :up, :down]
+    push!(data["on"], (:(occurred($(event))), compile(expr.args[2], data)))
+  elseif expr.args[1].head == :call && expr.args[1].args[1] == :clicked
+    println("maybe?")
+    push!(data["on"], (:(clicked(click, $(map(x -> compile(x, data), expr.args[1].args[2:end])...))), compile(expr.args[2], data)))
+  else
+    push!(data["on"], (event, compile(expr.args[2], data)))
+  end
   :()
 end
 
@@ -502,50 +520,23 @@ function compileinitnext(data::Dict{String, Any})
   init = quote
     $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2].args[1], data))), data["initnext"])...)
   end
-  next = quote
-    if occurred(click)
+
+  onClauses = map(x -> quote 
+    if $(x[1])
       $(map(x -> :($(compile(x.args[1], data)) = state.$(Symbol(string(x.args[1])*"History"))[state.time - 1]), 
-          vcat(data["initnext"], data["lifted"]))...)
-      $(vcat([get(data["on"], :click, vcat(
-        map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2].args[2], data))), data["initnext"]),
-        map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] != :GRID_SIZE, data["lifted"]))
-      ))]...)...)
-    elseif occurred(left)
-      $(map(x -> :($(compile(x.args[1], data)) = state.$(Symbol(string(x.args[1])*"History"))[state.time - 1]), 
-        vcat(data["initnext"], data["lifted"]))...)
-      $(vcat([get(data["on"], :left, vcat(
-        map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2].args[2], data))), data["initnext"]),
-        map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] != :GRID_SIZE, data["lifted"]))
-      ))]...)...)
-    elseif occurred(right)
-      $(map(x -> :($(compile(x.args[1], data)) = state.$(Symbol(string(x.args[1])*"History"))[state.time - 1]), 
-        vcat(data["initnext"], data["lifted"]))...)
-      $(vcat([get(data["on"], :right, vcat(
-        map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2].args[2], data))), data["initnext"]),
-        map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] != :GRID_SIZE, data["lifted"]))
-      ))]...)...)
-    elseif occurred(up) 
-      $(map(x -> :($(compile(x.args[1], data)) = state.$(Symbol(string(x.args[1])*"History"))[state.time - 1]), 
-        vcat(data["initnext"], data["lifted"]))...)
-      $(vcat([get(data["on"], :up, vcat(
-        map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2].args[2], data))), data["initnext"]),
-        map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] != :GRID_SIZE, data["lifted"]))
-      ))]...)...)
-    elseif occurred(down)
-      $(map(x -> :($(compile(x.args[1], data)) = state.$(Symbol(string(x.args[1])*"History"))[state.time - 1]), 
-        vcat(data["initnext"], data["lifted"]))...)
-      $(vcat([get(data["on"], :down, vcat(
-        map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2].args[2], data))), data["initnext"]),
-        map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] != :GRID_SIZE, data["lifted"]))
-      ))]...)...)
-    else
-      $(map(x -> :($(compile(x.args[1], data)) = state.$(Symbol(string(x.args[1])*"History"))[state.time - 1]), 
-          vcat(data["initnext"], data["lifted"]))...)
-      $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2].args[2], data))), data["initnext"])...)
-      $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] != :GRID_SIZE, data["lifted"]))...)
+      vcat(data["initnext"], data["lifted"]))...)
+      $(x[2])
     end
+  end, data["on"])
+
+  next = quote
+    $(map(x -> :($(compile(x.args[1], data)) = state.$(Symbol(string(x.args[1])*"History"))[state.time - 1]), 
+      vcat(data["initnext"], data["lifted"]))...)
+    $(vcat(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2].args[2], data))), data["initnext"]),
+           map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] != :GRID_SIZE, data["lifted"]))
+      )...)
+    $(onClauses...)
   end
-  
 
   initFunction = quote
     function init($(map(x -> :($(compile(x.args[1], data))::Union{$(compile(data["types"][x.args[1]], data)), Nothing}), data["external"])...))::STATE
@@ -627,10 +618,9 @@ function compilebuiltin()
   uniformChoiceFunction = builtInDict["uniformChoice"]
   uniformChoiceFunction2 = builtInDict["uniformChoice2"]
   minFunction = builtInDict["min"]
-  clickType = builtInDict["clickType"]
   rangeFunction = builtInDict["range"]
   utils = builtInDict["utils"]
-  [occurredFunction, utils, uniformChoiceFunction, uniformChoiceFunction2, minFunction, clickType, rangeFunction]
+  [occurredFunction, utils, uniformChoiceFunction, uniformChoiceFunction2, minFunction, rangeFunction]
 end
 
 const builtInDict = Dict([
@@ -654,12 +644,6 @@ const builtInDict = Dict([
                           min(arr...)
                         end
                       end,
-"clickType"       =>  quote
-                        struct Click
-                          x::Int
-                          y::Int                    
-                        end     
-                      end,
 "range"           => quote
                       function range(start::Int, stop::Int)
                         [start:stop;]
@@ -667,13 +651,17 @@ const builtInDict = Dict([
                     end,
 "utils"           => quote
                         abstract type Object end
-
                         abstract type KeyPress end
 
                         struct Left <: KeyPress end
                         struct Right <: KeyPress end
                         struct Up <: KeyPress end
                         struct Down <: KeyPress end
+
+                        struct Click
+                          x::Int
+                          y::Int                    
+                        end     
 
                         struct Position
                           x::Int
@@ -686,8 +674,8 @@ const builtInDict = Dict([
                           opacity::Float64
                         end
 
-                        Cell(position::Position, color::String) = Cell(position, color, 0.6)
-                        Cell(x::Int, y::Int, color::String) = Cell(Position(floor(Int, x), floor(Int, y)), color, 0.6)
+                        Cell(position::Position, color::String) = Cell(position, color, 0.8)
+                        Cell(x::Int, y::Int, color::String) = Cell(Position(floor(Int, x), floor(Int, y)), color, 0.8)
                         Cell(x::Int, y::Int, color::String, opacity::Float64) = Cell(Position(floor(Int, x), floor(Int, y)), color, opacity)
 
                         struct Scene
@@ -705,15 +693,41 @@ const builtInDict = Dict([
                           map(cell -> Cell(move(cell.position, obj.origin), cell.color), obj.render)
                         end
 
+                        function isWithinBounds(obj::Object)::Bool
+                          println(filter(cell -> !isWithinBounds(cell.position),render(obj)))
+                          length(filter(cell -> !isWithinBounds(cell.position), render(obj))) == 0
+                        end
+
+                        function clicked(click::Union{Click, Nothing}, object::Object)::Bool
+                          if click == nothing
+                            false
+                          else
+                            GRID_SIZE = state.GRID_SIZEHistory[0]
+                            nums = map(cell -> GRID_SIZE*cell.position.y + cell.position.x, render(object))
+                            (GRID_SIZE * click.y + click.x) in nums
+                          end
+                        end
+
+                        function clicked(click::Union{Click, Nothing}, x::Int, y::Int)::Bool
+                          if click == nothing
+                            false
+                          else
+                            click.x == x && click.y == y                         
+                          end
+                        end
+
+                        function clicked(click::Union{Click, Nothing}, pos::Position)::Bool
+                          if click == nothing
+                            false
+                          else
+                            click.x == pos.x && click.y == pos.y                         
+                          end
+                        end
+
                         function intersects(obj1::Object, obj2::Object)::Bool
                           nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj1))
                           nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj2))
                           length(intersect(nums1, nums2)) != 0
-                        end
-
-                        function isWithinBounds(obj::Object)::Bool
-                          println(filter(cell -> !isWithinBounds(cell.position),render(obj)))
-                          length(filter(cell -> !isWithinBounds(cell.position),render(obj))) == 0
                         end
 
                         function addObj(list::Array{<:Object}, obj::Object)
@@ -777,7 +791,7 @@ const builtInDict = Dict([
                         end
 
                         function isFree(position::Position)::Bool
-                          length(filter(cell -> cell.position == position, render(state.scene))) == 0
+                          length(filter(cell -> cell.position.x == position.x && cell.position.y == position.y, render(state.scene))) == 0
                         end
 
                         function unitVector(position1::Position, position2::Position)::Position
@@ -858,6 +872,8 @@ const builtInDict = Dict([
 
                         function randomPositions(GRID_SIZE::Int, n::Int)::Array{Position}
                           nums = uniformChoice([0:(GRID_SIZE * GRID_SIZE - 1);], n)
+                          println(nums)
+                          println(map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums))
                           map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums)
                         end
 
@@ -910,11 +926,85 @@ const builtInDict = Dict([
                           new_object
                         end
 
+                        function nextLiquid(object::Object)::Object 
+                          GRID_SIZE = state.GRID_SIZEHistory[0]
+                          new_object = deepcopy(object)
+                          if object.origin.y != GRID_SIZE - 1 && isFree(move(object.origin, Position(0, 1)))
+                            new_object.origin = move(object.origin, Position(0, 1))
+                          else
+                            leftHoles = filter(pos -> (pos.y == object.origin.y + 1)
+                                                       && (pos.x < object.origin.x)
+                                                       && isFree(pos), allPositions())
+                            rightHoles = filter(pos -> (pos.y == object.origin.y + 1)
+                                                       && (pos.x > object.origin.x)
+                                                       && isFree(pos), allPositions())
+                            if (length(leftHoles) != 0) || (length(rightHoles) != 0)
+                              if (length(leftHoles) == 0)
+                                closestHole = closest(object, rightHoles)
+                                if isFree(move(closestHole, Position(0, -1)), move(object.origin, Position(1, 0)))
+                                  new_object.origin = move(object.origin, unitVector(object, move(closestHole, Position(0, -1))))
+                                end
+                              elseif (length(rightHoles) == 0)
+                                closestHole = closest(object, leftHoles)
+                                if isFree(move(closestHole, Position(0, -1)), move(object.origin, Position(-1, 0)))
+                                  new_object.origin = move(object.origin, unitVector(object, move(closestHole, Position(0, -1))))                      
+                                end
+                              else
+                                closestLeftHole = closest(object, leftHoles)
+                                closestRightHole = closest(object, rightHoles)
+                                if distance(object.origin, closestLeftHole) > distance(object.origin, closestRightHole)
+                                  if isFree(move(object.origin, Position(1, 0)), move(closestRightHole, Position(0, -1)))
+                                    new_object.origin = move(object.origin, unitVector(new_object, move(closestRightHole, Position(0, -1))))
+                                  elseif isFree(move(closestLeftHole, Position(0, -1)), move(object.origin, Position(-1, 0)))
+                                    new_object.origin = move(object.origin, unitVector(new_object, move(closestLeftHole, Position(0, -1))))
+                                  end
+                                else
+                                  if isFree(move(closestLeftHole, Position(0, -1)), move(object.origin, Position(-1, 0)))
+                                    new_object.origin = move(object.origin, unitVector(new_object, move(closestLeftHole, Position(0, -1))))
+                                  elseif isFree(move(object.origin, Position(1, 0)), move(closestRightHole, Position(0, -1)))
+                                    new_object.origin = move(object.origin, unitVector(new_object, move(closestRightHole, Position(0, -1))))
+                                  end
+                                end
+                              end
+                            end
+                          end
+                          new_object
+                        end
+
+                        function nextSolid(object::Object)::Object 
+                          GRID_SIZE = state.GRID_SIZEHistory[0] 
+                          new_object = deepcopy(object)
+                          if (object.origin.y != GRID_SIZE - 1 && isFree(move(object.origin, Position(0, 1))))
+                            new_object.origin = move(object.origin, Position(0, 1))
+                          end
+                          new_object
+                        end
+                        
+                        function closest(object::Object, positions::Array{Position})::Position
+                          closestDistance = sort(map(pos -> distance(pos, object.origin), positions))[1]
+                          closest = filter(pos -> distance(pos, object.origin) == closestDistance, positions)[1]
+                          closest
+                        end
+
+                        function isFree(start::Position, stop::Position)::Bool 
+                          GRID_SIZE = state.GRID_SIZEHistory[0]
+                          nums = [(GRID_SIZE * start.y + start.x):(GRID_SIZE * stop.y + stop.x);]
+                          reduce(&, map(num -> isFree(Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE))), nums))
+                        end
+
+                        function allPositions()
+                          GRID_SIZE = state.GRID_SIZEHistory[0]
+                          nums = [1:GRID_SIZE*GRID_SIZE - 1;]
+                          map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums)
+                        end
+                      
                     end
 ])
 
 # binary operators
 const binaryOperators = [:+, :-, :/, :*, :&, :|, :>=, :<=, :>, :<, :(==), :!=, :%, :&&]
+
+# compile.jl
 
 "compile `aexpr` into Expr"
 function compiletojulia(aexpr::AExpr)::Expr
@@ -925,7 +1015,7 @@ function compiletojulia(aexpr::AExpr)::Expr
                ("initnext" => []), # :assign aexprs for all initnext variables
                ("lifted" => []), # :assign aexprs for all lifted variables
                ("types" => Dict{Symbol, Any}([:click => :Click, :left => :KeyPress, :right => :KeyPress, :up => :KeyPress, :down => :KeyPress, :GRID_SIZE => :Int, :background => :String])), # map of global variable names (symbols) to types
-               ("on" => Dict()),
+               ("on" => []),
                ("objects" => [])]) 
                
   if (aexpr.head == :program)

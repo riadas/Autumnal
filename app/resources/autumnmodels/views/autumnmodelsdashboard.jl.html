@@ -12,12 +12,15 @@
     </div>
     
     <div id="grid-view" class="dashboard-panel" style="border-left: 3px solid white;">
-      <div style="display: flex; margin-top: 10px; margin-left: 10px;">
+      <div style="display: flex; flex-wrap: wrap; height: fit-content; margin-top: 5px; margin-left: 10px;">
         <button id="compile-button" class="control-button"></button>
         <button id="particles-button" class="control-button example-button">PARTICLES</button>
         <button id="ants-button" class="control-button example-button">ANTS</button>
         <button id="light-button" class="control-button example-button">LIGHTS</button>
         <button id="magnets-button" class="control-button example-button">MAGNETS</button>
+        <button id="plug-button" class="control-button example-button">WATER PLUG</button>
+        <button id="ice-button" class="control-button example-button">ICE</button>
+
       </div>
       <div id="container">
         <div class="grid-container" >
@@ -31,7 +34,7 @@
               <button id="play-button" class="control-button" type="submit" id="run" style="margin-right: 10px;">▶</button>
               <button id="restart-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;">↻</button>
               <button id="save-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;"><i class="fa fa-floppy-o" aria-hidden="true"></i></button>
-              <button id="history-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;"><i class="fa fa-history" aria-hidden="true"></i></button>
+              <button id="history-button" class="control-button" type="submit" style="visibility: hidden; font-size: 15px; font-weight: bold;"><i class="fa fa-history" aria-hidden="true"></i></button>
           </div>
         </div>
       </div>
@@ -43,7 +46,7 @@
       // global frontend variables
       var not_run_yet = true;
       var intervalID = -1;
-      var timestep = 600;
+      var timestep = 300;
       var historytimestep = 500;
       var compiled = false;
       var client_id = getRandomInt(1, 10000);
@@ -66,6 +69,8 @@
       document.getElementById("ants-button").addEventListener("click", antsClick);
       document.getElementById("light-button").addEventListener("click", lightClick);
       document.getElementById("magnets-button").addEventListener("click", magnetsClick);
+      document.getElementById("plug-button").addEventListener("click", plugClick);
+      document.getElementById("ice-button").addEventListener("click", iceClick);
       document.getElementById("history-button").addEventListener("click", historyClick);
 
 
@@ -78,6 +83,8 @@
         particlesButton = document.getElementById("particles-button");
         lightButton = document.getElementById("light-button");
         magnetsButton = document.getElementById("magnets-button");
+        plugButton = document.getElementById("plug-button");
+        iceButton = document.getElementById("ice-button");
         playButton = document.getElementById("play-button");
         restartButton = document.getElementById("restart-button");
         saveButton = document.getElementById("save-button");
@@ -94,6 +101,9 @@
           particlesButton.classList.add("disabled");
           lightButton.classList.add("disabled");
           magnetsButton.classList.add("disabled");
+          plugButton.classList.add("disabled");
+          iceButton.classList.add("disabled");
+
           
           if (!history_mode) {
             playButton.classList.remove("history-mode");
@@ -168,6 +178,8 @@
           particlesButton.classList.remove("disabled");
           lightButton.classList.remove("disabled");
           magnetsButton.classList.remove("disabled");
+          plugButton.classList.remove("disabled");
+          iceButton.classList.remove("disabled");
         }
       }
 
@@ -617,7 +629,95 @@
 )`);
     }
 
+    function plugClick() {
+      myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
 
+  (object Button (: color String) (Cell 0 0 color))
+  (object Vessel (Cell 0 0 "purple"))
+  (object Plug (Cell 0 0 "orange"))
+  (object Water (Cell 0 0 "blue"))
+
+  (: vesselButton Button)
+  (= vesselButton (Button "purple" (Position 2 0)))
+  (: plugButton Button)
+  (= plugButton (Button "orange" (Position 5 0)))
+  (: waterButton Button)
+  (= waterButton (Button "blue" (Position 8 0)))
+  (: removeButton Button)
+  (= removeButton (Button "black" (Position 11 0)))
+  (: clearButton Button)
+  (= clearButton (Button "red" (Position 14 0)))
+
+  (: vessels (List Vessel))
+  (= vessels (initnext (list) (prev vessels)))
+  (: plugs (List Plug))
+  (= plugs (initnext (list) (prev plugs)))
+  (: water (List Water))
+  (= water (initnext (list) (updateObj (prev water) nextLiquid)))
+
+  (= currentParticle (initnext "vessel" (prev currentParticle)))
+
+  (on click (if (isFree (Position (.. click x) (.. click y))) 
+             then (if (== currentParticle "vessel") 
+                   then (= vessels (addObj (prev vessels) (Vessel (Position (.. click x) (.. click y))))) 
+                   else (if (== currentParticle "plug") 
+                         then (= plugs (addObj (prev plugs) (Plug (Position (.. click x) (.. click y))))) 
+                         else (= water (addObj (prev water) (Water (Position (.. click x) (.. click y)))))))
+              else (= water (prev water))))
+
+  (on (clicked vesselButton) (= currentParticle "vessel"))
+  (on (clicked plugButton) (= currentParticle "plug"))
+  (on (clicked waterButton) (= currentParticle "water"))
+  (on (clicked removeButton) (= plugs (list)))
+  (on (clicked clearButton) (let ((= vessels (list)) (= plugs (list)) (= water (list)))))  
+)`);
+    }
+
+    function iceClick() {
+      myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  (object CelestialBody (: day Bool) (list (Cell 0 0 (if day then "gold" else "gray"))
+                                           (Cell 0 1 (if day then "gold" else "gray"))
+                                           (Cell 1 0 (if day then "gold" else "gray"))
+                                           (Cell 1 1 (if day then "gold" else "gray"))))
+  (object Cloud (list (Cell -1 0 "gray")
+                      (Cell 0 0 "gray")
+                      (Cell 1 0 "gray")))
+  
+  (object Water (: liquid Bool) (Cell 0 0 (if liquid then "blue" else "lightblue")))
+  
+  (: celestialBody CelestialBody)
+  (= celestialBody (initnext (CelestialBody true (Position 0 0)) (prev celestialBody)))
+
+  (: cloud Cloud)
+  (= cloud (initnext (Cloud (Position 8 0)) (prev cloud)))
+  
+  (: water (List Water))
+  (= water (initnext (list) (updateObj (prev water) nextWater)))
+  
+  (on left (= cloud (nextCloud cloud (Position -1 0))))
+
+  (on right (= cloud (nextCloud cloud (Position 1 0))))
+
+  (on down (= water (addObj water (Water 
+                                    (.. celestialBody day) 
+                                    (move (.. cloud origin) (Position 0 1))))))
+  
+  (on click (let ((= celestialBody (updateObj celestialBody "day" (! (.. celestialBody day))))
+                  (= water (updateObj water (--> drop (updateObj drop "liquid" (! (.. drop liquid)))))))))
+
+  (= nextWater (fn (drop) 
+                   (if (.. drop liquid)
+                    then (nextLiquid drop)
+                    else (nextSolid drop))))
+  
+  (= nextCloud (fn (cloud position)
+                   (if (isWithinBounds (move cloud position)) 
+                    then (move cloud position)
+                    else cloud)))
+)`);
+    }
     }
     )
   </script>
