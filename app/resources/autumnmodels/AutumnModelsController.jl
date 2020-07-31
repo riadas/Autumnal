@@ -366,9 +366,9 @@ end
 function compile(expr, data::Dict{String, Any}, parent::Union{AExpr, Nothing}=nothing)
   if expr isa BigInt
     floor(Int, expr)
-  elseif expr == :true
+  elseif expr == Symbol("true")
     :(1 == 1)
-  elseif expr == :false
+  elseif expr == Symbol("false")
     :(1 == 2)
   else
     expr
