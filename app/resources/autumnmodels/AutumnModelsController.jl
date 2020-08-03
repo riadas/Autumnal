@@ -326,6 +326,7 @@ end
 
 # compileutils.jl
 
+"Autumn Compile Error"
 struct AutumnCompileError <: Exception
   msg
 end
@@ -480,15 +481,16 @@ function compileobject(expr::AExpr, data::Dict{String, Any})
   name = expr.args[1]
   push!(data["objects"], name)
   custom_fields = map(field -> (
-    :($(field.args[1])::$(field.args[2]))
-  ), filter(x -> x.head == :typedecl, expr.args[2:end]))
-  custom_field_names = map(field -> field.args[1], filter(x -> x.head == :typedecl, expr.args[2:end]))
-  rendering = compile(filter(x -> x.head != :typedecl, expr.args[2:end])[1], data)
+    :($(field.args[1])::$(compile(field.args[2], data)))
+  ), filter(x -> (typeof(x) == AExpr && x.head == :typedecl), expr.args[2:end]))
+  custom_field_names = map(field -> field.args[1], filter(x -> (x isa AExpr && x.head == :typedecl), expr.args[2:end]))
+  rendering = compile(filter(x -> (typeof(x) != AExpr) || (x.head != :typedecl), expr.args[2:end])[1], data)
   quote
     mutable struct $(name) <: Object
       id::Int
       origin::Position
       alive::Bool
+      hidden::Bool
       $(custom_fields...) 
       render::Array{Cell}
     end
@@ -496,7 +498,7 @@ function compileobject(expr::AExpr, data::Dict{String, Any})
     function $(name)($(vcat(custom_fields, :(origin::Position))...))::$(name)
       state.objectsCreated += 1
       rendering = $(rendering)      
-      $(name)(state.objectsCreated, origin, true, $(custom_field_names...), rendering isa AbstractArray ? rendering : [rendering])
+      $(name)(state.objectsCreated, origin, true, false, $(custom_field_names...), rendering isa AbstractArray ? vcat(rendering...) : [rendering])
     end
   end
 end
@@ -518,6 +520,7 @@ end
 
 function compileinitnext(data::Dict{String, Any})
   init = quote
+    $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), data["lifted"])...)
     $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2].args[1], data))), data["initnext"])...)
   end
 
@@ -541,7 +544,6 @@ function compileinitnext(data::Dict{String, Any})
   initFunction = quote
     function init($(map(x -> :($(compile(x.args[1], data))::Union{$(compile(data["types"][x.args[1]], data)), Nothing}), data["external"])...))::STATE
       $(compileinitstate(data))
-      $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] == :GRID_SIZE, data["lifted"]))...)
       $(init)
       $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] != :GRID_SIZE, data["lifted"]))...)
       $(map(x -> :(state.$(Symbol(string(x.args[1])*"History"))[state.time] = $(compile(x.args[1], data))), 
@@ -686,7 +688,7 @@ const builtInDict = Dict([
                         Scene(objects::AbstractArray) = Scene(objects, "#ffffff00")
 
                         function render(scene::Scene)::Array{Cell}
-                          vcat(map(obj -> map(cell -> Cell(move(cell.position, obj.origin), cell.color), obj.render), filter(obj -> obj.alive, scene.objects))...)
+                          vcat(map(obj -> render(obj), filter(obj -> obj.alive && !obj.hidden, scene.objects))...)
                         end
 
                         function render(obj::Object)::Array{Cell}
@@ -708,6 +710,12 @@ const builtInDict = Dict([
                           end
                         end
 
+                        function clicked(click::Union{Click, Nothing}, objects::AbstractArray)
+                          println("LOOK AT ME")
+                          println(reduce(&, map(obj -> clicked(click, obj), objects)))
+                          reduce(|, map(obj -> clicked(click, obj), objects))
+                        end
+
                         function clicked(click::Union{Click, Nothing}, x::Int, y::Int)::Bool
                           if click == nothing
                             false
@@ -727,6 +735,12 @@ const builtInDict = Dict([
                         function intersects(obj1::Object, obj2::Object)::Bool
                           nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj1))
                           nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj2))
+                          length(intersect(nums1, nums2)) != 0
+                        end
+
+                        function intersects(obj1::Object, obj2::Array{<:Object})::Bool
+                          nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj1))
+                          nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
                           length(intersect(nums1, nums2)) != 0
                         end
 
@@ -760,14 +774,18 @@ const builtInDict = Dict([
 
                         function updateObj(obj::Object, field::String, value)
                           fields = fieldnames(typeof(obj))
-                          custom_fields = fields[4:end-1]
+                          custom_fields = fields[5:end-1]
                           origin_field = (fields[2],)
 
                           constructor_fields = (custom_fields..., origin_field...)
                           constructor_values = map(x -> x == Symbol(field) ? value : getproperty(obj, x), constructor_fields)
 
                           new_obj = typeof(obj)(constructor_values...)
-                          setproperty!(new_obj, :id, obj.id) 
+                          setproperty!(new_obj, :id, obj.id)
+                          setproperty!(new_obj, :alive, obj.alive)
+                          setproperty!(new_obj, :hidden, obj.hidden)
+
+                          setproperty!(new_obj, Symbol(field), value)  
                           new_obj
                         end
 
@@ -848,6 +866,10 @@ const builtInDict = Dict([
                           Position(-position.y, position.x)
                          end
 
+                        function rotateNoCollision(object::Object)::Object
+                          (isWithinBounds(rotate(object)) && isFree(rotate(object), object)) ? rotate(object) : object
+                        end
+
                         function move(position1::Position, position2::Position)
                           Position(position1.x + position2.x, position1.y + position2.y)
                         end
@@ -868,6 +890,14 @@ const builtInDict = Dict([
 
                         function move(object::Object, x::Int, y::Int)::Object
                           move(object, Position(x, y))                          
+                        end
+
+                        function moveNoCollision(object::Object, position::Position)::Object
+                          (isWithinBounds(move(object, position)) && isFree(move(object, position.x, position.y), object)) ? move(object, position.x, position.y) : object 
+                        end
+
+                        function moveNoCollision(object::Object, x::Int, y::Int)
+                          (isWithinBounds(move(object, position)) && isFree(move(object, x, y), object)) ? move(object, x, y) : object 
                         end
 
                         function randomPositions(GRID_SIZE::Int, n::Int)::Array{Position}
@@ -927,6 +957,7 @@ const builtInDict = Dict([
                         end
 
                         function nextLiquid(object::Object)::Object 
+                          println("nextLiquid")
                           GRID_SIZE = state.GRID_SIZEHistory[0]
                           new_object = deepcopy(object)
                           if object.origin.y != GRID_SIZE - 1 && isFree(move(object.origin, Position(0, 1)))
@@ -972,9 +1003,10 @@ const builtInDict = Dict([
                         end
 
                         function nextSolid(object::Object)::Object 
+                          println("nextSolid")
                           GRID_SIZE = state.GRID_SIZEHistory[0] 
                           new_object = deepcopy(object)
-                          if (object.origin.y != GRID_SIZE - 1 && isFree(move(object.origin, Position(0, 1))))
+                          if (isWithinBounds(move(object, Position(0, 1))) && reduce(&, map(x -> isFree(x, object), map(cell -> move(cell.position, Position(0, 1)), render(object)))))
                             new_object.origin = move(object.origin, Position(0, 1))
                           end
                           new_object
@@ -990,6 +1022,21 @@ const builtInDict = Dict([
                           GRID_SIZE = state.GRID_SIZEHistory[0]
                           nums = [(GRID_SIZE * start.y + start.x):(GRID_SIZE * stop.y + stop.x);]
                           reduce(&, map(num -> isFree(Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE))), nums))
+                        end
+
+                        function isFree(start::Position, stop::Position, object::Object)::Bool 
+                          GRID_SIZE = state.GRID_SIZEHistory[0]
+                          nums = [(GRID_SIZE * start.y + start.x):(GRID_SIZE * stop.y + stop.x);]
+                          reduce(&, map(num -> isFree(Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), object), nums))
+                        end
+
+                        function isFree(position::Position, object::Object)
+                          length(filter(cell -> cell.position.x == position.x && cell.position.y == position.y, 
+                          filter(x -> !(x in render(object)), render(state.scene)))) == 0
+                        end
+
+                        function isFree(object::Object, orig_object::Object)::Bool
+                          reduce(&, map(x -> isFree(x, orig_object), map(cell -> cell.position, render(object))))
                         end
 
                         function allPositions()

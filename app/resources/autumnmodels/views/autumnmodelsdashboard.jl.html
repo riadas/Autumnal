@@ -20,6 +20,8 @@
         <button id="magnets-button" class="control-button example-button">MAGNETS</button>
         <button id="plug-button" class="control-button example-button">WATER PLUG</button>
         <button id="ice-button" class="control-button example-button">ICE</button>
+        <button id="tetris-button" class="control-button example-button">TETRIS</button>
+        <button id="hatch-button" class="control-button example-button">EGG</button>
 
       </div>
       <div id="container">
@@ -69,10 +71,11 @@
       document.getElementById("ants-button").addEventListener("click", antsClick);
       document.getElementById("light-button").addEventListener("click", lightClick);
       document.getElementById("magnets-button").addEventListener("click", magnetsClick);
+      document.getElementById("tetris-button").addEventListener("click", tetrisClick);
       document.getElementById("plug-button").addEventListener("click", plugClick);
       document.getElementById("ice-button").addEventListener("click", iceClick);
+      document.getElementById("hatch-button").addEventListener("click", hatchClick);
       document.getElementById("history-button").addEventListener("click", historyClick);
-
 
       // assign button styles
       updateButtonStyles();
@@ -85,6 +88,8 @@
         magnetsButton = document.getElementById("magnets-button");
         plugButton = document.getElementById("plug-button");
         iceButton = document.getElementById("ice-button");
+        tetrisButton = document.getElementById("tetris-button");
+        hatchButton = document.getElementById("hatch-button");
         playButton = document.getElementById("play-button");
         restartButton = document.getElementById("restart-button");
         saveButton = document.getElementById("save-button");
@@ -103,7 +108,8 @@
           magnetsButton.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
-
+          tetrisButton.classList.add("disabled");
+          hatchButton.classList.add("disabled");
           
           if (!history_mode) {
             playButton.classList.remove("history-mode");
@@ -178,6 +184,8 @@
           particlesButton.classList.remove("disabled");
           lightButton.classList.remove("disabled");
           magnetsButton.classList.remove("disabled");
+          tetrisButton.classList.remove("disabled");
+          hatchButton.classList.remove("disabled");
           plugButton.classList.remove("disabled");
           iceButton.classList.remove("disabled");
         }
@@ -718,6 +726,141 @@
                     else cloud)))
 )`);
     }
+
+  function tetrisClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  (= background "black")
+  (object Tetris (: shape (List Cell)) shape)
+
+  (: blocks (List Tetris))
+  (= blocks (initnext (list) (nextBlocks (prev blocks) (prev activeTetris))))
+  
+  (: activeTetris Tetris)
+  (= activeTetris (initnext (Tetris (list (Cell 0 0 "blue") (Cell 0 1 "blue") (Cell 0 2 "blue") (Cell 1 2 "blue")) 
+                                    (uniformChoice (list (Position 4 0) (Position 7 0) (Position 10 0))))
+                            (nextTetris (prev activeTetris))))
+  
+  (on up (= activeTetris (rotateNoCollision (prev activeTetris))))
+  (on down (= activeTetris (rotateNoCollision (rotateNoCollision (rotateNoCollision (prev activeTetris))))))
+  (on left (= activeTetris (moveNoCollision (prev activeTetris) (Position -1 0))))
+  (on right (= activeTetris (moveNoCollision (prev activeTetris) (Position 1 0))))
+  (on (== (.. (nextSolid (prev activeTetris)) origin) (.. (prev activeTetris) origin)) (= activeTetris (nextTetris activeTetris)))
+  
+  (= nextBlocks (fn (blocks tetris) 
+                    (if (& (isFree (Position 0 0) (Position 15 0) tetris) 
+                             (== (.. (nextSolid tetris) origin) (.. tetris origin))) 
+                    then (addObj blocks tetris) 
+                    else blocks)))  
+
+  (= nextTetris (fn (tetris) 
+                    (if (isFree (Position 0 0) (Position 15 0) tetris) 
+                     then 
+                     (if (== (.. (nextSolid tetris) origin) (.. tetris origin)) 
+                      then (Tetris (uniformChoice (list (list (Cell 0 0 "blue") (Cell 0 1 "blue") (Cell 0 2 "blue") (Cell 1 2 "blue"))
+                                                        (list (Cell -1 0 "yellow") (Cell 0 0 "yellow") (Cell 0 1 "yellow") (Cell 1 0 "yellow"))
+                                                        (list (Cell 0 0 "purple") (Cell 0 1 "purple") (Cell 1 0 "purple") (Cell 1 1 "purple"))
+                                                        (list (Cell 0 0 "limegreen") (Cell 0 1 "limegreen") (Cell 1 1 "limegreen") (Cell 1 2 "limegreen")))) 
+                                   (uniformChoice (list (Position 4 0) (Position 7 0) (Position 10 0)))) 
+                      else (nextSolid tetris))
+                    else (removeObj tetris))))
+)`);
+  }
+
+  function hatchClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+
+  (object Eggshell (: broken Bool) (Cell 0 0 "tan"))
+  (object Feather (: color String) (Cell 0 0 color))
+
+
+  (: eggshells (List Eggshell))
+  (= eggshells (initnext egg (nextEggshells (prev eggshells) (prev feathers))))
+
+  (: feathers (List Feather))
+  (= feathers (initnext (updateObj chick (--> feather (updateObj feather "hidden" true))) (nextFeathers (prev feathers))))
+
+  (on (clicked eggshells) (= eggshells (updateObj (prev eggshells) 
+                                                  (--> eggshell 
+                                                       (if (& (== (.. (.. eggshell origin) x) (.. click x)) (== (.. (.. eggshell origin) y) (.. click y))) 
+                                                        then (updateObj eggshell "broken" true) 
+                                                        else eggshell)))))
+                       
+  (= nextEggshells (fn (eggshells feathers) 
+                       (updateObj eggshells (--> eggshell (if (.. eggshell broken)
+                                                           then (if (intersects eggshell feathers) 
+                                                                 then (removeObj eggshell) 
+                                                                 else (nextLiquid eggshell))
+                                                           else eggshell)))))
+
+  (= nextFeathers (fn (feathers) 
+                      (updateObj feathers (--> feather (if (& (isFree (.. feather origin) feather) (.. feather hidden)) 
+                                                        then (updateObj feather "hidden" false)
+                                                        else feather)))))
+
+  (= egg (list                                    
+         (Eggshell false (Position 7 15)) 
+         (Eggshell false (Position 8 15))
+         (Eggshell false (Position 9 15))  
+         (Eggshell false (Position 6 14)) 
+         (Eggshell false (Position 7 14)) 
+         (Eggshell false (Position 8 14)) 
+         (Eggshell false (Position 9 14))
+         (Eggshell false (Position 10 14)) 
+         (Eggshell false (Position 5 13)) 
+         (Eggshell false (Position 6 13))
+         (Eggshell false (Position 7 13)) 
+         (Eggshell false (Position 8 13)) 
+         (Eggshell false (Position 9 13)) 
+         (Eggshell false (Position 10 13))
+         (Eggshell false (Position 11 13)) 
+         (Eggshell false (Position 5 12)) 
+         (Eggshell false (Position 6 12)) 
+         (Eggshell false (Position 7 12))
+         (Eggshell false (Position 8 12)) 
+         (Eggshell false (Position 9 12)) 
+         (Eggshell false (Position 10 12)) 
+         (Eggshell false (Position 11 12))
+         (Eggshell false (Position 5 11)) 
+         (Eggshell false (Position 6 11)) 
+         (Eggshell false (Position 7 11)) 
+         (Eggshell false (Position 8 11))
+         (Eggshell false (Position 9 11)) 
+         (Eggshell false (Position 10 11)) 
+         (Eggshell false (Position 11 11)) 
+         (Eggshell false (Position 6 10)) 
+         (Eggshell false (Position 7 10)) 
+         (Eggshell false (Position 8 10)) 
+         (Eggshell false (Position 9 10))
+         (Eggshell false (Position 10 10))
+         (Eggshell false (Position 7 9)) 
+         (Eggshell false (Position 8 9)) 
+         (Eggshell false (Position 9 9))))
+
+  (= chick (list (Feather "orange" (Position 7 15))
+           (Feather "orange" (Position 8 15))
+           (Feather "yellow" (Position 6 14))
+           (Feather "yellow" (Position 7 14))
+           (Feather "yellow" (Position 8 14))
+           (Feather "yellow" (Position 9 14))
+           (Feather "yellow" (Position 6 13))
+           (Feather "yellow" (Position 7 13))
+           (Feather "yellow" (Position 8 13))
+           (Feather "yellow" (Position 9 13))
+           (Feather "yellow" (Position 6 12))
+           (Feather "yellow" (Position 7 12))
+           (Feather "yellow" (Position 8 12))
+           (Feather "yellow" (Position 9 12))
+           (Feather "yellow" (Position 9 11))
+           (Feather "yellow" (Position 10 11))
+           (Feather "orange" (Position 11 11))
+           (Feather "yellow" (Position 9 10))
+           (Feather "black" (Position 10 10))))
+
+)`);
+  }
+
     }
     )
   </script>
