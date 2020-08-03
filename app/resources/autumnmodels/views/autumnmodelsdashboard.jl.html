@@ -22,6 +22,7 @@
         <button id="ice-button" class="control-button example-button">ICE</button>
         <button id="tetris-button" class="control-button example-button">TETRIS</button>
         <button id="hatch-button" class="control-button example-button">EGG</button>
+        <button id="snake-button" class="control-button example-button">SNAKE</button>
 
       </div>
       <div id="container">
@@ -75,6 +76,7 @@
       document.getElementById("plug-button").addEventListener("click", plugClick);
       document.getElementById("ice-button").addEventListener("click", iceClick);
       document.getElementById("hatch-button").addEventListener("click", hatchClick);
+      document.getElementById("snake-button").addEventListener("click", snakeClick);
       document.getElementById("history-button").addEventListener("click", historyClick);
 
       // assign button styles
@@ -90,6 +92,7 @@
         iceButton = document.getElementById("ice-button");
         tetrisButton = document.getElementById("tetris-button");
         hatchButton = document.getElementById("hatch-button");
+        snakeButton = document.getElementById("snake-button");
         playButton = document.getElementById("play-button");
         restartButton = document.getElementById("restart-button");
         saveButton = document.getElementById("save-button");
@@ -110,6 +113,7 @@
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
           hatchButton.classList.add("disabled");
+          snakeButton.classList.add("disabled");
           
           if (!history_mode) {
             playButton.classList.remove("history-mode");
@@ -186,6 +190,7 @@
           magnetsButton.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
+          snakeButton.classList.remove("disabled");
           plugButton.classList.remove("disabled");
           iceButton.classList.remove("disabled");
         }
@@ -859,6 +864,44 @@
            (Feather "black" (Position 10 10))))
 
 )`);
+  }
+
+  function snakeClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  
+  (object Snake (: head Cell) (: tail (List Cell)) (: direction Position) (list head tail))
+  (object Food (Cell 0 0 "pink"))
+  
+  (: snake Snake)
+  (= snake (initnext (Snake (Cell 7 7 "green") (list (Cell 8 7 "green")) (Position -1 0) (Position 0 0)) 
+                     (nextSnake (prev snake) (prev food))))
+  
+  (: food Food)
+  (= food (initnext (Food (Position 10 8)) (nextFood food)))
+  
+  (= nextSnake (fn (snake food) (let (
+                                      (= new_snake (Snake (Cell (moveWrap (.. snake head) (.. snake direction)) "green") (vcat (.. snake head) (.. snake tail)) (.. snake direction) (.. snake origin)))
+									  (if (in (.. new_snake head) (.. new_snake tail)) 
+                                       then (Snake (Cell (.. (.. snake head) position) "red") (.. snake tail) (.. snake direction) (.. snake origin)) 
+                                       else (if (! (isFree (.. food origin) food)) 
+                                             then new_snake 
+                                             else (updateObj new_snake "tail" (filter 
+                                                                                (--> cell (!= (.. cell position) (.. (last (.. new_snake tail)) position))) 
+																		        (.. new_snake tail)))))
+                                     ))))
+  
+  (= nextFood (fn (food) (if (isFree (.. food origin) food) 
+                          then food 
+                          else (Food (uniformChoice (filter isFree (allPositions)))) )))
+  
+  (on left (= snake (if (== (.. (.. snake head) color) "red") then snake else (updateObj (prev snake) "direction" (Position -1 0)))))
+  (on right (= snake (if (== (.. (.. snake head) color) "red") then snake else (updateObj (prev snake) "direction" (Position 1 0)))))
+  (on up (= snake (if (== (.. (.. snake head) color) "red") then snake else (updateObj (prev snake) "direction" (Position 0 -1)))))
+  (on down (= snake (if (== (.. (.. snake head) color) "red") then snake else (updateObj (prev snake) "direction" (Position 0 1)))))
+)`);
+
+
   }
 
     }

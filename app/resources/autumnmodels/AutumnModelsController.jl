@@ -900,6 +900,35 @@ const builtInDict = Dict([
                           (isWithinBounds(move(object, position)) && isFree(move(object, x, y), object)) ? move(object, x, y) : object 
                         end
 
+                        function moveWrap(object::Object, position::Position)::Object
+                          object.position = moveWrap(object.origin, position.x, position.y)
+                          object
+                        end
+
+                        function moveWrap(cell::Cell, position::Position)
+                          moveWrap(cell.position, position.x, position.y)
+                        end
+
+                        function moveWrap(position::Position, cell::Cell)
+                          moveWrap(cell.position, position)
+                        end
+
+                        function moveWrap(object::Object, x::Int, y::Int)::Object
+                          object.position = moveWrap(object.origin, x, y)
+                          object
+                        end
+                        
+                        function moveWrap(position1::Position, position2::Position)::Position
+                          moveWrap(position, position2.x, position2.y)
+                        end
+
+                        function moveWrap(position::Position, x::Int, y::Int)::Position
+                          GRID_SIZE = state.GRID_SIZEHistory[0]
+                          println("hello")
+                          println(Position((position.x + x + GRID_SIZE) % GRID_SIZE, (position.y + y + GRID_SIZE) % GRID_SIZE))
+                          Position((position.x + x + GRID_SIZE) % GRID_SIZE, (position.y + y + GRID_SIZE) % GRID_SIZE)
+                        end
+
                         function randomPositions(GRID_SIZE::Int, n::Int)::Array{Position}
                           nums = uniformChoice([0:(GRID_SIZE * GRID_SIZE - 1);], n)
                           println(nums)
