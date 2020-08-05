@@ -2,14 +2,13 @@ module AutumnModelsController
 using Genie.Renderer
 using Genie.Renderer.Html: html
 using Genie.Renderer.Json: json
-using Genie.Router
+using Genie.Router 
 using Genie.Requests
 using MLStyle
 import Base.min
 using SExpressions
 
 MODS = Dict{Int, Any}(); 
-STATES = Dict{Int, Any}();
 HISTORY = Dict{Int, Dict{Int, Any}}()
 
 function autumnmodels()
@@ -21,30 +20,30 @@ function playground()
 end
 
 function compileautumn()
-  println("compileautumn")
+  # println("compileautumn")
   autumnString = postpayload(:autumnstring, "(program (= GRID_SIZE 12))")
   clientid = parse(Int64, postpayload(:clientid, 0))
-  println(string("autumnstring: ", autumnString))
-  println(string("clientid: ", clientid))
-  println(typeof(clientid))
+  # println(string("autumnstring: ", autumnString))
+  # println(string("clientid: ", clientid))
+  # println(typeof(clientid))
   if !haskey(MODS, clientid)
     try
       parsedAutumn = eval(Meta.parse("au\"\"\"$(autumnString)\"\"\""))
-      println("PARSED SUCCESSFULLY")
+      # println("PARSED SUCCESSFULLY")
       compiledAutumn = compiletojulia(parsedAutumn)
-      println("COMPILED SUCCESSFULLY")
+      # println("COMPILED SUCCESSFULLY")
       mod = eval(compiledAutumn)
-      println("EVALUATED SUCCESSFULLY")
+      # println("EVALUATED SUCCESSFULLY")
       content = showstring(parsedAutumn)
       MODS[clientid] = mod
-      println("HERE 3")
+      # println("HERE 3")
     catch y
-      println("PARSING OR COMPILING FAILURE!")
-      println(y)
+      # println("PARSING OR COMPILING FAILURE!")
+      # println(y)
       content = ""
     end
   else
-    println("RESET")
+    # println("RESET")
     content = autumnString
     delete!(MODS, clientid)
   end
@@ -52,29 +51,27 @@ function compileautumn()
 end
 
 function step()
-  println("step")
+  # println("step")
   clientid = parse(Int64, @params(:clientid))
   mod = MODS[clientid]
-  state = STATES[clientid]
-  println(state.time)
+  state = mod.state
+  # println(state.time)
   next_state = mod.next(state, nothing, nothing, nothing, nothing, nothing)
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  STATES[clientid] = next_state
   #HISTORY[clientid][next_state.time] = cells
   json(vcat(background, cells))
 end
 
 function startautumn()
-  println("startautumn")
+  # println("startautumn")
   clientid = parse(Int64, @params(:clientid))
   mod = MODS[clientid]
   state = mod.init(nothing, nothing, nothing, nothing, nothing)
-  println(state.time)
+  # println(state.time)
   grid_size = state.GRID_SIZEHistory[state.time]
   background = :backgroundHistory in fieldnames(typeof(state)) ? state.backgroundHistory[state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(state.scene))
-  STATES[clientid] = state
   #HISTORY[clientid] = Dict{Int, Any}()
   #HISTORY[clientid][state.time] = cells
   json(vcat(grid_size, background, cells))
@@ -82,27 +79,25 @@ function startautumn()
 end
 
 function clicked()
-  println("click")
+  # println("click")
   clientid = parse(Int64, @params(:clientid))
   mod = MODS[clientid]
-  state = STATES[clientid]
-  println(state.time)
+  state = mod.state
+  # println(state.time)
   next_state = mod.next(state, mod.Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))), nothing, nothing, nothing, nothing)
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  STATES[clientid] = next_state
   #HISTORY[clientid][next_state.time] = cells
   json(vcat(background, cells))
   #json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))))) : []))
 end
 
 function up()
-  println("up")
+  # println("up")
   clientid = parse(Int64, @params(:clientid))
   mod = MODS[clientid]
-  state = STATES[clientid]
+  state = mod.state
   next_state = mod.next(state, nothing, nothing, nothing, mod.Up(), nothing)
-  STATES[clientid] = next_state
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
   #HISTORY[clientid][next_state.time] = cells
@@ -110,12 +105,11 @@ function up()
 end
 
 function down()
-  println("down")
+  # println("down")
   clientid = parse(Int64, @params(:clientid))
   mod = MODS[clientid]
-  state = STATES[clientid]
+  state = mod.state
   next_state = mod.next(state, nothing, nothing, nothing, nothing, mod.Down())
-  STATES[clientid] = next_state
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
   #HISTORY[clientid][next_state.time] = cells
@@ -123,12 +117,11 @@ function down()
 end
 
 function right()
-  println("right")
+  # println("right")
   clientid = parse(Int64, @params(:clientid))
   mod = MODS[clientid]
-  state = STATES[clientid]
+  state = mod.state
   next_state = mod.next(state, nothing, nothing, mod.Right(), nothing, nothing)
-  STATES[clientid] = next_state
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
   #HISTORY[clientid][next_state.time] = cells
@@ -136,12 +129,11 @@ function right()
 end
 
 function left()
-  println("left")
+  # println("left")
   clientid = parse(Int64, @params(:clientid))
   mod = MODS[clientid]
-  state = STATES[clientid]
+  state = mod.state
   next_state = mod.next(state, nothing, mod.Left(), nothing, nothing, nothing)
-  STATES[clientid] = next_state
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
   #HISTORY[clientid][next_state.time] = vcat(background, cells)
@@ -149,7 +141,7 @@ function left()
 end
 
 function replay()
-  println("replay")
+  # println("replay")
   clientid = parse(Int64, @params(:clientid))
   json(HISTORY[clientid])
   # json(Dict(key => map(particle -> [particle.position.x, particle.position.y, particle.color], filter(particle -> particle.render, particles)) for (key, particles) in history))
@@ -420,8 +412,8 @@ end
 
 function compiletypedecl(expr::AExpr, data::Dict{String, Any}, parent::Union{AExpr, Nothing})
   if (parent !== nothing && (parent.head == :program || parent.head == :external))
-    println(expr.args[1])
-    println(expr.args[2])
+    # println(expr.args[1])
+    # println(expr.args[2])
     data["types"][expr.args[1]] = expr.args[2]
     :()
   else
@@ -430,8 +422,8 @@ function compiletypedecl(expr::AExpr, data::Dict{String, Any}, parent::Union{AEx
 end
 
 function compileexternal(expr::AExpr, data::Dict{String, Any})
-  println("here: ")
-  println(expr.args[1])
+  # println("here: ")
+  # println(expr.args[1])
   if !(expr.args[1] in data["external"])
     push!(data["external"], expr.args[1])
   end
@@ -504,13 +496,13 @@ function compileobject(expr::AExpr, data::Dict{String, Any})
 end
 
 function compileon(expr::AExpr, data::Dict{String, Any})
-  println("here")
-  println(typeof(expr.args[1]) == AExpr ? expr.args[1].args[1] : expr.args[1])
+  # println("here")
+  # println(typeof(expr.args[1]) == AExpr ? expr.args[1].args[1] : expr.args[1])
   event = compile(expr.args[1], data)
   if event in [:click, :left, :right, :up, :down]
     push!(data["on"], (:(occurred($(event))), compile(expr.args[2], data)))
   elseif expr.args[1].head == :call && expr.args[1].args[1] == :clicked
-    println("maybe?")
+    # println("maybe?")
     push!(data["on"], (:(clicked(click, $(map(x -> compile(x, data), expr.args[1].args[2:end])...))), compile(expr.args[2], data)))
   else
     push!(data["on"], (event, compile(expr.args[2], data)))
@@ -550,12 +542,14 @@ function compileinitnext(data::Dict{String, Any})
             vcat(data["external"], data["initnext"], data["lifted"]))...)
             state.scene = Scene(vcat([$(filter(x -> get(data["types"], x, :Any) in vcat(data["objects"], map(x -> [:List, x], data["objects"])), 
         map(x -> x.args[1], vcat(data["initnext"], data["lifted"])))...)]...), :backgroundHistory in fieldnames(STATE) ? state.backgroundHistory[state.time] : "#ffffff00")
-      deepcopy(state)
+      
+      global state = deepcopy(state)
+      state
     end
     end
   nextFunction = quote
     function next($([:(old_state::STATE), map(x -> :($(compile(x.args[1], data))::Union{$(compile(data["types"][x.args[1]], data)), Nothing}), data["external"])...]...))::STATE
-      global state = deepcopy(old_state)
+      global state = old_state
       state.time = state.time + 1
       $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] == :GRID_SIZE, data["lifted"]))...)
       $(next)
@@ -563,7 +557,8 @@ function compileinitnext(data::Dict{String, Any})
             vcat(data["external"], data["initnext"], data["lifted"]))...)
       state.scene = Scene(vcat([$(filter(x -> get(data["types"], x, :Any) in vcat(data["objects"], map(x -> [:List, x], data["objects"])), 
         map(x -> x.args[1], vcat(data["initnext"], data["lifted"])))...)]...), :backgroundHistory in fieldnames(STATE) ? state.backgroundHistory[state.time] : "#ffffff00")
-      deepcopy(state)
+      global state = deepcopy(state)
+      state
     end
     end
     [initFunction, nextFunction]
@@ -696,7 +691,7 @@ const builtInDict = Dict([
                         end
 
                         function isWithinBounds(obj::Object)::Bool
-                          println(filter(cell -> !isWithinBounds(cell.position),render(obj)))
+                          # println(filter(cell -> !isWithinBounds(cell.position),render(obj)))
                           length(filter(cell -> !isWithinBounds(cell.position), render(obj))) == 0
                         end
 
@@ -711,8 +706,8 @@ const builtInDict = Dict([
                         end
 
                         function clicked(click::Union{Click, Nothing}, objects::AbstractArray)
-                          println("LOOK AT ME")
-                          println(reduce(&, map(obj -> clicked(click, obj), objects)))
+                          # println("LOOK AT ME")
+                          # println(reduce(&, map(obj -> clicked(click, obj), objects)))
                           reduce(|, map(obj -> clicked(click, obj), objects))
                         end
 
@@ -924,15 +919,15 @@ const builtInDict = Dict([
 
                         function moveWrap(position::Position, x::Int, y::Int)::Position
                           GRID_SIZE = state.GRID_SIZEHistory[0]
-                          println("hello")
-                          println(Position((position.x + x + GRID_SIZE) % GRID_SIZE, (position.y + y + GRID_SIZE) % GRID_SIZE))
+                          # println("hello")
+                          # println(Position((position.x + x + GRID_SIZE) % GRID_SIZE, (position.y + y + GRID_SIZE) % GRID_SIZE))
                           Position((position.x + x + GRID_SIZE) % GRID_SIZE, (position.y + y + GRID_SIZE) % GRID_SIZE)
                         end
 
                         function randomPositions(GRID_SIZE::Int, n::Int)::Array{Position}
                           nums = uniformChoice([0:(GRID_SIZE * GRID_SIZE - 1);], n)
-                          println(nums)
-                          println(map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums))
+                          # println(nums)
+                          # println(map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums))
                           map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums)
                         end
 
@@ -986,7 +981,7 @@ const builtInDict = Dict([
                         end
 
                         function nextLiquid(object::Object)::Object 
-                          println("nextLiquid")
+                          # println("nextLiquid")
                           GRID_SIZE = state.GRID_SIZEHistory[0]
                           new_object = deepcopy(object)
                           if object.origin.y != GRID_SIZE - 1 && isFree(move(object.origin, Position(0, 1)))
@@ -1032,7 +1027,7 @@ const builtInDict = Dict([
                         end
 
                         function nextSolid(object::Object)::Object 
-                          println("nextSolid")
+                          # println("nextSolid")
                           GRID_SIZE = state.GRID_SIZEHistory[0] 
                           new_object = deepcopy(object)
                           if (isWithinBounds(move(object, Position(0, 1))) && reduce(&, map(x -> isFree(x, object), map(cell -> move(cell.position, Position(0, 1)), render(object)))))

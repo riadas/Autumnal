@@ -59,10 +59,11 @@
       var historyIntervalID = -1;
       var history_response = '{}';
       var history_index = -1;
+      var paused = false;
   
       // attach event listeners to buttons
       Array.from(document.getElementsByClassName("cell")).forEach(function (cell) {
-        console.log(cell.id)
+        //console.log(cell.id)
         cell.addEventListener("click", function () { click(parseInt(cell.id)); });
       })
       document.getElementById("play-button").addEventListener("click", playOrPauseClick);
@@ -197,7 +198,7 @@
       }
 
       function updateCellStyles(xml_response) { 
-        console.log(xml_response);
+        //console.log(xml_response);
         xml_json = JSON.parse(xml_response);
         Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { 
           cell.style.background = xml_json[0] == "#ffffff00" ? xml_json[0] : "linear-gradient(45deg, "+colorToRGBA(xml_json[0], 0.6)+", "+colorToRGBA(xml_json[0], 0.6)+")"
@@ -214,11 +215,11 @@
 
         console.log("compileClick")
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", 'http://localhost:8000/compileautumn', true);
+        xhr.open("POST", 'http://causal-discovery.herokuapp.com:80/compileautumn', true);
 
         //Send the proper header information along with the request
         xhr.onreadystatechange = function () { // Call a function when the state changes.
-          if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+          if (this.readyState === 4 && this.status === 200) {
             content = JSON.parse(xhr.response)[0];
             console.log("content: "+content);
 
@@ -250,6 +251,10 @@
             updateButtonStyles(); 
           }
         };
+        if (!compiled) {
+          console.log("hello");
+          document.getElementById("compile-button").innerHTML = "COMPILING <i style='font-size: medium' class='fa fa-spinner fa-spin'></i>";
+        }
         console.log("client_id: "+client_id);
         console.log("autumn-string: "+myCodeMirror.getValue());
         formData = new FormData();
@@ -267,13 +272,14 @@
       function playOrPauseClick() {
         if (!history_mode) {
           if (intervalID !== -1) { // pause
+            paused = true;
             clearInterval(intervalID);
             intervalID = -1;
             updateButtonStyles();
           } else { // play
             if (not_run_yet) {
               var xhr = new XMLHttpRequest();
-              xhr.open("GET", 'http://localhost:8000/startautumn?clientid='+client_id, true);
+              xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn?clientid='+client_id, true);
       
               //Send the proper header information along with the request
               xhr.setRequestHeader("Content-Type", "application/json");
@@ -300,7 +306,7 @@
                         grid.appendChild(button);
                       }
                     });
-
+                    paused = false;
                     if (intervalID != -1) {
                       clearInterval(intervalID);
                     }
@@ -310,9 +316,12 @@
                     console.log("here?")
                 }
               };
+              console.log("hello");
+              document.getElementById("play-button").innerHTML = "<i style='font-size: medium' class='fa fa-spinner fa-spin'></i>";
               not_run_yet = false;
               xhr.send();
             } else {
+              paused = false;
               intervalID = setInterval(step, timestep);
               updateButtonStyles();
             }
@@ -332,7 +341,7 @@
       function restartClick() {
         if (!history_mode) {
           var xhr = new XMLHttpRequest();
-          xhr.open("GET", 'http://localhost:8000/startautumn?clientid='+client_id, true);
+          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn?clientid='+client_id, true);
 
           //Send the proper header information along with the request
           xhr.setRequestHeader("Content-Type", "application/json");
@@ -343,7 +352,8 @@
                 if (intervalID != -1) {
                   clearInterval(intervalID);
                 }
-                updateCellStyles(xhr.response);
+                //updateCellStyles(`["#ffffff00"]`);
+                paused = false;
                 intervalID = setInterval(step, timestep);
                 updateButtonStyles();
             }
@@ -361,7 +371,7 @@
         if (!history_mode) {
           if (intervalID != -1) {
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", 'http://localhost:8000/clicked?x='+(id % grid_size)+'&y='+Math.floor(id/grid_size)+'&clientid='+client_id, true);
+            xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/clicked?x='+(id % grid_size)+'&y='+Math.floor(id/grid_size)+'&clientid='+client_id, true);
 
             //Send the proper header information along with the request
             xhr.setRequestHeader("Content-Type", "application/json");
@@ -395,7 +405,7 @@
               key = "down";
               break;
           }
-          xhr.open("GET", 'http://localhost:8000/' + key + '?clientid='+client_id, true);
+          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/' + key + '?clientid='+client_id, true);
 
           //Send the proper header information along with the request
           xhr.setRequestHeader("Content-Type", "application/json");
@@ -416,7 +426,7 @@
         console.log("step");
         var xhr = new XMLHttpRequest();
 
-        xhr.open("GET", 'http://localhost:8000/step?clientid='+client_id, true);
+        xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/step?clientid='+client_id, true);
 
         //Send the proper header information along with the request
         xhr.setRequestHeader("Content-Type", "application/json");
@@ -428,11 +438,13 @@
               console.log("xhr.response: "+JSON.stringify(xhr.response));
               console.log(typeof(JSON.parse(xhr.response)))
 
-
-
               updateCellStyles(xhr.response);
               clearInterval(intervalID);
-              intervalID = setInterval(step, timestep);
+              if (paused) {
+                intervalID = -1;
+              } else {
+                intervalID = setInterval(step, timestep);
+              }
           }
         };
         xhr.send();
@@ -443,7 +455,7 @@
           history_mode = true;
           var xhr = new XMLHttpRequest();
 
-          xhr.open("GET", 'http://localhost:8000/replay?clientid='+client_id, true);
+          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/replay?clientid='+client_id, true);
                   //Send the proper header information along with the request
                   xhr.setRequestHeader("Content-Type", "application/json");
 
@@ -497,14 +509,14 @@
     updateCellStyles(`["#ffffff00"]`);
 
     function colorToRGBA(color, a) {
-      console.log("colorToRGBA")
-      console.log(color);
+      //console.log("colorToRGBA")
+      //console.log(color);
       if (color[0] != "#") {
         hex = colors[color];
       } else {
         hex = color;
       }
-      console.log("hex: "+hex)
+      // console.log("hex: "+hex)
       return hexToRGB(hex, a)
     }
 
@@ -595,9 +607,7 @@
   (= lights (initnext (mapPositions Light GRID_SIZE (--> pos (== (.. pos x) (.. pos y))) false) 
                       (prev lights)))
 
-  (on click (= lights (if (== (.. click x) (.. click y))
-                       then (updateObj lights (--> obj (updateObj obj "on" (! (.. obj on))))) 
-                       else (prev lights))))
+  (on (clicked lights) (= lights (updateObj lights (--> obj (updateObj obj "on" (! (.. obj on)))))))
 )`)
     }
 
