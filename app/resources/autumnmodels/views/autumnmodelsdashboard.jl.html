@@ -387,7 +387,7 @@
         }
       }
 
-      document.addEventListener('keydown', function(event) {
+      document.addEventListener('keyup', function(event) {
         if (!history_mode && (intervalID != -1)) {
           var xhr = new XMLHttpRequest();
           let key = "";
@@ -673,9 +673,9 @@
   (= clearButton (Button "red" (Position 14 0)))
 
   (: vessels (List Vessel))
-  (= vessels (initnext (list) (prev vessels)))
+  (= vessels (initnext (list (Vessel (Position 6 15)) (Vessel (Position 6 14)) (Vessel (Position 6 13)) (Vessel (Position 5 12)) (Vessel (Position 4 11)) (Vessel (Position 3 10)) (Vessel (Position 9 15)) (Vessel (Position 9 14)) (Vessel (Position 9 13)) (Vessel (Position 10 12)) (Vessel (Position 11 11)) (Vessel (Position 12 10))) (prev vessels)))
   (: plugs (List Plug))
-  (= plugs (initnext (list) (prev plugs)))
+  (= plugs (initnext (list (Plug (Position 7 15)) (Plug (Position 8 15)) (Plug (Position 7 14)) (Plug (Position 8 14)) (Plug (Position 7 13)) (Plug (Position 8 13))) (prev plugs)))
   (: water (List Water))
   (= water (initnext (list) (updateObj (prev water) nextLiquid)))
 
