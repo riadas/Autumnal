@@ -194,7 +194,7 @@ function showstring(expr::Expr)
     Expr(:args, args...) => join(map(showstring, args), " ")
     Expr(:call, f, arg1, arg2) && if isinfix(f) end => "$(showstring(arg1)) $f $(showstring(arg2))"
     Expr(:call, f, args...) => "($(join(map(showstring, [f ; args]), " ")))"
-    Expr(:let, vars...) => "let \n\t$(join(map(showstring, vars[1:end-1]), "\n\t"))\nin\n\t$(showstring(vars[end]))"
+    Expr(:let, vars...) => "let \n\t$(join(map(showstring, vars), "\n\t"))"
     Expr(:paramtype, type, param) => string(type, " ", param)
     Expr(:paramtype, type) => string(type)
     Expr(:case, type, vars...) => string("\n\tcase $(showstring(type)) of \n\t\t", join(map(showstring, vars), "\n\t\t"))
@@ -363,6 +363,10 @@ function compile(expr, data::Dict{String, Any}, parent::Union{AExpr, Nothing}=no
     :(1 == 1)
   elseif expr == Symbol("false")
     :(1 == 2)
+  elseif expr in [:left, :right, :up, :down]
+    :(occurred($(expr)))
+  elseif expr == :clicked
+    :(occurred(click))
   else
     expr
   end
@@ -444,7 +448,9 @@ end
 
 function compilecall(expr::AExpr, data::Dict{String, Any})
   fnName = expr.args[1]
-  if !(fnName in binaryOperators) && fnName != :prev
+  if fnName == :clicked
+    :(clicked(click, $(map(x -> compile(x, data), expr.args[2:end])...)))
+  elseif !(fnName in binaryOperators) && fnName != :prev
     :($(fnName)($(map(x -> compile(x, data), expr.args[2:end])...)))
   elseif fnName == :prev
     :($(Symbol(string(expr.args[2]) * "Prev"))($(map(compile, expr.args[3:end])...)))
@@ -499,14 +505,8 @@ function compileon(expr::AExpr, data::Dict{String, Any})
   # println("here")
   # println(typeof(expr.args[1]) == AExpr ? expr.args[1].args[1] : expr.args[1])
   event = compile(expr.args[1], data)
-  if event in [:click, :left, :right, :up, :down]
-    push!(data["on"], (:(occurred($(event))), compile(expr.args[2], data)))
-  elseif expr.args[1].head == :call && expr.args[1].args[1] == :clicked
-    # println("maybe?")
-    push!(data["on"], (:(clicked(click, $(map(x -> compile(x, data), expr.args[1].args[2:end])...))), compile(expr.args[2], data)))
-  else
-    push!(data["on"], (event, compile(expr.args[2], data)))
-  end
+  response = compile(expr.args[2], data)
+  push!(data["on"], (event, compile(expr.args[2], data)))
   :()
 end
 
@@ -518,27 +518,29 @@ function compileinitnext(data::Dict{String, Any})
 
   onClauses = map(x -> quote 
     if $(x[1])
-      $(map(x -> :($(compile(x.args[1], data)) = state.$(Symbol(string(x.args[1])*"History"))[state.time - 1]), 
-      vcat(data["initnext"], data["lifted"]))...)
       $(x[2])
     end
   end, data["on"])
+  notOnClause = quote
+    if !(reduce(|, [$(map(x -> x[1], data["on"])...)]))
+      $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2].args[2], data))), data["initnext"])...)
+    end
+  end
 
   next = quote
     $(map(x -> :($(compile(x.args[1], data)) = state.$(Symbol(string(x.args[1])*"History"))[state.time - 1]), 
       vcat(data["initnext"], data["lifted"]))...)
-    $(vcat(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2].args[2], data))), data["initnext"]),
-           map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] != :GRID_SIZE, data["lifted"]))
-      )...)
     $(onClauses...)
+    $(notOnClause)
+    $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] != :GRID_SIZE, data["lifted"]))...)
   end
 
   initFunction = quote
-    function init($(map(x -> :($(compile(x.args[1], data))::Union{$(compile(data["types"][x.args[1]], data)), Nothing}), data["external"])...))::STATE
+    function init($(map(x -> :($(x.args[1])::Union{$(compile(data["types"][x.args[1]], data)), Nothing}), data["external"])...))::STATE
       $(compileinitstate(data))
       $(init)
       $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] != :GRID_SIZE, data["lifted"]))...)
-      $(map(x -> :(state.$(Symbol(string(x.args[1])*"History"))[state.time] = $(compile(x.args[1], data))), 
+      $(map(x -> :(state.$(Symbol(string(x.args[1])*"History"))[state.time] = $(x.args[1])), 
             vcat(data["external"], data["initnext"], data["lifted"]))...)
             state.scene = Scene(vcat([$(filter(x -> get(data["types"], x, :Any) in vcat(data["objects"], map(x -> [:List, x], data["objects"])), 
         map(x -> x.args[1], vcat(data["initnext"], data["lifted"])))...)]...), :backgroundHistory in fieldnames(STATE) ? state.backgroundHistory[state.time] : "#ffffff00")
@@ -548,12 +550,12 @@ function compileinitnext(data::Dict{String, Any})
     end
     end
   nextFunction = quote
-    function next($([:(old_state::STATE), map(x -> :($(compile(x.args[1], data))::Union{$(compile(data["types"][x.args[1]], data)), Nothing}), data["external"])...]...))::STATE
+    function next($([:(old_state::STATE), map(x -> :($(x.args[1])::Union{$(compile(data["types"][x.args[1]], data)), Nothing}), data["external"])...]...))::STATE
       global state = old_state
       state.time = state.time + 1
       $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2], data))), filter(x -> x.args[1] == :GRID_SIZE, data["lifted"]))...)
       $(next)
-      $(map(x -> :(state.$(Symbol(string(x.args[1])*"History"))[state.time] = $(compile(x.args[1], data))), 
+      $(map(x -> :(state.$(Symbol(string(x.args[1])*"History"))[state.time] = $(x.args[1])), 
             vcat(data["external"], data["initnext"], data["lifted"]))...)
       state.scene = Scene(vcat([$(filter(x -> get(data["types"], x, :Any) in vcat(data["objects"], map(x -> [:List, x], data["objects"])), 
         map(x -> x.args[1], vcat(data["initnext"], data["lifted"])))...)]...), :backgroundHistory in fieldnames(STATE) ? state.backgroundHistory[state.time] : "#ffffff00")
@@ -807,6 +809,14 @@ const builtInDict = Dict([
                           length(filter(cell -> cell.position.x == position.x && cell.position.y == position.y, render(state.scene))) == 0
                         end
 
+                        function isFree(click::Union{Click, Nothing})::Bool
+                          if click == nothing
+                            false
+                          else
+                            isFree(Position(click.x, click.y))
+                          end
+                        end
+
                         function unitVector(position1::Position, position2::Position)::Position
                           deltaX = position2.x - position1.x
                           deltaY = position2.y - position1.y
@@ -892,7 +902,7 @@ const builtInDict = Dict([
                         end
 
                         function moveNoCollision(object::Object, x::Int, y::Int)
-                          (isWithinBounds(move(object, position)) && isFree(move(object, x, y), object)) ? move(object, x, y) : object 
+                          (isWithinBounds(move(object, x, y)) && isFree(move(object, x, y), object)) ? move(object, x, y) : object 
                         end
 
                         function moveWrap(object::Object, position::Position)::Object

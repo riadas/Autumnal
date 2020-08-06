@@ -215,7 +215,7 @@
 
         console.log("compileClick")
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", 'http://causal-discovery.herokuapp.com:80/compileautumn', true);
+        xhr.open("POST", 'http://localhost:8000/compileautumn', true);
 
         //Send the proper header information along with the request
         xhr.onreadystatechange = function () { // Call a function when the state changes.
@@ -279,7 +279,7 @@
           } else { // play
             if (not_run_yet) {
               var xhr = new XMLHttpRequest();
-              xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn?clientid='+client_id, true);
+              xhr.open("GET", 'http://localhost:8000/startautumn?clientid='+client_id, true);
       
               //Send the proper header information along with the request
               xhr.setRequestHeader("Content-Type", "application/json");
@@ -341,7 +341,7 @@
       function restartClick() {
         if (!history_mode) {
           var xhr = new XMLHttpRequest();
-          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn?clientid='+client_id, true);
+          xhr.open("GET", 'http://localhost:8000/startautumn?clientid='+client_id, true);
 
           //Send the proper header information along with the request
           xhr.setRequestHeader("Content-Type", "application/json");
@@ -371,7 +371,7 @@
         if (!history_mode) {
           if (intervalID != -1) {
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/clicked?x='+(id % grid_size)+'&y='+Math.floor(id/grid_size)+'&clientid='+client_id, true);
+            xhr.open("GET", 'http://localhost:8000/clicked?x='+(id % grid_size)+'&y='+Math.floor(id/grid_size)+'&clientid='+client_id, true);
 
             //Send the proper header information along with the request
             xhr.setRequestHeader("Content-Type", "application/json");
@@ -405,7 +405,7 @@
               key = "down";
               break;
           }
-          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/' + key + '?clientid='+client_id, true);
+          xhr.open("GET", 'http://localhost:8000/' + key + '?clientid='+client_id, true);
 
           //Send the proper header information along with the request
           xhr.setRequestHeader("Content-Type", "application/json");
@@ -426,7 +426,7 @@
         console.log("step");
         var xhr = new XMLHttpRequest();
 
-        xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/step?clientid='+client_id, true);
+        xhr.open("GET", 'http://localhost:8000/step?clientid='+client_id, true);
 
         //Send the proper header information along with the request
         xhr.setRequestHeader("Content-Type", "application/json");
@@ -455,7 +455,7 @@
           history_mode = true;
           var xhr = new XMLHttpRequest();
 
-          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/replay?clientid='+client_id, true);
+          xhr.open("GET", 'http://localhost:8000/replay?clientid='+client_id, true);
                   //Send the proper header information along with the request
                   xhr.setRequestHeader("Content-Type", "application/json");
 
@@ -574,7 +574,7 @@
 					                                   then (removeObj obj)
 		  									           else obj)))))
 
-  (on click (= foods (addObj (prev foods) (map Food (randomPositions GRID_SIZE 4)))))
+  (on clicked (= foods (addObj (prev foods) (map Food (randomPositions GRID_SIZE 4)))))
 
   (: nextAnt (-> Ant Ant))
   (= nextAnt (fn (ant) (move ant (unitVector ant (closest ant Food)))))
@@ -592,7 +592,7 @@
      (initnext (list) 
                (updateObj (prev particles) (--> obj (Particle (uniformChoice (adjPositions (.. obj origin))))))))	
   
-  (on click (= particles (addObj (prev particles) (Particle (Position (.. click x) (.. click y))))))
+  (on clicked (= particles (addObj (prev particles) (Particle (Position (.. click x) (.. click y))))))
 )`);
     }
 
@@ -623,30 +623,18 @@
   (: mobileMagnet Magnet)
   (= mobileMagnet (initnext (Magnet (Position 4 7)) (prev mobileMagnet)))
 
-  (on click (= mobileMagnet (updateMagnet (rotate mobileMagnet) mobileMagnet fixedMagnet attractVectors)))
-  (on left (= mobileMagnet (updateMagnet (move mobileMagnet -1 0) mobileMagnet fixedMagnet attractVectors)))
-  (on right (= mobileMagnet (updateMagnet (move mobileMagnet 1 0) mobileMagnet fixedMagnet attractVectors)))
-  (on up (= mobileMagnet (updateMagnet (move mobileMagnet 0 -1) mobileMagnet fixedMagnet attractVectors)))
-  (on down (= mobileMagnet (updateMagnet (move mobileMagnet 0 1) mobileMagnet fixedMagnet attractVectors)))
-
-  (= invalid (fn (magnet1 magnet2) 
-                 (| (| (! (isWithinBounds magnet1)) (intersects magnet1 magnet2))
-                    (| (adjacent (posPole magnet1) (posPole magnet2)) 
-                       (adjacent (negPole magnet1) (negPole magnet2))))))
-  
-  (= updateMagnet (fn (interMagnet mobMagnet fixedMagnet attractVectors) 
-                      (if (invalid interMagnet fixedMagnet) 
-                      then mobMagnet 
-                      else (let ((= disp1 (displacement (posPole interMagnet) (negPole fixedMagnet)))
-                                 (= disp2 (displacement (negPole interMagnet) (posPole fixedMagnet)))
-                                 (if (in disp1 attractVectors) 
-                                 then (move interMagnet (unitVector disp1)) 
-                                 else (if (in disp2 attractVectors) 
-                                       then (move interMagnet (unitVector disp2)) 
-                                       else interMagnet)))))))
-
-  (= posPole (fn (magnet) (move (.. magnet origin) (first (.. magnet render)))))  
-  (= negPole (fn (magnet) (move (.. magnet origin) (last (.. magnet render)))))
+  (on clicked (= mobileMagnet (rotateNoCollision (prev mobileMagnet))))
+  (on left (= mobileMagnet (moveNoCollision (prev mobileMagnet) -1 0)))
+  (on right (= mobileMagnet (moveNoCollision (prev mobileMagnet) 1 0)))
+  (on up (= mobileMagnet (moveNoCollision (prev mobileMagnet) 0 -1)))
+  (on down (= mobileMagnet (moveNoCollision (prev mobileMagnet) 0 1)))
+  (on (adjacent (posPole mobileMagnet) (posPole fixedMagnet)) (= mobileMagnet (prev mobileMagnet)))
+  (on (adjacent (negPole mobileMagnet) (negPole fixedMagnet)) (= mobileMagnet (prev mobileMagnet)))
+  (on (in (displacement (posPole mobileMagnet) (negPole fixedMagnet)) attractVectors) (= mobileMagnet (move mobileMagnet    (unitVector (displacement (posPole mobileMagnet) (negPole fixedMagnet))))))
+  (on (in (displacement (negPole mobileMagnet) (posPole fixedMagnet)) attractVectors) (= mobileMagnet (move mobileMagnet (unitVector (displacement (negPole mobileMagnet) (posPole fixedMagnet))))))
+    
+  (= posPole (fn (magnet) (first (render magnet))))  
+  (= negPole (fn (magnet) (last (render magnet))))  
 
   (= attractVectors (list (Position 0 2) (Position 2 0) (Position -2 0) (Position 0 -2)))
 )`);
@@ -681,14 +669,9 @@
 
   (= currentParticle (initnext "vessel" (prev currentParticle)))
 
-  (on click (if (isFree (Position (.. click x) (.. click y))) 
-             then (if (== currentParticle "vessel") 
-                   then (= vessels (addObj (prev vessels) (Vessel (Position (.. click x) (.. click y))))) 
-                   else (if (== currentParticle "plug") 
-                         then (= plugs (addObj (prev plugs) (Plug (Position (.. click x) (.. click y))))) 
-                         else (= water (addObj (prev water) (Water (Position (.. click x) (.. click y)))))))
-              else (= water (prev water))))
-
+  (on (& clicked (& (isFree click) (== currentParticle "vessel"))) (= vessels (addObj (prev vessels) (Vessel (Position (.. click x) (.. click y))))))
+  (on (& clicked (& (isFree click) (== currentParticle "plug"))) (= plugs (addObj (prev plugs) (Plug (Position (.. click x) (.. click y))))))
+  (on (& clicked (& (isFree click) (== currentParticle "water"))) (= water (addObj (prev water) (Water (Position (.. click x) (.. click y))))))
   (on (clicked vesselButton) (= currentParticle "vessel"))
   (on (clicked plugButton) (= currentParticle "plug"))
   (on (clicked waterButton) (= currentParticle "water"))
@@ -720,15 +703,9 @@
   (= water (initnext (list) (updateObj (prev water) nextWater)))
   
   (on left (= cloud (nextCloud cloud (Position -1 0))))
-
   (on right (= cloud (nextCloud cloud (Position 1 0))))
-
-  (on down (= water (addObj water (Water 
-                                    (.. celestialBody day) 
-                                    (move (.. cloud origin) (Position 0 1))))))
-  
-  (on click (let ((= celestialBody (updateObj celestialBody "day" (! (.. celestialBody day))))
-                  (= water (updateObj water (--> drop (updateObj drop "liquid" (! (.. drop liquid)))))))))
+  (on down (= water (addObj water (Water (.. celestialBody day) (move (.. cloud origin) (Position 0 1))))))
+  (on clicked (let ((= celestialBody (updateObj celestialBody "day" (! (.. celestialBody day)))) (= water (updateObj water (--> drop (updateObj drop "liquid" (! (.. drop liquid)))))))))
 
   (= nextWater (fn (drop) 
                    (if (.. drop liquid)
@@ -760,7 +737,8 @@
   (on down (= activeTetris (rotateNoCollision (rotateNoCollision (rotateNoCollision (prev activeTetris))))))
   (on left (= activeTetris (moveNoCollision (prev activeTetris) (Position -1 0))))
   (on right (= activeTetris (moveNoCollision (prev activeTetris) (Position 1 0))))
-  (on (== (.. (nextSolid (prev activeTetris)) origin) (.. (prev activeTetris) origin)) (= activeTetris (nextTetris activeTetris)))
+  (on (== (.. (nextSolid (prev activeTetris)) origin) (.. (prev activeTetris) origin)) 
+    (let ((= activeTetris (nextTetris (prev activeTetris))) (= blocks (nextBlocks (prev blocks) (prev activeTetris))))))
   
   (= nextBlocks (fn (blocks tetris) 
                     (if (& (isFree (Position 0 0) (Position 15 0) tetris) 
