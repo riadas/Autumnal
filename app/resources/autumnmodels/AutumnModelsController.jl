@@ -713,6 +713,11 @@ const builtInDict = Dict([
                           reduce(|, map(obj -> clicked(click, obj), objects))
                         end
 
+                        function objClicked(click::Union{Click, Nothing}, objects::AbstractArray)::Object
+                          println(click)
+                          filter(obj -> clicked(click, obj), objects)[1]
+                        end
+
                         function clicked(click::Union{Click, Nothing}, x::Int, y::Int)::Bool
                           if click == nothing
                             false
@@ -741,32 +746,37 @@ const builtInDict = Dict([
                           length(intersect(nums1, nums2)) != 0
                         end
 
+                        function intersects(list1, list2)::Bool
+                          length(intersect(list1, list2)) != 0 
+                        end
+
+                        function intersects(object::Object)::Bool
+                          objects = state.scene.objects
+                          intersects(object, objects)
+                        end
+
                         function addObj(list::Array{<:Object}, obj::Object)
-                          push!(list, obj)
-                          list
+                          new_list = push!(deepcopy(list), obj)
+                          new_list
                         end
 
                         function addObj(list::Array{<:Object}, objs::Array{<:Object})
-                          list = vcat(list, objs)
-                          list
+                          new_list = vcat(deepcopy(list), objs)
+                          new_list
                         end
 
                         function removeObj(list::Array{<:Object}, obj::Object)
-                          old_obj = filter(x -> x.id == obj.id, list)
-                          old_obj.alive = false
-                          list
+                          deepcopy(filter(x -> x.id != obj.id, list))
                         end
 
                         function removeObj(list::Array{<:Object}, fn)
                           orig_list = filter(obj -> !fn(obj), list)
-                          removed_list = filter(obj -> fn(obj), list)
-                          foreach(obj -> (obj.alive = false), removed_list)
-                          vcat(orig_list, removed_list)
+                          deepcopy(orig_list)
                         end
 
                         function removeObj(obj::Object)
                           obj.alive = false
-                          obj
+                          deepcopy(obj)
                         end
 
                         function updateObj(obj::Object, field::String, value)
@@ -857,8 +867,12 @@ const builtInDict = Dict([
                           displacement(position1, position2) in [Position(0,1), Position(1, 0), Position(0, -1), Position(-1, 0)]
                         end
 
-                        function adjacent(cell1::Cell, cell2::Cell)
+                        function adjacent(cell1::Cell, cell2::Cell)::Bool
                           adjacent(cell1.position, cell2.position)
+                        end
+
+                        function adjacent(cell::Cell, cells::Array{Cell})
+                          length(filter(x -> adjacent(cell, x), cells)) != 0
                         end
 
                         function rotate(object::Object)::Object
@@ -1084,6 +1098,7 @@ const builtInDict = Dict([
 
 # binary operators
 const binaryOperators = [:+, :-, :/, :*, :&, :|, :>=, :<=, :>, :<, :(==), :!=, :%, :&&]
+
 
 # compile.jl
 

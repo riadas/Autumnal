@@ -23,6 +23,7 @@
         <button id="tetris-button" class="control-button example-button">TETRIS</button>
         <button id="hatch-button" class="control-button example-button">EGG</button>
         <button id="snake-button" class="control-button example-button">SNAKE</button>
+        <button id="magnets-button-2" class="control-button example-button">MAGNETS II</button>
 
       </div>
       <div id="container">
@@ -78,6 +79,8 @@
       document.getElementById("ice-button").addEventListener("click", iceClick);
       document.getElementById("hatch-button").addEventListener("click", hatchClick);
       document.getElementById("snake-button").addEventListener("click", snakeClick);
+      document.getElementById("magnets-button-2").addEventListener("click", magnets2Click);
+
       document.getElementById("history-button").addEventListener("click", historyClick);
 
       // assign button styles
@@ -94,6 +97,7 @@
         tetrisButton = document.getElementById("tetris-button");
         hatchButton = document.getElementById("hatch-button");
         snakeButton = document.getElementById("snake-button");
+        magnets2Button = document.getElementById("magnets-button-2");
         playButton = document.getElementById("play-button");
         restartButton = document.getElementById("restart-button");
         saveButton = document.getElementById("save-button");
@@ -110,6 +114,7 @@
           particlesButton.classList.add("disabled");
           lightButton.classList.add("disabled");
           magnetsButton.classList.add("disabled");
+          magnets2Button.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -189,6 +194,7 @@
           particlesButton.classList.remove("disabled");
           lightButton.classList.remove("disabled");
           magnetsButton.classList.remove("disabled");
+          magnets2Button.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -888,8 +894,43 @@
   (on up (= snake (if (== (.. (.. snake head) color) "red") then snake else (updateObj (prev snake) "direction" (Position 0 -1)))))
   (on down (= snake (if (== (.. (.. snake head) color) "red") then snake else (updateObj (prev snake) "direction" (Position 0 1)))))
 )`);
+  }
 
+  function magnets2Click() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
 
+  (object Magnet (list (Cell 0 0 "red") (Cell 0 1 "blue")))
+
+  (: fixedMagnets (List Magnet))
+  (= fixedMagnets (initnext (list (Magnet (Position 7 7))) (prev fixedMagnets)))
+
+  (: mobileMagnet Magnet)
+  (= mobileMagnet (initnext (Magnet (Position 4 7)) (prev mobileMagnet)))
+
+  (on clicked (let ((= fixedMagnets (if (! (intersects (Magnet (Position (.. click x) (.. click y))))) then (addObj fixedMagnets mobileMagnet) else (prev fixedMagnets)))
+                    (= mobileMagnet (if (! (intersects (Magnet (Position (.. click x) (.. click y))))) then (Magnet (Position (.. click x) (.. click y))) else (prev mobileMagnet)))
+                   )))
+  (on (clicked (prev mobileMagnet)) (= mobileMagnet (rotateNoCollision (prev mobileMagnet))))
+  (on (clicked (prev fixedMagnets)) 
+    (let ((= fixedMagnets (addObj fixedMagnets mobileMagnet)) 
+          (= mobileMagnet (objClicked click fixedMagnets))
+          (= fixedMagnets (removeObj fixedMagnets (objClicked click fixedMagnets)))
+         )))
+  (on left (= mobileMagnet (moveNoCollision (prev mobileMagnet) -1 0)))
+  (on right (= mobileMagnet (moveNoCollision (prev mobileMagnet) 1 0)))
+  (on up (= mobileMagnet (moveNoCollision (prev mobileMagnet) 0 -1)))
+  (on down (= mobileMagnet (moveNoCollision (prev mobileMagnet) 0 1)))
+  (on (adjacent (posPole mobileMagnet) (map posPole fixedMagnets)) (let ((= mobileMagnet (prev mobileMagnet)) (= fixedMagnets (prev fixedMagnets)))))
+  (on (adjacent (negPole mobileMagnet) (map negPole fixedMagnets)) (let ((= mobileMagnet (prev mobileMagnet)) (= fixedMagnets (prev fixedMagnets)))))
+  (on (intersects (map (--> magnet (displacement (posPole mobileMagnet) (negPole magnet))) fixedMagnets) attractVectors) (= mobileMagnet (move mobileMagnet (unitVector (uniformChoice (intersect (map (--> magnet (displacement (posPole mobileMagnet) (negPole magnet))) fixedMagnets) attractVectors))))))
+  (on (intersects (map (--> magnet (displacement (negPole mobileMagnet) (posPole magnet))) fixedMagnets) attractVectors) (= mobileMagnet (move mobileMagnet (unitVector (uniformChoice (intersect (map (--> magnet (displacement (negPole mobileMagnet) (posPole magnet))) fixedMagnets) attractVectors))))))
+
+  (= posPole (fn (magnet) (first (render magnet))))  
+  (= negPole (fn (magnet) (last (render magnet))))  
+
+  (= attractVectors (list (Position 0 2) (Position 2 0) (Position -2 0) (Position 0 -2)))
+)`);
   }
 
     }
