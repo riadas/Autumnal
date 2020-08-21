@@ -1064,7 +1064,7 @@ const builtInDict = Dict([
                           closestDistance = sort(map(pos -> distance(pos, object.origin), positions))[1]
                           closest = filter(pos -> distance(pos, object.origin) == closestDistance, positions)[1]
                           closest
-                        end
+                        end 
 
                         function isFree(start::Position, stop::Position)::Bool 
                           GRID_SIZE = state.GRID_SIZEHistory[0]
