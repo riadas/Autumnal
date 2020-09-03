@@ -221,7 +221,7 @@
 
         console.log("compileClick")
         var xhr = new XMLHttpRequest(); 
-        xhr.open("POST", 'http://causal-discovery.herokuapp.com:80/compileautumn', true);
+        xhr.open("POST", 'http://logic.toys:80/compileautumn', true);
 
         //Send the proper header information along with the request
         xhr.onreadystatechange = function () { // Call a function when the state changes.
@@ -285,7 +285,7 @@
           } else { // play
             if (not_run_yet) {
               var xhr = new XMLHttpRequest();
-              xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn?clientid='+client_id, true);
+              xhr.open("GET", 'http://logic.toys:80/startautumn?clientid='+client_id, true);
       
               //Send the proper header information along with the request
               xhr.setRequestHeader("Content-Type", "application/json");
@@ -347,7 +347,7 @@
       function restartClick() {
         if (!history_mode) {
           var xhr = new XMLHttpRequest();
-          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/startautumn?clientid='+client_id, true);
+          xhr.open("GET", 'http://logic.toys:80/startautumn?clientid='+client_id, true);
 
           //Send the proper header information along with the request
           xhr.setRequestHeader("Content-Type", "application/json");
@@ -377,7 +377,7 @@
         if (!history_mode) {
           if (intervalID != -1) {
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/clicked?x='+(id % grid_size)+'&y='+Math.floor(id/grid_size)+'&clientid='+client_id, true);
+            xhr.open("GET", 'http://logic.toys:80/clicked?x='+(id % grid_size)+'&y='+Math.floor(id/grid_size)+'&clientid='+client_id, true);
 
             //Send the proper header information along with the request
             xhr.setRequestHeader("Content-Type", "application/json");
@@ -411,7 +411,7 @@
               key = "down";
               break;
           }
-          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/' + key + '?clientid='+client_id, true);
+          xhr.open("GET", 'http://logic.toys:80/' + key + '?clientid='+client_id, true);
 
           //Send the proper header information along with the request
           xhr.setRequestHeader("Content-Type", "application/json");
@@ -432,7 +432,7 @@
         console.log("step");
         var xhr = new XMLHttpRequest();
 
-        xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/step?clientid='+client_id, true);
+        xhr.open("GET", 'http://logic.toys:80/step?clientid='+client_id, true);
 
         //Send the proper header information along with the request
         xhr.setRequestHeader("Content-Type", "application/json");
@@ -461,7 +461,7 @@
           history_mode = true;
           var xhr = new XMLHttpRequest();
 
-          xhr.open("GET", 'http://causal-discovery.herokuapp.com:80/replay?clientid='+client_id, true);
+          xhr.open("GET", 'http://logic.toys:80/replay?clientid='+client_id, true);
                   //Send the proper header information along with the request
                   xhr.setRequestHeader("Content-Type", "application/json");
 
