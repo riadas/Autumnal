@@ -210,9 +210,11 @@
           cell.style.background = xml_json[0] == "#ffffff00" ? xml_json[0] : "linear-gradient(45deg, "+colorToRGBA(xml_json[0], 0.6)+", "+colorToRGBA(xml_json[0], 0.6)+")"
         })
         xml_json.slice(1, xml_json.length).forEach(function (particle) {
-          cell = document.getElementById((particle[1]*grid_size + particle[0]).toString())
-          cell.style.background = cell.style.background != "linear-gradient(45deg, "+colorToRGBA(xml_json[0], 0.6)+", "+colorToRGBA(xml_json[0], 0.6)+")" ? 
-          ["linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")", cell.style.background].join(", ") : "linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")";
+          if ((particle[1] < grid_size && particle[1] >= 0) && (particle[0] < grid_size && particle[0] >= 0)) {
+            cell = document.getElementById((particle[1]*grid_size + particle[0]).toString())
+            cell.style.background = cell.style.background != "linear-gradient(45deg, "+colorToRGBA(xml_json[0], 0.6)+", "+colorToRGBA(xml_json[0], 0.6)+")" ? 
+            ["linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")", cell.style.background].join(", ") : "linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")";
+          }
         })
       }
 

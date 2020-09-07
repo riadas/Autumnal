@@ -689,8 +689,7 @@ const builtInDict = Dict([
                         end
 
                         function render(obj::Object)::Array{Cell}
-                          cells = map(cell -> Cell(move(cell.position, obj.origin), cell.color), obj.render)
-                          filter(cell -> isWithinBounds(cell.position), cells)
+                          map(cell -> Cell(move(cell.position, obj.origin), cell.color), obj.render)
                         end
 
                         function isWithinBounds(obj::Object)::Bool
