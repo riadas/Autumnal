@@ -943,34 +943,34 @@
 
   function magnets3Click() {
     myCodeMirror.setValue(`(program
-  (= GRID_SIZE 16)
-
+    (= GRID_SIZE 16)
+  
   (object Magnet (list (Cell 0 0 "blue") (Cell 0 1 "blue")))
-
-  (: fixedMagnets (List Magnet))
-  (= fixedMagnets (initnext (list (Magnet (Position 7 7))) (prev fixedMagnets)))
+  
+  (: fixedMagnet Magnet)
+  (= fixedMagnet (initnext (Magnet (Position 7 7)) (prev fixedMagnet)))
 
   (: mobileMagnet Magnet)
   (= mobileMagnet (initnext (Magnet (Position 4 7)) (prev mobileMagnet)))
-
-  (on clicked (let ((= fixedMagnets (if (! (intersects (Magnet (Position (.. click x) (.. click y))))) then (addObj fixedMagnets mobileMagnet) else (prev fixedMagnets)))
-                    (= mobileMagnet (if (! (intersects (Magnet (Position (.. click x) (.. click y))))) then (Magnet (Position (.. click x) (.. click y))) else (prev mobileMagnet)))
-                   )))
-  (on (clicked (prev mobileMagnet)) (= mobileMagnet (rotateNoCollision (prev mobileMagnet))))
-  (on (clicked (prev fixedMagnets)) 
-    (let ((= fixedMagnets (addObj fixedMagnets mobileMagnet)) 
-          (= mobileMagnet (objClicked click fixedMagnets))
-          (= fixedMagnets (removeObj fixedMagnets (objClicked click fixedMagnets)))
-         )))
-  (on left (= mobileMagnet (moveNoCollision (prev mobileMagnet) -1 0)))
-  (on right (= mobileMagnet (moveNoCollision (prev mobileMagnet) 1 0)))
-  (on up (= mobileMagnet (moveNoCollision (prev mobileMagnet) 0 -1)))
-  (on down (= mobileMagnet (moveNoCollision (prev mobileMagnet) 0 1)))
-  (on (adjacent (posPole mobileMagnet) (map posPole fixedMagnets)) (let ((= mobileMagnet (prev mobileMagnet)) (= fixedMagnets (prev fixedMagnets)))))
-  (on (adjacent (negPole mobileMagnet) (map negPole fixedMagnets)) (let ((= mobileMagnet (prev mobileMagnet)) (= fixedMagnets (prev fixedMagnets)))))
-  (on (intersects (map (--> magnet (displacement (posPole mobileMagnet) (negPole magnet))) fixedMagnets) attractVectors) (= mobileMagnet (move mobileMagnet (unitVector (uniformChoice (intersect (map (--> magnet (displacement (posPole mobileMagnet) (negPole magnet))) fixedMagnets) attractVectors))))))
-  (on (intersects (map (--> magnet (displacement (negPole mobileMagnet) (posPole magnet))) fixedMagnets) attractVectors) (= mobileMagnet (move mobileMagnet (unitVector (uniformChoice (intersect (map (--> magnet (displacement (negPole mobileMagnet) (posPole magnet))) fixedMagnets) attractVectors))))))
-
+  
+  (: isAttached Bool)
+  (= isAttached (initnext false (prev isAttached)))
+  
+  (on clicked (= mobileMagnet (rotateNoCollision (prev mobileMagnet))))
+  (on left (= mobileMagnet (move (prev mobileMagnet) -1 0)))
+  (on right (= mobileMagnet (move (prev mobileMagnet) 1 0)))
+  (on up (= mobileMagnet (move (prev mobileMagnet) 0 -1)))
+  (on down (= mobileMagnet (move (prev mobileMagnet) 0 1)))
+  (on (& isAttached left) (= fixedMagnet (move (prev fixedMagnet) -1 0)))
+  (on (& isAttached right) (= fixedMagnet (move (prev fixedMagnet) 1 0)))
+  (on (& isAttached up) (= fixedMagnet (move (prev fixedMagnet) 0 -1)))
+  (on (& isAttached down) (= fixedMagnet (move (prev fixedMagnet) 0 1)))
+  (on (adjacent (posPole mobileMagnet) (posPole fixedMagnet)) (= mobileMagnet (prev mobileMagnet)))
+  (on (adjacent (negPole mobileMagnet) (negPole fixedMagnet)) (= mobileMagnet (prev mobileMagnet)))
+  (on (in (displacement (posPole mobileMagnet) (negPole fixedMagnet)) attractVectors) (= mobileMagnet (move mobileMagnet    (unitVector (displacement (posPole mobileMagnet) (negPole fixedMagnet))))))
+  (on (in (displacement (negPole mobileMagnet) (posPole fixedMagnet)) attractVectors) (= mobileMagnet (move mobileMagnet (unitVector (displacement (negPole mobileMagnet) (posPole fixedMagnet))))))
+  (on (& (adjacent (posPole mobileMagnet) (negPole fixedMagnet)) (adjacent (posPole fixedMagnet) (negPole mobileMagnet))) (= isAttached true))  
+  
   (= posPole (fn (magnet) (first (render magnet))))  
   (= negPole (fn (magnet) (last (render magnet))))  
 
