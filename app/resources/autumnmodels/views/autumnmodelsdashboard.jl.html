@@ -943,7 +943,7 @@
 
   function magnets3Click() { 
     myCodeMirror.setValue(`(program
-    (= GRID_SIZE 16)
+    (= GRID_SIZE 16) 
   
   (object Magnet (list (Cell 0 0 "blue") (Cell 0 1 "blue")))
   
@@ -957,7 +957,7 @@
   (= isAttached (initnext false (prev isAttached)))
   
   (on clicked (= mobileMagnet (rotateNoCollision (prev mobileMagnet))))
-  (on left (= mobileMagnet (move (prev mobileMagnet) -1 0)))
+  (on left (= mobileMagnet (move (prev mobileMagnet) -1 0))) 
   (on right (= mobileMagnet (move (prev mobileMagnet) 1 0)))
   (on up (= mobileMagnet (move (prev mobileMagnet) 0 -1)))
   (on down (= mobileMagnet (move (prev mobileMagnet) 0 1)))
