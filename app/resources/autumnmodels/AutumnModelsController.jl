@@ -1,4 +1,4 @@
-module AutumnModelsController
+module AutumnModelsController 
 using Genie.Renderer
 using Genie.Renderer.Html: html
 using Genie.Renderer.Json: json
