@@ -875,7 +875,7 @@ const builtInDict = Dict([
                           length(filter(x -> adjacent(cell, x), cells)) != 0
                         end
 
-                        function adjacentObjs(Object obj)
+                        function adjacentObjs(obj::Object)
                           objects = state.scene.objects
                           adjacentPositions = map(pos -> state.GRID_SIZEHistory[0]*pos.y + pos.x, adjPositions(obj))
                           filter(x -> intersect(map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(x)), adjacentPositions), objects)
