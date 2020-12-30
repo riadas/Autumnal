@@ -50,13 +50,13 @@
     </div>
   </div>
   <script>
-    const host = "http://www.logic.toys";
+    const host = "http://www.logic.toys:80";
     // const host = "http://localhost:8000";
     document.addEventListener("DOMContentLoaded", function() {
       // global frontend variables
       var not_run_yet = true;
       var intervalID = -1;
-      var timestep = 300; // 500
+      var timestep = 300; // 500 
       var historytimestep = 500;
       var compiled = false;
       var client_id = getRandomInt(1, 10000);
