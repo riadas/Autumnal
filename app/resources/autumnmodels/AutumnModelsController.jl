@@ -863,7 +863,7 @@ const builtInDict = Dict([
                           displacement(cell1.position, cell2.position)
                         end
 
-                        function adjacent(position1::Position, position2::Position):Bool
+                        function adjacent(position1::Position, position2::Position)::Bool
                           displacement(position1, position2) in [Position(0,1), Position(1, 0), Position(0, -1), Position(-1, 0)]
                         end
 
@@ -873,6 +873,12 @@ const builtInDict = Dict([
 
                         function adjacent(cell::Cell, cells::Array{Cell})
                           length(filter(x -> adjacent(cell, x), cells)) != 0
+                        end
+
+                        function adjacentObjs(Object obj)
+                          objects = state.scene.objects
+                          adjacentPositions = map(pos -> state.GRID_SIZEHistory[0]*pos.y + pos.x, adjPositions(obj))
+                          filter(x -> intersect(map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(x)), adjacentPositions), objects)
                         end
 
                         function rotate(object::Object)::Object

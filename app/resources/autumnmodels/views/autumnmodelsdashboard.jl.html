@@ -49,12 +49,12 @@
     </div>
   </div>
   <script>
-    const host = "http://www.logic.toys";
+    const host = "http://localhost:8000"; // http://localhost:8000 http://www.logic.toys
     document.addEventListener("DOMContentLoaded", function() {
       // global frontend variables
       var not_run_yet = true;
       var intervalID = -1;
-      var timestep = 300;
+      var timestep = 500; // 300
       var historytimestep = 500;
       var compiled = false;
       var client_id = getRandomInt(1, 10000);
