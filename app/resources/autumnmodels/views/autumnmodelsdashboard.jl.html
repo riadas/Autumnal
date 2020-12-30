@@ -28,6 +28,7 @@
         <button id="lock-button" class="control-button example-button">LOCK</button>
         <button id="bbq-button" class="control-button example-button">BBQ</button>
         <button id="bottle-button" class="control-button example-button">BOTTLE</button>
+        <button id="disease-button" class="control-button example-button">DISEASE</button>
         
       </div>
       <div id="container">
@@ -49,12 +50,13 @@
     </div>
   </div>
   <script>
-    const host = "http://www.logic.toys"; // http://localhost:8000 http://www.logic.toys
+    // const host = "http://www.logic.toys";
+    const host = "http://localhost:8000";
     document.addEventListener("DOMContentLoaded", function() {
       // global frontend variables
       var not_run_yet = true;
       var intervalID = -1;
-      var timestep = 500; // 300
+      var timestep = 300; // 500
       var historytimestep = 500;
       var compiled = false;
       var client_id = getRandomInt(1, 10000);
@@ -88,6 +90,7 @@
       document.getElementById("lock-button").addEventListener("click", lockClick);
       document.getElementById("bbq-button").addEventListener("click", bbqClick);
       document.getElementById("bottle-button").addEventListener("click", bottleClick);
+      document.getElementById("disease-button").addEventListener("click", diseaseClick);
 
       document.getElementById("history-button").addEventListener("click", historyClick);
 
@@ -110,6 +113,7 @@
         lockButton = document.getElementById("lock-button");
         bbqButton = document.getElementById("bbq-button");
         bottleButton = document.getElementById("bottle-button");
+        diseaseButton = document.getElementById("disease-button");
         playButton = document.getElementById("play-button");
         restartButton = document.getElementById("restart-button");
         saveButton = document.getElementById("save-button");
@@ -131,6 +135,7 @@
           lockButton.classList.add("disabled");
           bbqButton.classList.add("disabled");
           bottleButton.classList.add("disabled");
+          diseaseButton.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -215,6 +220,7 @@
           lockButton.classList.remove("disabled");
           bbqButton.classList.remove("disabled");
           bottleButton.classList.remove("disabled");
+          diseaseButton.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -1095,6 +1101,37 @@
 
   )`);
   }
+
+  function diseaseClick() { 
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  
+  (object Particle (: health Bool) (Cell 0 0 (if health then "gray" else "darkgreen")))
+
+  (: inactiveParticles (List Particle))
+  (= inactiveParticles (initnext (list (Particle true (Position 5 3)) (Particle true (Position 11 14)) (Particle true (Position 4 8)) (Particle true (Position 9 9)) (Particle true (Position 1 13)) (Particle true (Position 14 5)))  
+                       (updateObj (prev inactiveParticles) (--> obj (if (! (.. activeParticle health))
+                                                                     then (updateObj obj "health" false)
+                                                                     else obj)) 
+														   (--> obj (adjacent (.. obj origin) (.. (prev activeParticle) origin))))))   
+
+  (: activeParticle Particle)
+  (= activeParticle (initnext (Particle false (Position 0 0)) (prev activeParticle))) 
+
+  (on (!= (length (filter (--> obj (! (.. obj health))) (adjacentObjs activeParticle))) 0) (= activeParticle (updateObj (prev activeParticle) "health" false)))
+  (on (clicked (prev inactiveParticles)) 
+      (let ((= inactiveParticles (addObj (prev inactiveParticles) (prev activeParticle))) 
+            (= activeParticle (objClicked click (prev inactiveParticles)))
+            (= inactiveParticles (removeObj inactiveParticles (objClicked click (prev inactiveParticles))))
+           )))
+  (on left (= activeParticle (moveNoCollision (prev activeParticle) -1 0)))
+  (on right (= activeParticle (moveNoCollision (prev activeParticle) 1 0)))
+  (on up (= activeParticle (moveNoCollision (prev activeParticle) 0 -1)))
+  (on down (= activeParticle (moveNoCollision (prev activeParticle) 0 1)))
+)`);
+  }
+
+
 
     }
     )

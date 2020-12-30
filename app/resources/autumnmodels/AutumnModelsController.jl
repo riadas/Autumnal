@@ -876,9 +876,25 @@ const builtInDict = Dict([
                         end
 
                         function adjacentObjs(obj::Object)
-                          objects = state.scene.objects
-                          adjacentPositions = map(pos -> state.GRID_SIZEHistory[0]*pos.y + pos.x, adjPositions(obj))
-                          filter(x -> intersect(map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(x)), adjacentPositions), objects)
+                          # println("why")
+                          # println(state.time)
+                          # print(state.scene.objects)
+                          if (state.time > 1)
+                            # println("hello 0.0")
+                            objects = state.scene.objects
+                            # println(obj)
+                            # println(state.scene.objects)
+                            # println("hello 0.1")
+                            # println(adjPositions(obj.origin))
+                            adjacentPositions = map(pos -> state.GRID_SIZEHistory[0]*pos.y + pos.x, adjPositions(obj.origin))
+                            # println("hello 0.2")
+                            filter(x -> length(intersect(map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(x)), adjacentPositions)) != 0, objects)
+                            # []
+                            # filter(x -> intersect([], adjacentPositions), objects)
+                          else
+                            # println("hello 1")
+                            []
+                          end
                         end
 
                         function rotate(object::Object)::Object
