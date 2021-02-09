@@ -522,7 +522,7 @@ function compileinitnext(data::Dict{String, Any})
     end
   end, data["on"])
   notOnClause = quote
-    if !(reduce(|, [$(map(x -> x[1], data["on"])...)]))
+    if !(foldl(|, [$(map(x -> x[1], data["on"])...)]; init=false))
       $(map(x -> :($(compile(x.args[1], data)) = $(compile(x.args[2].args[2], data))), data["initnext"])...)
     end
   end
