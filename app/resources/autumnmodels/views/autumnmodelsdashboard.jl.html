@@ -29,6 +29,8 @@
         <button id="bbq-button" class="control-button example-button">BBQ</button>
         <button id="bottle-button" class="control-button example-button">BOTTLE</button>
         <button id="disease-button" class="control-button example-button">DISEASE</button>
+        <button id="balls-button-1" class="control-button example-button">BALLS I</button>
+        <button id="balls-button-2" class="control-button example-button">BALLS II</button>
         
       </div>
       <div id="container">
@@ -91,6 +93,8 @@
       document.getElementById("bbq-button").addEventListener("click", bbqClick);
       document.getElementById("bottle-button").addEventListener("click", bottleClick);
       document.getElementById("disease-button").addEventListener("click", diseaseClick);
+      document.getElementById("balls-button-1").addEventListener("click", balls1Click);
+      document.getElementById("balls-button-2").addEventListener("click", balls2Click);
 
       document.getElementById("history-button").addEventListener("click", historyClick);
 
@@ -114,6 +118,8 @@
         bbqButton = document.getElementById("bbq-button");
         bottleButton = document.getElementById("bottle-button");
         diseaseButton = document.getElementById("disease-button");
+        balls1Button = document.getElementById("balls-button-1");
+        balls2Button = document.getElementById("balls-button-2");
         playButton = document.getElementById("play-button");
         restartButton = document.getElementById("restart-button");
         saveButton = document.getElementById("save-button");
@@ -136,6 +142,8 @@
           bbqButton.classList.add("disabled");
           bottleButton.classList.add("disabled");
           diseaseButton.classList.add("disabled");
+          balls1Button.classList.add("disabled");
+          balls2Button.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -221,6 +229,8 @@
           bbqButton.classList.remove("disabled");
           bottleButton.classList.remove("disabled");
           diseaseButton.classList.remove("disabled");
+          balls1Button.classList.remove("disabled");
+          balls2Button.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -1128,6 +1138,161 @@
   (on right (= activeParticle (moveNoCollision (prev activeParticle) 1 0)))
   (on up (= activeParticle (moveNoCollision (prev activeParticle) 0 -1)))
   (on down (= activeParticle (moveNoCollision (prev activeParticle) 0 1)))
+)`);
+  }
+
+  function balls1Click() { 
+    myCodeMirror.setValue(`(program 
+  (= GRID_SIZE 16)
+
+  (object Goal (Cell 0 0 "green"))
+  (: goal Goal)
+  (= goal (initnext (Goal (Position 0 10)) (prev goal)))
+
+  (object Ball (: direction Integer) (: color String) (Cell 0 0 color))
+  (object Wall (: visible Bool)(list (Cell 0 0 (if visible then "black" else "white")) (Cell 0 1 (if visible then "black" else "white")) (Cell 0 2 (if visible then "black" else "white"))))
+
+  (: wall Wall)
+  (= wall (initnext (Wall true (Position 4 9)) (prev wall)))
+
+  (= nextBall (fn (ball)
+                (if (== (.. ball direction) 1)
+  then (updateObj ball "origin"
+         (Position (.. (.. ball origin) x) (- (.. (.. ball origin) y) 1)))
+  else
+  (if (== (.. ball direction) 2)
+  then (updateObj ball "origin"
+         (Position (+ (.. (.. ball origin) x) 1) (- (.. (.. ball origin) y) 1)))
+  else
+  (if (== (.. ball direction) 3)
+  then (updateObj ball "origin"
+         (Position (+ (.. (.. ball origin) x) 1) (.. (.. ball origin) y)))
+  else
+  (if (== (.. ball direction) 4)
+  then (updateObj ball "origin"
+         (Position (+ (.. (.. ball origin) x) 1) (+ (.. (.. ball origin) y) 1)))
+  else
+  (if (== (.. ball direction) 5)
+  then (updateObj ball "origin"
+         (Position (.. (.. ball origin) x) (+ (.. (.. ball origin) y) 1)))
+  else
+  (if (== (.. ball direction) 6)
+  then (updateObj ball "origin"
+         (Position (- (.. (.. ball origin) x) 1) (+ (.. (.. ball origin) y) 1)))
+  else
+  (if (== (.. ball direction) 7)
+  then (updateObj ball "origin"
+         (Position (- (.. (.. ball origin) x) 1) (.. (.. ball origin) y)))
+  else
+  (if (== (.. ball direction) 8)
+  then (updateObj ball "origin"
+         (Position (- (.. (.. ball origin) x) 1) (- (.. (.. ball origin) y) 1)))
+  else ball))))))))))
+
+
+  (on (clicked wall) (= wall (updateObj wall "visible" (! (.. wall visible)))))
+
+  (= wallintersect (fn (ball)
+                     (if (& (== (.. ball direction) 4) (== (.. (.. ball origin) y) 15)) then 2 else
+  (if (& (== (.. ball direction) 5) (== (.. (.. ball origin) y) 15)) then 1 else
+  (if (& (== (.. ball direction) 6) (== (.. (.. ball origin) y) 15)) then 8 else
+  (if (& (== (.. ball direction) 6) (== (.. (.. ball origin) x) 0)) then 4 else
+  (if (& (== (.. ball direction) 7) (== (.. (.. ball origin) x) 0)) then 3 else
+  (if (& (== (.. ball direction) 8) (== (.. (.. ball origin) x) 0)) then 2 else
+  (if (& (== (.. ball direction) 2) (== (.. (.. ball origin) x) 15)) then 8 else
+  (if (& (== (.. ball direction) 3) (== (.. (.. ball origin) x) 15)) then 7 else
+  (if (& (== (.. ball direction) 4) (== (.. (.. ball origin) x) 15)) then 6 else
+  (if (& (== (.. ball direction) 8) (== (.. (.. ball origin) y) 0)) then 6 else
+  (if (& (== (.. ball direction) 1) (== (.. (.. ball origin) y) 0)) then 5 else
+  (if (& (== (.. ball direction) 2) (== (.. (.. ball origin) y) 0)) then 4 else
+
+  (.. ball direction)))))))))))))))
+
+
+  (: ball_a Ball)
+  (= ball_a (initnext (Ball 7 "blue" (Position 15 10)) (if (intersects ball_a ball_b) then (nextBall (updateObj (prev ball_a) "direction" 6)) else (nextBall (updateObj (prev ball_a) "direction" (wallintersect (prev ball_a)))))))
+
+  (: ball_b Ball)
+  (= ball_b (initnext (Ball 6 "red" (Position 15 5)) (if (intersects (prev ball_a) ball_b) then (nextBall (updateObj (prev ball_b) "direction" 2)) else (nextBall (updateObj (prev ball_b) "direction" (wallintersect (prev ball_b)))))))
+  )`);
+  }
+
+  function balls2Click() { 
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+
+  (object Goal (Cell 0 0 "green"))
+  (: goal Goal)
+  (= goal (initnext (Goal (Position 0 10)) (prev goal)))
+
+  (object Ball (: direction Integer) (: color String) (Cell 0 0 color))
+
+  (= nextBall (fn (ball)
+                (if (< (.. ball direction) 45)
+  then (updateObj ball "origin"
+         (Position (.. (.. ball origin) x) (- (.. (.. ball origin) y) 1)))
+  else
+  (if (< (.. ball direction) 90)
+  then (updateObj ball "origin"
+         (Position (+ (.. (.. ball origin) x) 1) (- (.. (.. ball origin) y) 1)))
+  else
+  (if (< (.. ball direction) 135)
+  then (updateObj ball "origin"
+         (Position (+ (.. (.. ball origin) x) 1) (.. (.. ball origin) y)))
+  else
+  (if (< (.. ball direction) 180)
+  then (updateObj ball "origin"
+         (Position (+ (.. (.. ball origin) x) 1) (+ (.. (.. ball origin) y) 1)))
+  else
+  (if (< (.. ball direction) 225)
+  then (updateObj ball "origin"
+         (Position (.. (.. ball origin) x) (+ (.. (.. ball origin) y) 1)))
+  else
+  (if (< (.. ball direction) 270)
+  then (updateObj ball "origin"
+         (Position (- (.. (.. ball origin) x) 1) (+ (.. (.. ball origin) y) 1)))
+  else
+  (if (< (.. ball direction) 315)
+  then (updateObj ball "origin"
+         (Position (- (.. (.. ball origin) x) 1) (.. (.. ball origin) y)))
+  else
+  (if (< (.. ball direction) 360)
+  then (updateObj ball "origin"
+         (Position (- (.. (.. ball origin) x) 1) (- (.. (.. ball origin) y) 1)))
+  else ball))))))))))
+
+
+  (on (clicked goal) (= goal (prev goal)))
+
+  (= wallintersect (fn (ball)
+                     (if (& (< (.. ball direction) 180) (== (.. (.. ball origin) y) 15)) then (- 180 (.. ball direction)) else
+  (if (& (== (.. ball direction) 180) (== (.. (.. ball origin) y) 15)) then 0 else
+  (if (& (> (.. ball direction) 180) (== (.. (.. ball origin) y) 15)) then (+ 90 (.. ball direction)) else
+  (if (& (& (< (.. ball direction) 270) (> (.. ball direction) 180)) (== (.. (.. ball origin) x) 0)) then (- 360 (.. ball direction)) else
+  (if (& (== (.. ball direction) 270) (== (.. (.. ball origin) x) 0)) then 90 else
+  (if (& (> (.. ball direction) 270) (== (.. (.. ball origin) x) 0)) then (- 360 (.. ball direction)) else
+  (if (& (< (.. ball direction) 90) (== (.. (.. ball origin) x) 15)) then (+ 270 (.. ball direction)) else
+  (if (& (== (.. ball direction) 90) (== (.. (.. ball origin) x) 15)) then 270 else
+  (if (& (> (.. ball direction) 90) (== (.. (.. ball origin) x) 15)) then (+ 90 (.. ball direction)) else
+  (if (& (> (.. ball direction) 180) (== (.. (.. ball origin) y) 0)) then (- 520 (.. ball direction)) else
+  (if (& (== (.. ball direction) 45) (== (.. (.. ball origin) y) 0)) then 180 else
+  (if (& (< (.. ball direction) 180) (== (.. (.. ball origin) y) 0)) then (- 180 (.. ball direction)) else
+  (.. ball direction)))))))))))))))
+
+  (= ballcollision (fn (ball1 ball2)
+                     (.. ball2 direction)
+          ))
+
+  (: ball_a Ball)
+  (= ball_a (initnext (Ball 361 "blue" (Position 6 10)) (if (intersects ball_a ball_b) then (nextBall (updateObj (prev ball_a) "direction" (ballcollision (prev ball_a) (prev ball_b)))) else (nextBall (updateObj (prev ball_a) "direction" (wallintersect (prev ball_a)))))))
+
+  (: ball_b Ball)
+  (= ball_b (initnext (Ball 361 "red" (Position 10 10)) (if (intersects ball_b ball_c) then (nextBall (updateObj (prev ball_b) "direction" (ballcollision (prev ball_b) (prev ball_c)))) else (if (intersects (prev ball_a) ball_b) then (nextBall (updateObj (prev ball_b) "direction" 361)) else (nextBall (updateObj (prev ball_b) "direction" (wallintersect (prev ball_b))))))))
+
+  (: ball_c Ball)
+  (= ball_c (initnext (Ball 270 "purple" (Position 14 10)) (if (intersects (prev ball_b) ball_c) then (nextBall (updateObj (prev ball_c) "direction" 361)) else (nextBall (updateObj (prev ball_c) "direction" (wallintersect (prev ball_c)))))))
+
+  (on (intersects ball_a goal) (= ball_a (updateObj ball_a "direction" 361)))
 )`);
   }
 
