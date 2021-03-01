@@ -1,3 +1,3 @@
 # Causal Discovery Web Interface
 
-[http://causal-discovery.herokuapp.com](http://causal-discovery.herokuapp.com)
+[http://www.logic.toys](http://www.logic.toys)
