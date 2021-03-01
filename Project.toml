@@ -6,3 +6,6 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 SExpressions = "eaa8e424-c5f6-11e8-1b3d-d576ba0eee97"
+
+[compat]
+Genie = "= 0.31.2"
