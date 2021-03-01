@@ -31,7 +31,7 @@
         <button id="disease-button" class="control-button example-button">DISEASE</button>
         <button id="balls-button-1" class="control-button example-button">BALLS I</button>
         <button id="balls-button-2" class="control-button example-button">BALLS II</button>
-        
+        <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM</button>
       </div>
       <div id="container">
         <div class="grid-container" >
@@ -52,13 +52,13 @@
     </div>
   </div>
   <script>
-    const host = "http://www.logic.toys"; 
-    //const host = "http://localhost:8000";
+    //const host = "http://www.logic.toys"; 
+    const host = "http://localhost:8000";
     document.addEventListener("DOMContentLoaded", function() {
       // global frontend variables
       var not_run_yet = true;
       var intervalID = -1;
-      var timestep = 300; // 500 
+      var timestep = 300; // 300 
       var historytimestep = 500;
       var compiled = false;
       var client_id = getRandomInt(1, 10000);
@@ -95,6 +95,7 @@
       document.getElementById("disease-button").addEventListener("click", diseaseClick);
       document.getElementById("balls-button-1").addEventListener("click", balls1Click);
       document.getElementById("balls-button-2").addEventListener("click", balls2Click);
+      document.getElementById("random-button").addEventListener("click", randomClick);
 
       document.getElementById("history-button").addEventListener("click", historyClick);
 
@@ -120,6 +121,8 @@
         diseaseButton = document.getElementById("disease-button");
         balls1Button = document.getElementById("balls-button-1");
         balls2Button = document.getElementById("balls-button-2");
+        randomButton = document.getElementById("random-button");
+
         playButton = document.getElementById("play-button");
         restartButton = document.getElementById("restart-button");
         saveButton = document.getElementById("save-button");
@@ -149,6 +152,7 @@
           tetrisButton.classList.add("disabled");
           hatchButton.classList.add("disabled");
           snakeButton.classList.add("disabled");
+          randomButton.classList.add("disabled");
           
           if (!history_mode) {
             playButton.classList.remove("history-mode");
@@ -213,7 +217,7 @@
           }
         } else {
           compileButton.classList.remove("history-mode")
-          compileButton.innerHTML = "COMPILE <i style='font-size: medium' class='fa fa-code' aria-hidden='true'></i>";
+          compileButton.innerHTML = "COMPILE <i style='font-size: medium' class='fa fa-code' aria-hidden='true'></i>"; // 
           playButton.style.display = "none";
           restartButton.style.display = "none";
           saveButton.style.display = "none";
@@ -236,6 +240,7 @@
           snakeButton.classList.remove("disabled");
           plugButton.classList.remove("disabled");
           iceButton.classList.remove("disabled");
+          randomButton.classList.remove("disabled");
         }
       }
 
@@ -297,7 +302,7 @@
         };
         if (!compiled) {
           console.log("hello");
-          document.getElementById("compile-button").innerHTML = "COMPILING <i style='font-size: medium' class='fa fa-spinner fa-spin'></i>";
+          document.getElementById("compile-button").innerHTML = "COMPILING...";
         }
         console.log("client_id: "+client_id);
         console.log("autumn-string: "+myCodeMirror.getValue());
@@ -1296,8 +1301,23 @@
 )`);
   }
 
+  function randomClick() {
 
+    console.log("randomClick")
+    var xhr = new XMLHttpRequest(); 
+    xhr.open("GET", host + '/random', true);
 
+    //Send the proper header information along with the request
+    xhr.onreadystatechange = function () { // Call a function when the state changes.
+      if (this.readyState === 4 && this.status === 200) {
+        content = JSON.parse(xhr.response)[0];
+        console.log("content: "+content);
+        myCodeMirror.setValue(content);
+        compileClick();
+      }
+    };
+    xhr.send();
+  }
     }
     )
   </script>

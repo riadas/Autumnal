@@ -22,3 +22,5 @@ route("/down", AutumnModelsController.down, method = GET, named=:down)
 route("/step", AutumnModelsController.step, method = GET, named=:step)
 
 route("/replay", AutumnModelsController.replay, method = GET, named=:replay)
+
+route("/random", AutumnModelsController.random, method = GET, named=:random)
