@@ -31,7 +31,8 @@
         <button id="disease-button" class="control-button example-button">DISEASE</button>
         <button id="balls-button-1" class="control-button example-button">BALLS I</button>
         <button id="balls-button-2" class="control-button example-button">BALLS II</button>
-        <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM</button>
+        <button id="random-button" style="background-color: orange !important" class="control-button example-button">RAND</button>
+        <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RAND2</button>
       </div>
       <div id="container">
         <div class="grid-container" >
@@ -96,6 +97,8 @@
       document.getElementById("balls-button-1").addEventListener("click", balls1Click);
       document.getElementById("balls-button-2").addEventListener("click", balls2Click);
       document.getElementById("random-button").addEventListener("click", randomClick);
+      document.getElementById("random-button-2").addEventListener("click", randomClick2);
+
 
       document.getElementById("history-button").addEventListener("click", historyClick);
 
@@ -122,6 +125,7 @@
         balls1Button = document.getElementById("balls-button-1");
         balls2Button = document.getElementById("balls-button-2");
         randomButton = document.getElementById("random-button");
+        randomButton2 = document.getElementById("random-button-2");
 
         playButton = document.getElementById("play-button");
         restartButton = document.getElementById("restart-button");
@@ -153,6 +157,7 @@
           hatchButton.classList.add("disabled");
           snakeButton.classList.add("disabled");
           randomButton.classList.add("disabled");
+          randomButton2.classList.add("disabled");
           
           if (!history_mode) {
             playButton.classList.remove("history-mode");
@@ -241,6 +246,7 @@
           plugButton.classList.remove("disabled");
           iceButton.classList.remove("disabled");
           randomButton.classList.remove("disabled");
+          randomButton2.classList.remove("disabled");
         }
       }
 
@@ -1306,6 +1312,23 @@
     console.log("randomClick")
     var xhr = new XMLHttpRequest(); 
     xhr.open("GET", host + '/random', true);
+
+    //Send the proper header information along with the request
+    xhr.onreadystatechange = function () { // Call a function when the state changes.
+      if (this.readyState === 4 && this.status === 200) {
+        content = JSON.parse(xhr.response)[0];
+        console.log("content: "+content);
+        myCodeMirror.setValue(content);
+        compileClick();
+      }
+    };
+    xhr.send();
+  }
+
+  function randomClick2() {
+    console.log("randomClick2")
+    var xhr = new XMLHttpRequest(); 
+    xhr.open("GET", host + '/random2', true);
 
     //Send the proper header information along with the request
     xhr.onreadystatechange = function () { // Call a function when the state changes.
