@@ -1248,21 +1248,33 @@ function runprogram(prog::Expr, n::Int)
   state
 end
 
-# sceneparsing.jl
+# scene.jl
+
+struct ObjType
+  shape::AbstractArray
+  color::String
+  id::Int
+end
+
+struct Obj
+  type::ObjType
+  position::Tuple{Int, Int}
+  id::Int
+end
 
 colors = ["red", "yellow", "green", "blue"]
 backgroundcolors = ["white", "black"]
 function generatescene_program(rng=Random.GLOBAL_RNG; gridsize::Int=16)
   types, objects, background, _ = generatescene_objects(rng, gridsize=gridsize)
-  """
+  """ 
   (program
     (= GRID_SIZE $(gridsize))
     (= background "$(background)")
-    $(join(map(t -> "(object ObjType$(t[2]) (: color String) (list $(join(map(cell -> "(Cell $(cell[1]) $(cell[2]) color)", t[1]), " "))))", types), "\n  "))
+    $(join(map(t -> "(object ObjType$(t.id) (list $(join(map(cell -> """(Cell $(cell[1]) $(cell[2]) "$(t.color)")""", t.shape), " "))))", types), "\n  "))
 
-    $((join(map(obj -> """(: obj$(obj[4]) ObjType$(obj[1][2]))""", objects), "\n  "))...)
+    $((join(map(obj -> """(: obj$(obj.id) ObjType$(obj.type.id))""", objects), "\n  "))...)
 
-    $((join(map(obj -> """(= obj$(obj[4]) (initnext (ObjType$(obj[1][2]) "$(obj[3])" (Position $(obj[2][1] - 1) $(obj[2][2] - 1))) (prev obj$(obj[4]))))""", objects), "\n  ")))
+    $((join(map(obj -> """(= obj$(obj.id) (initnext (ObjType$(obj.type.id) (Position $(obj.position[1] - 1) $(obj.position[2] - 1))) (prev obj$(obj.id))))""", objects), "\n  ")))
   )
   """
 end
@@ -1272,7 +1284,7 @@ function generatescene_objects(rng=Random.GLOBAL_RNG; gridsize::Int=16)
   numObjects = rand(rng, 1:20)
   numTypes = rand(rng, 1:min(numObjects, 5))
   types = [] # each type has form (list of position tuples, index in types list)::Tuple{Array{Tuple{Int, Int}}, Int}
-
+  
   objectPositions = [(rand(rng, 1:gridsize), rand(rng, 1:gridsize)) for x in 1:numObjects]
   objects = [] # each object has form (type, position tuple, color, index in objects list)
 
@@ -1283,15 +1295,15 @@ function generatescene_objects(rng=Random.GLOBAL_RNG; gridsize::Int=16)
       boundaryPositions = neighbors(shape)
       push!(shape, boundaryPositions[rand(rng, 1:length(boundaryPositions))])
     end
-    push!(types, (shape, length(types) + 1))
+    color = colors[rand(rng, 1:length(colors))]
+    push!(types, ObjType(shape, color, length(types) + 1))
   end
 
   for i in 1:numObjects
     objPosition = objectPositions[i]
-    objColor = colors[rand(rng, 1:length(colors))]
     objType = types[rand(rng, 1:length(types))]
 
-    push!(objects, (objType, objPosition, objColor, length(objects) + 1))    
+    push!(objects, Obj(objType, objPosition, length(objects) + 1))    
   end
   (types, objects, background, gridsize)
 end
@@ -1310,9 +1322,9 @@ end
 # dynamics.jl
 
 env = Dict(["custom_types" => Dict([
-            "Object1" => [("color", "String")],
-            "Object2" => [("color", "String")],
-            "Object3" => [("color", "String")],              
+            "Object1" => [],
+            "Object2" => [],
+            "Object3" => [],              
             ]),
             "variables" => Dict([
               "object1" => "Object_Object2",
@@ -1462,17 +1474,19 @@ function generateprogram(rng=Random.GLOBAL_RNG; gridsize::Int=16)
   # generate objects and types 
   types, objects, background, _ = generatescene_objects(rng, gridsize=gridsize)
 
+
+
   # construct environment object
   environment = Dict(["custom_types" => Dict(
-                                             map(t -> "Object_ObjType$(t[2])" => [("color", "String")], types) 
+                                             map(t -> "Object_ObjType$(t.id)" => [("color", "String")], types) 
                                             ),
                       "variables" => Dict(
-                                          map(obj -> "obj$(obj[4])" => "Object_ObjType$(obj[1][2])", objects)                    
+                                          map(obj -> "obj$(obj.id)" => "Object_ObjType$(obj.type.id)", objects)                    
                                          )])
   
   # generate next values for each object
-  next_vals = map(obj -> genObjectUpdateRule("obj$(obj[4])", environment), objects)
-  objects = [(objects[i]..., (next_vals[i],)...) for i in 1:length(objects)]
+  next_vals = map(obj -> genObjectUpdateRule("obj$(obj.id)", environment), objects)
+  objects = [(objects[i], next_vals[i]) for i in 1:length(objects)]
 
   # generate on-clauses
   on_clause_object_ids = rand(1:length(objects), rand(1:length(objects)))
@@ -1482,12 +1496,12 @@ function generateprogram(rng=Random.GLOBAL_RNG; gridsize::Int=16)
   (program
     (= GRID_SIZE $(gridsize))
     (= background "$(background)")
-    $(join(map(t -> "(object ObjType$(t[2]) (: color String) (list $(join(map(cell -> "(Cell $(cell[1]) $(cell[2]) color)", t[1]), " "))))", types), "\n  "))
+    $(join(map(t -> "(object ObjType$(t.id) (list $(join(map(cell -> """(Cell $(cell[1]) $(cell[2]) "$(t.color)")""", t.shape), " "))))", types), "\n  "))
 
-    $((join(map(obj -> """(: obj$(obj[4]) ObjType$(obj[1][2]))""", objects), "\n  "))...)
+    $((join(map(obj -> """(: obj$(obj[1].id) ObjType$(obj[1].type.id))""", objects), "\n  "))...)
 
     $((join(map(obj -> 
-    """(= obj$(obj[4]) (initnext (ObjType$(obj[1][2]) "$(obj[3])" (Position $(obj[2][1] - 1) $(obj[2][2] - 1))) $(obj[5])))""", objects), "\n  ")))
+    """(= obj$(obj[1].id) (initnext (ObjType$(obj[1].type.id) (Position $(obj[1].position[1] - 1) $(obj[1].position[2] - 1))) $(obj[2])))""", objects), "\n  ")))
 
     $((join(map(tuple -> 
     """(on $(tuple[1]) (= obj$(tuple[3]) $(tuple[2])))""", on_clauses), "\n  "))...)
