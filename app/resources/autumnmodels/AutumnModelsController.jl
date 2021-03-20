@@ -1258,12 +1258,14 @@ end
 struct ObjType
   shape::AbstractArray
   color::String
+  custom_fields::AbstractArray
   id::Int
 end
 
 struct Obj
   type::ObjType
   position::Tuple{Int, Int}
+  custom_field_values::AbstractArray
   id::Int
 end
 
@@ -1301,14 +1303,26 @@ function generatescene_objects(rng=Random.GLOBAL_RNG; gridsize::Int=16)
       push!(shape, boundaryPositions[rand(rng, 1:length(boundaryPositions))])
     end
     color = colors[rand(rng, 1:length(colors))]
-    push!(types, ObjType(shape, color, length(types) + 1))
+    
+    # generate custom fields
+    custom_fields = []
+    num_fields = rand(0:2)
+    for i in 1:num_fields
+      push!(custom_fields, ("field$(i)", rand(["Int", "Bool"])))
+    end
+
+    push!(types, ObjType(shape, color, custom_fields, length(types) + 1))
   end
 
   for i in 1:numObjects
     objPosition = objectPositions[i]
     objType = types[rand(rng, 1:length(types))]
 
-    push!(objects, Obj(objType, objPosition, length(objects) + 1))    
+    # generate custom field values
+    custom_fields = objType.custom_fields
+    custom_field_values = map(field -> field[2] == "Int" ? rand(1:3) : rand(["true", "false"]), custom_fields)
+
+    push!(objects, Obj(objType, objPosition, custom_field_values, length(objects) + 1))    
   end
   (types, objects, background, gridsize)
 end
@@ -1377,7 +1391,9 @@ end
 
 # ----- Int generator ----- # 
 function genInt(environment)
-  rand(1:5)
+  int_vars = filter(var -> environment["variables"][var] == "Int", collect(keys(environment["variables"])))
+  choices = [collect(1:5)..., int_vars...]
+  rand(choices)
 end
 
 # ----- Bool generator ----- #
@@ -1396,6 +1412,12 @@ function genBool(environment)
                     ("isWithinBounds", [:(genObject($(environment)))])
                    ]...)
   end
+
+  bool_vars = filter(var -> environment["variables"][var] == "Bool", collect(keys(environment["variables"])))
+  foreach(var -> push!(choices, (var, [])), bool_vars)
+
+  addBranchesFromCustomTypes(choices, "Bool", environment)
+
   choice = choices[rand(1:length(choices))]
   if (length(choice[2]) == 0)
     "$(choice[1])"
@@ -1413,8 +1435,11 @@ function genPosition(environment)
     ("unitVector", [:(genPosition($(environment)))]),
     ("uniformChoice", [:(genPositionList($(environment)))])
   ]
+  # if object constants exist, add support for (.. obj origin)
   if length(filter(var -> occursin("Object_", environment["variables"][var]), collect(keys(environment["variables"])))) > 0
     push!(choices, ("..", [:(genObject($(environment), p=1.0)), :(String("origin"))]))
+    
+    addBranchesFromCustomTypes(choices, "Position", environment)
   end
 
   choice = choices[rand(1:length(choices))]
@@ -1493,20 +1518,47 @@ function genString(environment)
   """ "$(color)" """
 end
 
+# ----- helper functions ----- #
+
+function addBranchesFromCustomTypes(arr::AbstractArray, fieldtype::String, environment)
+  types_with_field = filter(type -> fieldtype in map(tuple -> tuple[2], environment["custom_types"][type]), collect(keys(environment["custom_types"])))
+  for type in types_with_field
+    fieldnames = map(t -> t[1], filter(tuple -> tuple[2] == fieldtype, environment["custom_types"][type]))
+    if length(filter(var -> var == type, collect(keys(environment["variables"])))) > 0  
+      foreach(fieldname -> push!(arr, ("..", [Meta.parse("gen$(type)($(environment))"), :(String(fieldname))]), environment["custom_types"][type]), fieldnames)
+    end
+  end
+end
+
 # generativemodel.jl
 
 function generateprogram(rng=Random.GLOBAL_RNG; gridsize::Int=16, group::Bool=false)
   # generate objects and types 
   types, objects, background, _ = generatescene_objects(rng, gridsize=gridsize)
 
+  non_object_global_vars = []
+  num_non_object_global_vars = rand(0:2)
+
+  for i in 1:num_non_object_global_vars
+    type = rand(["Bool", "Int"])
+    if type == "Bool"
+      push!(non_object_global_vars, (type, rand(["true", "false"]), i))
+    else
+      push!(non_object_global_vars, (type, rand(1:3), i))
+    end
+  end
+
   if (!group)
     # construct environment object
     environment = Dict(["custom_types" => Dict(
-                                              map(t -> "Object_ObjType$(t.id)" => [], types) 
+                                              map(t -> "Object_ObjType$(t.id)" => t.custom_fields, types) 
                                               ),
                         "variables" => Dict(
-                                            map(obj -> "obj$(obj.id)" => "Object_ObjType$(obj.type.id)", objects)                    
-                                          )])
+                                            vcat(
+                                            map(obj -> "obj$(obj.id)" => "Object_ObjType$(obj.type.id)", objects)...,                    
+                                            map(tuple -> "globalVar$(tuple[3])" => tuple[1], non_object_global_vars)...
+                                            )
+                                           )])
     
     # generate next values for each object
     next_vals = map(obj -> genObjectUpdateRule("obj$(obj.id)", environment), objects)
@@ -1520,12 +1572,16 @@ function generateprogram(rng=Random.GLOBAL_RNG; gridsize::Int=16, group::Bool=fa
     (program
       (= GRID_SIZE $(gridsize))
       (= background "$(background)")
-      $(join(map(t -> "(object ObjType$(t.id) (list $(join(map(cell -> """(Cell $(cell[1]) $(cell[2]) "$(t.color)")""", t.shape), " "))))", types), "\n  "))
+      $(join(map(t -> "(object ObjType$(t.id) $(join(map(field -> "(: $(field[1]) $(field[2]))", t.custom_fields), " ")) (list $(join(map(cell -> """(Cell $(cell[1]) $(cell[2]) "$(t.color)")""", t.shape), " "))))", types), "\n  "))
+
+      $(join(map(tuple -> "(: globalVar$(tuple[3]) $(tuple[1]))", non_object_global_vars), "\n  "))
+
+      $(join(map(tuple -> "(= globalVar$(tuple[3]) (initnext $(tuple[2]) (prev globalVar$(tuple[3]))))", non_object_global_vars), "\n  "))
 
       $((join(map(obj -> """(: obj$(obj[1].id) ObjType$(obj[1].type.id))""", objects), "\n  "))...)
 
       $((join(map(obj -> 
-      """(= obj$(obj[1].id) (initnext (ObjType$(obj[1].type.id) (Position $(obj[1].position[1] - 1) $(obj[1].position[2] - 1))) $(obj[2])))""", objects), "\n  ")))
+      """(= obj$(obj[1].id) (initnext (ObjType$(obj[1].type.id) $(join(obj[1].custom_field_values, " ")) (Position $(obj[1].position[1] - 1) $(obj[1].position[2] - 1))) $(obj[2])))""", objects), "\n  ")))
 
       $((join(map(tuple -> 
       """(on $(tuple[1]) (= obj$(tuple[3]) $(tuple[2])))""", on_clauses), "\n  "))...)
@@ -1541,12 +1597,13 @@ function generateprogram(rng=Random.GLOBAL_RNG; gridsize::Int=16, group::Bool=fa
     println(length(objects))
 
     environment = Dict(["custom_types" => Dict(
-                                map(t -> "Object_ObjType$(t.id)" => [], types) 
+                                map(t -> "Object_ObjType$(t.id)" => t.custom_fields, types) 
                                 ),
                         "variables" => Dict(
                               vcat(
                                 map(id -> "objList$(findall(x -> x == id, list_type_ids)[1])" => "ObjectList_ObjType$(id)", list_type_ids)...,
-                                map(id -> "obj$(findall(x -> x == id, constant_type_ids)[1])" => "Object_ObjType$(id)", constant_type_ids)       
+                                map(id -> "obj$(findall(x -> x == id, constant_type_ids)[1])" => "Object_ObjType$(id)", constant_type_ids)...,
+                                map(tuple -> "globalVar$(tuple[3])" => tuple[1], non_object_global_vars)...       
                               )             
                             )])
 
@@ -1577,16 +1634,20 @@ function generateprogram(rng=Random.GLOBAL_RNG; gridsize::Int=16, group::Bool=fa
     (program
       (= GRID_SIZE $(gridsize))
       (= background "$(background)")
-      $(join(map(t -> "(object ObjType$(t.id) (list $(join(map(cell -> """(Cell $(cell[1]) $(cell[2]) "$(t.color)")""", t.shape), " "))))", types), "\n  "))
+      $(join(map(t -> "(object ObjType$(t.id) $(join(map(field -> "(: $(field[1]) $(field[2]))", t.custom_fields), " ")) (list $(join(map(cell -> """(Cell $(cell[1]) $(cell[2]) "$(t.color)")""", t.shape), " "))))", types), "\n  "))
+
+      $(join(map(tuple -> "(: globalVar$(tuple[3]) $(tuple[1]))", non_object_global_vars), "\n  "))
+
+      $(join(map(tuple -> "(= globalVar$(tuple[3]) (initnext $(tuple[2]) (prev globalVar$(tuple[3]))))", non_object_global_vars), "\n  "))
 
       $((join(map(id -> """(: objList$(findall(x -> x == id, list_type_ids)[1]) (List ObjType$(id)))""", list_type_ids), "\n  "))...)
       $((join(map(id -> """(: obj$(findall(x -> x == id, constant_type_ids)[1]) ObjType$(id))""", constant_type_ids), "\n  "))...)
 
       $((join(map(id -> 
-      """(= objList$(findall(x -> x == id, list_type_ids)[1]) (initnext (list $(join(map(obj -> "(ObjType$(obj.type.id) (Position $(obj.position[1] - 1) $(obj.position[2] - 1)))", filter(o -> o.type.id == id, objects)), " "))) $(next_list_vals[findall(y -> y == id, list_type_ids)[1]])))""", list_type_ids), "\n  ")))
+      """(= objList$(findall(x -> x == id, list_type_ids)[1]) (initnext (list $(join(map(obj -> "(ObjType$(obj.type.id) $(join(obj.custom_field_values, " ")) (Position $(obj.position[1] - 1) $(obj.position[2] - 1)))", filter(o -> o.type.id == id, objects)), " "))) $(next_list_vals[findall(y -> y == id, list_type_ids)[1]])))""", list_type_ids), "\n  ")))
 
       $((join(map(id -> 
-      """(= obj$(findall(x -> x == id, constant_type_ids)[1]) (initnext $(join(map(obj -> "(ObjType$(obj.type.id) (Position $(obj.position[1] - 1) $(obj.position[2] - 1)))", filter(o -> o.type.id == id, objects)))) $(next_constant_vals[findall(y -> y == id, constant_type_ids)[1]])))""", constant_type_ids), "\n  ")))
+      """(= obj$(findall(x -> x == id, constant_type_ids)[1]) (initnext $(join(map(obj -> "(ObjType$(obj.type.id) $(join(obj.custom_field_values, " ")) (Position $(obj.position[1] - 1) $(obj.position[2] - 1)))", filter(o -> o.type.id == id, objects)))) $(next_constant_vals[findall(y -> y == id, constant_type_ids)[1]])))""", constant_type_ids), "\n  ")))
 
       $((join(map(tuple -> 
       """(on $(tuple[1]) (= objList$(tuple[3]) $(tuple[2])))""", on_clauses_list), "\n  "))...)
