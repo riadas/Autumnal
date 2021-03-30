@@ -828,9 +828,7 @@ const builtInDict = Dict([
                       orig_list = filter(obj -> !filter_fn(obj), list)
                       filtered_list = filter(filter_fn, list)
                       new_filtered_list = map(map_fn, filtered_list)
-                      println(length(vcat(orig_list, new_filtered_list)))
-                      vcat(orig_list, new_filtered_list)
-                      
+                      vcat(orig_list, new_filtered_list)                     
                     end
 
                     function adjPositions(position::Position)::Array{Position}
