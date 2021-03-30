@@ -32,6 +32,7 @@
         <button id="balls-button-1" class="control-button example-button">BALLS I</button>
         <button id="balls-button-2" class="control-button example-button">BALLS II</button>
         <button id="space-button" class="control-button example-button">SPACE INVADERS</button>
+        <button id="gol-button" class="control-button example-button">GoL</button>
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
         <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RANDOM PROGRAM</button>
         <button id="random-button-3" style="background-color: orange !important" class="control-button example-button">RANDOM GROUPED PROGRAM</button>
@@ -99,6 +100,7 @@
       document.getElementById("balls-button-1").addEventListener("click", balls1Click);
       document.getElementById("balls-button-2").addEventListener("click", balls2Click);
       document.getElementById("space-button").addEventListener("click", spaceInvadersClick);
+      document.getElementById("gol-button").addEventListener("click", golClick);
       document.getElementById("random-button").addEventListener("click", randomClick);
       document.getElementById("random-button-2").addEventListener("click", randomClick2);
       document.getElementById("random-button-3").addEventListener("click", randomClick3);
@@ -130,6 +132,7 @@
         balls1Button = document.getElementById("balls-button-1");
         balls2Button = document.getElementById("balls-button-2");
         spaceButton = document.getElementById("space-button");
+        golButton = document.getElementById("gol-button");
         randomButton = document.getElementById("random-button");
         randomButton2 = document.getElementById("random-button-2");
         randomButton3 = document.getElementById("random-button-3");
@@ -159,6 +162,7 @@
           balls1Button.classList.add("disabled");
           balls2Button.classList.add("disabled");
           spaceButton.classList.add("disabled");
+          golButton.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -251,6 +255,7 @@
           balls1Button.classList.remove("disabled");
           balls2Button.classList.remove("disabled");
           spaceButton.classList.remove("disabled");
+          golButton.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -1384,6 +1389,36 @@
     (let 
        ((= bullets (removeObj (prev bullets) (--> obj (intersects obj (prev enemyBullets))))) 
         (= enemyBullets (removeObj (prev enemyBullets) (--> obj (intersects obj (prev bullets))))))))           
+)`)
+  }
+
+  function gameOfLifeClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  
+  (object Particle (: living Bool) (Cell 0 0 (if living then "black" else "white")))
+  
+  (: particles (List Particle))
+  (= particles 
+     (initnext (mapPositions Particle GRID_SIZE (--> pos true) false) 
+               (prev particles))) 
+  
+  (: time Int)
+  (= time (initnext 0 (+ (prev time) 1)))
+    
+  (on (& clicked (< time 20)) (= particles (addObj (removeObj (prev particles) (objClicked click particles)) (Particle true (Position (.. click x) (.. click y))))))
+  (on (> time 20) (= particles 
+                     (updateObj 
+                       (prev particles) 
+                       (--> obj 
+                           (if (& (.. obj living) 
+								  (| (<= (length (filter (--> o (.. o living)) (adjacentObjsDiag obj))) 1)
+                                     (>= (length (filter (--> o (.. o living)) (adjacentObjsDiag obj))) 4))) 
+							then (updateObj obj "living" false)
+							else (if (& (! (.. obj living))
+                                        (== (length (filter (--> o (.. o living)) (adjacentObjsDiag obj))) 3))
+								  then (updateObj obj "living" true)
+                                  else obj))))))
 )`)
   }
 
