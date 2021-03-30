@@ -765,6 +765,12 @@ const builtInDict = Dict([
                       length(intersect(nums1, nums2)) != 0
                     end
 
+                    function intersects(obj1::Array{<:Object}, obj2::Array{<:Object})::Bool
+                      nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj1)...))
+                      nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
+                      length(intersect(nums1, nums2)) != 0
+                    end
+
                     function intersects(list1, list2)::Bool
                       length(intersect(list1, list2)) != 0 
                     end
@@ -1351,15 +1357,15 @@ env = Dict(["custom_types" => Dict([
               "objectlist1" => "ObjectList_Object3",
             ])])
 
-function genUpdateRule(var, environment)
+function genUpdateRule(var, environment; p=0.7)
   if environment["variables"][var] == "Int"
     genInt(environment)
   elseif environment["variables"][var] == "Bool"
     genBoolUpdateRule(var, environment)
   elseif occursin("Object_", environment["variables"][var])
-    genObjectUpdateRule(var, environment)
+    genObjectUpdateRule(var, environment, p=p)
   else
-    genObjectListUpdateRule(var, environment)
+    genObjectListUpdateRule(var, environment, p=p)
   end
 end
 
@@ -1568,12 +1574,19 @@ end
 
 # generativemodel.jl
 
+"""Generate program"""
 function generateprogram(rng=Random.GLOBAL_RNG; gridsize::Int=16, group::Bool=false)
   # generate objects and types 
-  types, objects, background, _ = generatescene_objects(rng, gridsize=gridsize)
+  types_and_objects = generatescene_objects(rng, gridsize=gridsize)
+  generateprogram_given_objects(types_and_objects, rng, gridsize=gridsize, group=group)
+end
 
+"""Generate program given object decomposition (types and objects)"""
+function generateprogram_given_objects(types_and_objects, rng=Random.GLOBAL_RNG; gridsize::Int=16, group::Bool=false)
+  # generate objects and types 
+  types, objects, background, _ = types_and_objects
   non_object_global_vars = []
-  num_non_object_global_vars = rand(0:2)
+  num_non_object_global_vars = rand(0:0)
 
   for i in 1:num_non_object_global_vars
     type = rand(["Bool", "Int"])
@@ -1600,16 +1613,20 @@ function generateprogram(rng=Random.GLOBAL_RNG; gridsize::Int=16, group::Bool=fa
     next_vals = map(obj -> genObjectUpdateRule("obj$(obj.id)", environment), objects)
     objects = [(objects[i], next_vals[i]) for i in 1:length(objects)]
 
-    # generate next values for each non-object global variable
-    non_object_nexts = map(tuple -> genUpdateRule("globalVar$(tuple[3])", environment), non_object_global_vars)
-
     # generate on-clauses for each object
     on_clause_object_ids = rand(1:length(objects), rand(1:length(objects)))
-    on_clauses = map(i -> (genBool(environment), genUpdateRule("obj$(i)", environment), i), on_clause_object_ids)
+    on_clauses = map(i -> (genBool(environment), genUpdateRule("obj$(i)", environment, p=0.5), i), on_clause_object_ids)
 
     # generate on-clauses for each non-object global variable
-    non_object_on_clause_ids = rand(1:length(non_object_global_vars), rand(0:length(non_object_global_vars)))
-    non_object_on_clauses = map(i -> (genBool(environment), genUpdateRule("globalVar$(i)", environment), i), non_object_on_clause_ids)
+    # generate next values for each non-object global variable
+    if length(non_object_global_vars) != 0
+      non_object_nexts = map(tuple -> genUpdateRule("globalVar$(tuple[3])", environment), non_object_global_vars)
+      non_object_on_clause_ids = rand(1:length(non_object_global_vars), rand(0:length(non_object_global_vars)))
+      non_object_on_clauses = map(i -> (genBool(environment), genUpdateRule("globalVar$(i)", environment), i), non_object_on_clause_ids)
+    else
+      non_object_nexts = []
+      non_object_on_clauses = []
+    end
 
     """
     (program
@@ -1659,7 +1676,7 @@ function generateprogram(rng=Random.GLOBAL_RNG; gridsize::Int=16, group::Bool=fa
       next_list_vals = map(id -> genUpdateRule("objList$(findall(x -> x == id, list_type_ids)[1])", environment), list_type_ids)
 
       on_clause_list_ids = rand(list_type_ids, rand(1:length(list_type_ids)))
-      on_clauses_list = map(id -> (genBool(environment), genUpdateRule("objList$(findall(x -> x == id, list_type_ids)[1])", environment), findall(x -> x == id, list_type_ids)[1]), on_clause_list_ids)
+      on_clauses_list = map(id -> (genBool(environment), genUpdateRule("objList$(findall(x -> x == id, list_type_ids)[1])", environment, p=0.5), findall(x -> x == id, list_type_ids)[1]), on_clause_list_ids)
     else
       next_list_vals = []
       on_clauses_list = []
@@ -1670,7 +1687,7 @@ function generateprogram(rng=Random.GLOBAL_RNG; gridsize::Int=16, group::Bool=fa
       next_constant_vals = map(id -> genUpdateRule("obj$(findall(x -> x == id, constant_type_ids)[1])", environment), constant_type_ids)
       
       on_clauses_constant_ids = rand(constant_type_ids, rand(1:length(constant_type_ids)))
-      on_clauses_constant = map(id -> (genBool(environment), genUpdateRule("obj$(findall(x -> x == id, constant_type_ids)[1])", environment), findall(x -> x == id, constant_type_ids)[1]), on_clauses_constant_ids)
+      on_clauses_constant = map(id -> (genBool(environment), genUpdateRule("obj$(findall(x -> x == id, constant_type_ids)[1])", environment, p=0.5), findall(x -> x == id, constant_type_ids)[1]), on_clauses_constant_ids)
     else
       next_constant_vals = []
       on_clauses_constant = []

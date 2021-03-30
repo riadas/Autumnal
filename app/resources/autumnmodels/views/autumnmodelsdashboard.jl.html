@@ -31,6 +31,7 @@
         <button id="disease-button" class="control-button example-button">DISEASE</button>
         <button id="balls-button-1" class="control-button example-button">BALLS I</button>
         <button id="balls-button-2" class="control-button example-button">BALLS II</button>
+        <button id="space-button" class="control-button example-button">SPACE INVADERS</button>
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
         <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RANDOM PROGRAM</button>
         <button id="random-button-3" style="background-color: orange !important" class="control-button example-button">RANDOM GROUPED PROGRAM</button>
@@ -97,6 +98,7 @@
       document.getElementById("disease-button").addEventListener("click", diseaseClick);
       document.getElementById("balls-button-1").addEventListener("click", balls1Click);
       document.getElementById("balls-button-2").addEventListener("click", balls2Click);
+      document.getElementById("space-button").addEventListener("click", spaceInvadersClick);
       document.getElementById("random-button").addEventListener("click", randomClick);
       document.getElementById("random-button-2").addEventListener("click", randomClick2);
       document.getElementById("random-button-3").addEventListener("click", randomClick3);
@@ -127,6 +129,7 @@
         diseaseButton = document.getElementById("disease-button");
         balls1Button = document.getElementById("balls-button-1");
         balls2Button = document.getElementById("balls-button-2");
+        spaceButton = document.getElementById("space-button");
         randomButton = document.getElementById("random-button");
         randomButton2 = document.getElementById("random-button-2");
         randomButton3 = document.getElementById("random-button-3");
@@ -155,6 +158,7 @@
           diseaseButton.classList.add("disabled");
           balls1Button.classList.add("disabled");
           balls2Button.classList.add("disabled");
+          spaceButton.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -246,6 +250,7 @@
           diseaseButton.classList.remove("disabled");
           balls1Button.classList.remove("disabled");
           balls2Button.classList.remove("disabled");
+          spaceButton.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -1312,6 +1317,74 @@
 
   (on (intersects ball_a goal) (= ball_a (updateObj ball_a "direction" 361)))
 )`);
+  }
+
+  function spaceInvadersClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  
+  (object Enemy (Cell 0 0 "blue"))
+  (object Hero (Cell 0 0 "black"))
+  (object Bullet (Cell 0 0 "red"))
+  (object EnemyBullet (Cell 0 0 "orange"))
+  
+  (: enemies1 (List Enemy))
+  (= enemies1 (initnext (mapPositions 
+                          Enemy 
+                          GRID_SIZE
+                          (--> pos (& (== (.. pos y) 1) (== (% (.. pos x) 2) 0
+                                                            )))) 
+                        (prev enemies1)))
+
+  (: enemies2 (List Enemy))
+  (= enemies2 (initnext (mapPositions 
+                          Enemy 
+                          GRID_SIZE
+                          (--> pos (& (== (.. pos y) 3) (== (% (.. pos x) 2) 1
+                                                            )))) 
+                        (prev enemies2)))
+
+  
+  (: hero Hero)
+  (= hero (initnext (Hero (Position 8 15)) (prev hero)))
+  
+  (: enemyBullets (List EnemyBullet))
+  (= enemyBullets (initnext (list) (updateObj (prev enemyBullets) (--> obj (move obj 0 1)))))
+
+  (: bullets (List Bullet))
+  (= bullets (initnext (list) (updateObj (prev bullets) (--> obj (move obj 0 -1)))))
+  
+  (: time Int)
+  (= time (initnext 0 (+ (prev time) 1)))                                                         
+                                                           
+  (on left (= hero (moveLeftNoCollision (prev hero))))
+  (on right (= hero (moveRightNoCollision (prev hero))))
+  (on (& up (.. (prev hero) alive)) (= bullets (addObj (prev bullets) (Bullet (.. (prev hero) origin)))))  
+
+  (on (== (% time 10) 5) (= enemies1 (updateObj (prev enemies1) (--> obj (moveLeft obj)))))
+  (on (== (% time 10) 0) (= enemies1 (updateObj (prev enemies1) (--> obj (moveRight obj)))))
+
+  (on (== (% time 10) 5) (= enemies2 (updateObj (prev enemies2) (--> obj (moveRight obj)))))
+  (on (== (% time 10) 0) (= enemies2 (updateObj (prev enemies2) (--> obj (moveLeft obj)))))
+  
+  (on (intersects (prev bullets) (prev enemies1))
+  	(let ((= bullets (removeObj (prev bullets) (--> obj (intersects obj (prev enemies1)))))
+          (= enemies1 (removeObj (prev enemies1) (--> obj (intersects obj (prev bullets)))))))
+  )          
+           
+  (on (intersects (prev bullets) (prev enemies2))
+  	(let ((= bullets (removeObj (prev bullets) (--> obj (intersects obj (prev enemies2)))))
+          (= enemies2 (removeObj (prev enemies2) (--> obj (intersects obj (prev bullets)))))))
+  )
+          
+  (on (== (% time 5) 2) (= enemyBullets (addObj (prev enemyBullets) (EnemyBullet (uniformChoice (map (--> obj (.. obj origin)) (prev enemies2)))))))         
+  (on (intersects (prev hero) (prev enemyBullets)) (= hero (removeObj (prev hero))))
+
+  (on (intersects (prev bullets) (prev enemyBullets)) 
+    (let 
+       ((= bullets (removeObj (prev bullets) (--> obj (intersects obj (prev enemyBullets))))) 
+        (= enemyBullets (removeObj (prev enemyBullets) (--> obj (intersects obj (prev bullets))))))))           
+)`)
   }
 
   function randomClick() {
