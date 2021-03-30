@@ -828,7 +828,9 @@ const builtInDict = Dict([
                       orig_list = filter(obj -> !filter_fn(obj), list)
                       filtered_list = filter(filter_fn, list)
                       new_filtered_list = map(map_fn, filtered_list)
+                      println(length(vcat(orig_list, new_filtered_list)))
                       vcat(orig_list, new_filtered_list)
+                      
                     end
 
                     function adjPositions(position::Position)::Array{Position}
@@ -904,6 +906,19 @@ const builtInDict = Dict([
                       length(filter(x -> adjacent(cell, x), cells)) != 0
                     end
 
+                    function adjacentObjs(obj::Object)
+                      filter(o -> adjacent(o.origin, obj.origin) && (obj.id != o.id), state.scene.objects)
+                    end
+
+                    function adjacentObjsDiag(obj::Object)
+                      filter(o -> adjacentDiag(o.origin, obj.origin) && (obj.id != o.id), state.scene.objects)
+                    end
+
+                    function adjacentDiag(position1::Position, position2::Position)
+                      displacement(position1, position2) in [Position(0,1), Position(1, 0), Position(0, -1), Position(-1, 0),
+                                                             Position(1,1), Position(1, -1), Position(-1, 1), Position(-1, -1)]
+                    end 
+                    
                     function rotate(object::Object)::Object
                       new_object = deepcopy(object)
                       new_object.render = map(x -> Cell(rotate(x.position), x.color), new_object.render)
