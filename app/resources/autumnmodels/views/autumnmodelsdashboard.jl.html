@@ -36,6 +36,7 @@
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
         <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RANDOM PROGRAM</button>
         <button id="random-button-3" style="background-color: orange !important" class="control-button example-button">RANDOM GROUPED PROGRAM</button>
+        <button id="synthesize-button" style="background-color: #69e8e8 !important" class="control-button example-button disabled">SYNTHESIZE</button>
       </div>
       <div id="container">
         <div class="grid-container" >
@@ -104,7 +105,7 @@
       document.getElementById("random-button").addEventListener("click", randomClick);
       document.getElementById("random-button-2").addEventListener("click", randomClick2);
       document.getElementById("random-button-3").addEventListener("click", randomClick3);
-
+      document.getElementById("synthesize-button").addEventListener("click", synthesizeClick);
 
 
       document.getElementById("history-button").addEventListener("click", historyClick);
@@ -136,6 +137,7 @@
         randomButton = document.getElementById("random-button");
         randomButton2 = document.getElementById("random-button-2");
         randomButton3 = document.getElementById("random-button-3");
+        synthesizeButton = document.getElementById("synthesize-button");
 
         playButton = document.getElementById("play-button");
         restartButton = document.getElementById("restart-button");
@@ -171,7 +173,6 @@
           randomButton.classList.add("disabled");
           randomButton2.classList.add("disabled");
           randomButton3.classList.add("disabled");
-
           
           if (!history_mode) {
             playButton.classList.remove("history-mode");
@@ -183,6 +184,7 @@
             playButton.classList.remove("disabled");
             if (intervalID == -1) {
               compileButton.classList.remove("disabled");
+              synthesizeButton.classList.remove("disabled");
               playButton.innerText = "▶";
               playButton.style.fontSize = "13px";
               if (not_run_yet) {
@@ -196,6 +198,7 @@
               }
             } else {
               compileButton.classList.add("disabled");
+              synthesizeButton.classList.add("disabled");
               playButton.innerText = "▌▌";
               playButton.style.fontSize = "9px";
               restartButton.classList.add("disabled");
@@ -264,6 +267,7 @@
           randomButton.classList.remove("disabled");
           randomButton2.classList.remove("disabled");
           randomButton3.classList.remove("disabled");
+          synthesizeButton.classList.add("disabled");
         }
       }
 
@@ -1474,6 +1478,25 @@
     xhr.send();
   }
 
+  function synthesizeClick() {
+    console.log("synthesize")
+    var xhr = new XMLHttpRequest(); 
+    xhr.open("GET", host + '/synthesize?clientid='+client_id, true);
+
+    //Send the proper header information along with the request
+    xhr.onreadystatechange = function () { // Call a function when the state changes.
+      if (this.readyState === 4 && this.status === 200) {
+        document.getElementById("synthesize-button").innerHTML = "SYNTHESIZE";
+        compileClick();
+        content = JSON.parse(xhr.response)[0];
+        console.log("content: "+content);
+        myCodeMirror.setValue(content);
+      }
+    };
+    document.getElementById("synthesize-button").innerHTML = "SYNTHESIZING...";
+    xhr.send();
+
+  }
     }
     )
   </script>

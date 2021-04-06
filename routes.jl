@@ -28,3 +28,5 @@ route("/random", AutumnModelsController.random, method = GET, named=:random)
 route("/random2", AutumnModelsController.random2, method = GET, named=:random2)
 
 route("/random3", AutumnModelsController.random3, method = GET, named=:random3)
+
+route("/synthesize", AutumnModelsController.synthesize, method = GET, named=:synthesize)

@@ -6,6 +6,9 @@ using Genie.Router
 using Genie.Requests
 using MLStyle
 using Random
+using MacroTools: striplines
+using DataStructures
+using Statistics: median
 import Base.min
 using SExpressions
 
@@ -75,7 +78,7 @@ function step()
   next_state = mod.next(state, nothing, nothing, nothing, nothing, nothing)
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  #HISTORY[clientid][next_state.time] = cells
+  HISTORY[clientid][next_state.time] = mod.render(next_state.scene)
   json(vcat(background, cells))
 end
 
@@ -88,8 +91,8 @@ function startautumn()
   grid_size = state.GRID_SIZEHistory[state.time]
   background = :backgroundHistory in fieldnames(typeof(state)) ? state.backgroundHistory[state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(state.scene))
-  #HISTORY[clientid] = Dict{Int, Any}()
-  #HISTORY[clientid][state.time] = cells
+  HISTORY[clientid] = Dict{Int, Any}()
+  HISTORY[clientid][state.time] = mod.render(state.scene)
   json(vcat(grid_size, background, cells))
   # json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].init(nothing)) : []))
 end
@@ -103,7 +106,7 @@ function clicked()
   next_state = mod.next(state, mod.Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))), nothing, nothing, nothing, nothing)
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  #HISTORY[clientid][next_state.time] = cells
+  HISTORY[clientid][next_state.time] = mod.render(next_state.scene)
   json(vcat(background, cells))
   #json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))))) : []))
 end
@@ -116,7 +119,7 @@ function up()
   next_state = mod.next(state, nothing, nothing, nothing, mod.Up(), nothing)
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  #HISTORY[clientid][next_state.time] = cells
+  HISTORY[clientid][next_state.time] = mod.render(next_state.scene)
   json(vcat(background, cells))
 end
 
@@ -128,7 +131,7 @@ function down()
   next_state = mod.next(state, nothing, nothing, nothing, nothing, mod.Down())
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  #HISTORY[clientid][next_state.time] = cells
+  HISTORY[clientid][next_state.time] = mod.render(next_state.scene)
   json(vcat(background, cells))
 end
 
@@ -140,7 +143,7 @@ function right()
   next_state = mod.next(state, nothing, nothing, mod.Right(), nothing, nothing)
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  #HISTORY[clientid][next_state.time] = cells
+  HISTORY[clientid][next_state.time] = mod.render(next_state.scene)
   json(vcat(background, cells))
 end
 
@@ -152,7 +155,7 @@ function left()
   next_state = mod.next(state, nothing, mod.Left(), nothing, nothing, nothing)
   background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  #HISTORY[clientid][next_state.time] = vcat(background, cells)
+  HISTORY[clientid][next_state.time] = mod.render(next_state.scene)
   json(vcat(background, cells))
 end
 
@@ -161,6 +164,18 @@ function replay()
   clientid = parse(Int64, @params(:clientid))
   json(HISTORY[clientid])
   # json(Dict(key => map(particle -> [particle.position.x, particle.position.y, particle.color], filter(particle -> particle.render, particles)) for (key, particles) in history))
+end
+
+function synthesize()
+  clientid = parse(Int64, @params(:clientid))
+  mod = MODS[clientid]
+  state = mod.state
+  grid_size = state.GRID_SIZEHistory[state.time]
+  observations = [HISTORY[clientid][i] for i in 1:(min(20, length(HISTORY[clientid])))]
+  @show observations
+  @show grid_size
+  content = singletimestepsolution_program(observations, grid_size)
+  json([content])
 end
 
 # aexpr.jl
@@ -250,7 +265,7 @@ Base.show(io::IO, aexpr::AExpr) = print(io, showstring(aexpr))
 
 # sexpr.jl
 fg(s) = s
-fg(s::Cons) = array(s)
+fg(s::SExpressions.Cons) = array(s)
 "Convert an `SExpression` into nested Array{Any}"
 array(s::SExpression) = [map(fg, s)...]
 
@@ -1274,18 +1289,48 @@ end
 
 # scene.jl
 
-struct ObjType
+mutable struct ObjType
   shape::AbstractArray
   color::String
   custom_fields::AbstractArray
   id::Int
 end
 
-struct Obj
+mutable struct Obj
   type::ObjType
   position::Tuple{Int, Int}
   custom_field_values::AbstractArray
   id::Int
+end
+
+function program_string(types_and_objects)
+  types, objects, background, gridsize = types_and_objects 
+  """ 
+  (program
+    (= GRID_SIZE $(gridsize))
+    (= background "$(background)")
+    $(join(map(t -> "(object ObjType$(t.id) (list $(join(map(cell -> """(Cell $(cell[1]) $(cell[2]) "$(t.color)")""", t.shape), " "))))", types), "\n  "))
+
+    $((join(map(obj -> """(: obj$(obj.id) ObjType$(obj.type.id))""", objects), "\n  "))...)
+
+    $((join(map(obj -> """(= obj$(obj.id) (initnext (ObjType$(obj.type.id) (Position $(obj.position[1] - 1) $(obj.position[2] - 1))) (prev obj$(obj.id))))""", objects), "\n  ")))
+  )
+  """
+end
+
+function program_string_synth(types_and_objects)
+  types, objects, background, gridsize = types_and_objects 
+  """ 
+  (program
+    (= GRID_SIZE $(gridsize))
+    (= background "$(background)")
+    $(join(map(t -> "(object ObjType$(t.id) (list $(join(map(cell -> """(Cell $(cell[1]) $(cell[2]) "$(t.color)")""", t.shape), " "))))", types), "\n  "))
+
+    $((join(map(obj -> """(: obj$(obj.id) ObjType$(obj.type.id))""", objects), "\n  "))...)
+
+    $((join(map(obj -> """(= obj$(obj.id) (initnext (ObjType$(obj.type.id) (Position $(obj.position[1]) $(obj.position[2]))) (prev obj$(obj.id))))""", objects), "\n  ")))
+  )
+  """
 end
 
 colors = ["red", "yellow", "green", "blue"]
@@ -1357,6 +1402,71 @@ function neighbors(position)
   [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
 end
 
+function parsescene_autumn_singlecell(render_output::AbstractArray, background::String="white", dim::Int=16)
+  colors = unique(map(cell -> cell.color, render_output))
+  types = map(color -> ObjType([(0,0)], color, [], findall(c -> c == color, colors)[1]), colors)
+  objects = []
+  for i in 1:length(render_output)
+    cell = render_output[i]
+    push!(objects, Obj(types[findall(type -> type.color == cell.color, types)[1]], (cell.position.x, cell.position.y), [], i))
+  end
+  (types, objects, background, dim)
+end
+
+function color_contiguity_autumn(position_to_color, pos1, pos2)
+  length(intersect(position_to_color[pos1], position_to_color[pos2])) > 0
+end
+
+function parsescene_autumn(render_output::AbstractArray, dim::Int=16, background::String="white"; color=true)
+  
+  position_to_color = Dict()
+  for cell in render_output
+    if (cell.position.x, cell.position.y) in keys(position_to_color)
+      push!(position_to_color[(cell.position.x, cell.position.y)], cell.color)
+    else
+      position_to_color[(cell.position.x, cell.position.y)] = [cell.color] 
+    end
+  end
+
+  colored_positions = sort(collect(keys(position_to_color)))
+  objectshapes = []
+  visited = []
+  for position in colored_positions
+    if !(position in visited)
+      objectshape = []
+      q = Queue{Any}()
+      enqueue!(q, position)
+      while !isempty(q)
+        pos = dequeue!(q)
+        push!(objectshape, pos)
+        push!(visited, pos)
+        pos_neighbors = neighbors(pos)
+        for n in pos_neighbors
+          if (n in colored_positions) && !(n in visited) && (color ? color_contiguity_autumn(position_to_color, n, pos) : true) 
+            enqueue!(q, n)
+          end
+        end
+      end
+      push!(objectshapes, objectshape)
+    end
+  end  
+
+  types = []
+  objects = []
+  for objectshape in objectshapes
+    objectcolor = position_to_color[objectshape[1]][1]
+    
+    translated = map(pos -> dim * pos[2] + pos[1], objectshape)
+    translated = length(translated) % 2 == 0 ? translated[1:end-1] : translated # to produce a single median
+    centerPos = objectshape[findall(x -> x == median(translated), translated)[1]]
+    translatedShape = unique(map(pos -> (pos[1] - centerPos[1], pos[2] - centerPos[2]), objectshape))
+
+    push!(types, ObjType(translatedShape, objectcolor, [], length(types) + 1))
+    push!(objects, Obj(types[length(types)], centerPos, [], length(objects) + 1))
+  end
+  (types, objects, background, dim)
+end
+
 # dynamics.jl
 
 env = Dict(["custom_types" => Dict([
@@ -1393,7 +1503,7 @@ function genObjectName(environment)
   objects[rand(1:length(objects))]
 end
 
-function genObjectUpdateRule(object, environment; p=0.7)
+function genObjectUpdateRule(object, environment; p=0.3)
   prob = rand()
   if prob < p
     if object == "obj"
@@ -1403,15 +1513,15 @@ function genObjectUpdateRule(object, environment; p=0.7)
     end
   else
     choices = [
-      ("moveLeftNoCollision", [:(genObjectUpdateRule($(object), $(environment)))]),
-      ("moveRightNoCollision", [:(genObjectUpdateRule($(object), $(environment)))]),
-      ("moveUpNoCollision", [:(genObjectUpdateRule($(object), $(environment)))]),
-      ("moveDownNoCollision", [:(genObjectUpdateRule($(object), $(environment)))]),
-      ("moveNoCollision", [:(genObjectUpdateRule($(object), $(environment))), :(genPosition($(environment)))]),
-      ("nextLiquid", [:(genObjectUpdateRule($(object), $(environment)))]),
-      ("nextSolid", [:(genObjectUpdateRule($(object), $(environment)))]),
-      ("rotate", [:(genObjectUpdateRule($(object), $(environment)))]),
-      ("rotateNoCollision", [:(genObjectUpdateRule($(object), $(environment)))]),
+      ("moveLeft", [:(genObjectUpdateRule($(object), $(environment), p=0.9))]),
+      ("moveRight", [:(genObjectUpdateRule($(object), $(environment), p=0.9))]),
+      ("moveUp", [:(genObjectUpdateRule($(object), $(environment), p=0.9))]),
+      ("moveDown", [:(genObjectUpdateRule($(object), $(environment), p=0.9))]),
+      # ("moveNoCollision", [:(genObjectUpdateRule($(object), $(environment))), :(genPosition($(environment)))]),
+      # ("nextLiquid", [:(genObjectUpdateRule($(object), $(environment)))]),
+      # ("nextSolid", [:(genObjectUpdateRule($(object), $(environment)))]),
+      # ("rotate", [:(genObjectUpdateRule($(object), $(environment)))]),
+      # ("rotateNoCollision", [:(genObjectUpdateRule($(object), $(environment)))]),
     ]
     choice = choices[rand(1:length(choices))]
     "($(choice[1]) $(join(map(eval, choice[2]), " ")))"
@@ -1598,6 +1708,7 @@ end
 function generateprogram_given_objects(types_and_objects, rng=Random.GLOBAL_RNG; gridsize::Int=16, group::Bool=false)
   # generate objects and types 
   types, objects, background, _ = types_and_objects
+
   non_object_global_vars = []
   num_non_object_global_vars = rand(0:0)
 
@@ -1745,6 +1856,292 @@ function generateprogram_given_objects(types_and_objects, rng=Random.GLOBAL_RNG;
     )
     """
   end
+end
+
+function generate_hypothesis_update_rule(object, object_decomposition; p=0.3)
+  types, objects, background, gridsize = object_decomposition
+  objects = [object, objects...]
+  # construct environment 
+  environment = Dict(["custom_types" => Dict(map(t -> "Object_ObjType$(t.id)" => t.custom_fields, types) 
+                          ),
+                      "variables" => Dict(map(obj -> "obj$(obj.id)" => "Object_ObjType$(obj.type.id)", objects)
+                      )])
+ 
+  # generate update rule 
+  """(= obj$(object.id) $(genObjectUpdateRule("obj$(object.id)", environment, p=p)))"""
+end
+
+# singletimestepsolution.jl
+
+"""Construct matrix of single timestep solutions"""
+function singletimestepsolution_matrix(observations, grid_size)
+  object_decomposition = parse_and_map_objects(observations)
+  object_types, object_mapping, background, _ = object_decomposition
+  # matrix of update function sets for each object/time pair
+  # number of rows = number of objects, number of cols = number of time steps  
+  num_objects = length(collect(keys(object_mapping)))
+  matrix = [[] for object_id in 1:num_objects, time in 1:(length(observations) - 1)]
+  prev_used_rules = []
+  @show size(matrix)
+  # for each subsequent frame, map objects  
+  for time in 2:length(observations)
+    # for each object in previous time step, determine a set of update functions  
+    # that takes the previous object to the next object
+    for object_id in 1:num_objects
+      update_functions, prev_used_rules = synthesize_update_functions(object_id, time, object_decomposition, prev_used_rules, grid_size)
+      @show update_functions 
+      matrix[object_id, time - 1] = update_functions
+    end
+  end
+  matrix, object_decomposition, prev_used_rules
+end
+
+expr = nothing
+mod = nothing
+global_iters = 0
+"""Synthesize a set of update functions that """
+function synthesize_update_functions(object_id, time, object_decomposition, prev_used_rules, grid_size=16, max_iters=50)
+  object_types, object_mapping, background, _ = object_decomposition
+  prev_object = object_mapping[object_id][time - 1]
+  next_object = object_mapping[object_id][time]
+  @show object_id 
+  @show time
+  #@show prev_object 
+  #@show next_object
+  # @show isnothing(prev_object) && isnothing(next_object)
+  if isnothing(prev_object) && isnothing(next_object)
+    [""], prev_used_rules
+  elseif isnothing(prev_object)
+    ["(= addedObjType$(next_object.type.id)List (addObj addedObjType$(next_object.type.id)List (ObjType$(next_object.type.id) (Position $(next_object.position[1]) $(next_object.position[2])))))"], prev_used_rules
+  elseif isnothing(next_object)
+    if object_mapping[object_id][1] == nothing # object was added later; contained in addedList
+      ["(= addedObjType$(prev_object.type.id)List (removeObj addedObjType$(prev_object.type.id)List (--> obj (== (.. obj id) $(object_id)))))"], prev_used_rules
+    else # object was present at the start of the program
+      ["(= obj$(object_id) (removeObj obj$(object_id)))"], prev_used_rules
+    end
+  else # actual synthesis problem
+    prev_objects = filter(obj -> !isnothing(obj) && (obj.id != prev_object.id), [object_mapping[id][time - 1] for id in 1:length(collect(keys(object_mapping)))])
+    #@show prev_objects
+    solutions = []
+    iters = 0
+    prev_used_rules_index = 1
+    using_prev = false
+    while length(solutions) != 1 && iters < max_iters
+      hypothesis_program = program_string_synth((object_types, sort([prev_objects..., prev_object], by=(x -> x.id)), background, grid_size))
+      
+      if prev_used_rules_index <= length(prev_used_rules)
+        update_rule = replace(prev_used_rules[prev_used_rules_index], "objX" => "obj$(object_id)")
+        using_prev = true
+        prev_used_rules_index += 1
+      else
+        using_prev = false
+        update_rule = generate_hypothesis_update_rule(prev_object, (object_types, prev_objects, background, grid_size), p=0.2) # "(= obj1 (moveDownNoCollision (moveDownNoCollision (prev obj1))))"
+      end      
+
+      hypothesis_program = string(hypothesis_program[1:end-2], "\n\t (on true ", update_rule, ")\n)")
+      # println(hypothesis_program)
+      # @show global_iters
+      #@show update_rule
+
+      global expr = striplines(compiletojulia(parseautumn(hypothesis_program)))
+      @show expr
+      module_name = Symbol("CompiledProgram$(global_iters)")
+      global expr.args[1].args[2] = module_name
+      # @show expr.args[1].args[2]
+      global mod = @eval $(expr)
+      # @show repr(mod)
+      hypothesis_frame_state = @eval mod.next(mod.init(nothing, nothing, nothing, nothing, nothing), nothing, nothing, nothing, nothing, nothing)
+      
+      hypothesis_object = filter(o -> o.id == object_id, hypothesis_frame_state.scene.objects)[1]
+      #@show hypothesis_frame_state.scene.objects
+      #@show hypothesis_object
+
+      if render_equals(hypothesis_object, next_object)
+        if using_prev
+          println("HOORAY")
+        end
+        generic_update_rule = replace(update_rule, "obj$(object_id)" => "objX")
+        if !(generic_update_rule in prev_used_rules)
+          push!(prev_used_rules, generic_update_rule)
+        end
+
+        if object_mapping[object_id][1] == nothing # object was added later; contained in addedList
+          map_lambda_func = replace(string("(-->", replace(update_rule, "obj$(object_id)" => "obj")[3:end]), "(prev obj)" => "obj")
+          push!(solutions, "(= addedObjType$(prev_object.type.id)List (updateObj addedObjType$(prev_object.type.id)List $(map_lambda_func) (--> obj (== (.. obj id) $(object_id)))))")
+        else # object was present at the start of the program
+          push!(solutions, update_rule)
+        end
+      end
+      
+      iters += 1
+      global global_iters += 1
+      
+    end
+    if (iters == max_iters)
+      println("FAILURE")
+    end
+    solutions, prev_used_rules
+  end
+end
+
+"""Parse observations into object types and objects, and assign 
+   objects in current observed frame to objects in next frame"""
+function parse_and_map_objects(observations)
+  object_mapping = Dict{Int, AbstractArray}()
+
+  # initialize object mapping with object_decomposition from first observation
+  object_types, objects, background, dim = parsescene_autumn(observations[1]) # parsescene_autumn_singlecell
+  for object in objects
+    object_mapping[object.id] = [object]
+  end
+
+  for time in 2:length(observations)
+    next_object_types, next_objects, _, _ = parsescene_autumn(observations[time]) # parsescene_autumn_singlecell
+
+    # update object_types with new elements in next_object_types 
+    new_object_types = filter(type -> !((type.shape, type.color) in map(t -> (t.shape, t.color), object_types)), next_object_types)
+    if length(new_object_types) != 0
+      for i in 1:length(new_object_types)
+        new_type = new_object_types[i]
+        new_type.id = length(object_types) + i
+        push!(object_types, new_type)
+      end
+    end
+
+    # reassign type ids in next_objects according to global type set (object_types)
+    for object in next_objects
+      object.type = filter(type -> (type.shape, type.color) == (object.type.shape, object.type.color), object_types)[1]
+    end
+
+    # construct mapping between objects and next_objects
+    for type in object_types
+      curr_objects_with_type = filter(o -> o.type.id == type.id, objects)
+      next_objects_with_type = filter(o -> o.type.id == type.id, next_objects)
+      
+      closest_objects = compute_closest_objects(curr_objects_with_type, next_objects_with_type)
+      while !(isempty(curr_objects_with_type) || isempty(next_objects_with_type)) 
+        for (object_id, closest_ids) in closest_objects
+          if length(intersect(closest_ids, map(o -> o.id, next_objects_with_type))) == 1
+            closest_id = intersect(closest_ids, map(o -> o.id, next_objects_with_type))[1]
+            next_object = filter(o -> o.id == closest_id, next_objects_with_type)[1]
+
+            # remove curr and next objects from respective lists
+            filter!(o -> o.id != object_id, curr_objects_with_type)
+            filter!(o -> o.id != closest_id, next_objects_with_type)
+            delete!(closest_objects, object_id)
+            
+            # add next object to mapping
+            next_object.id = object_id
+            push!(object_mapping[object_id], next_object)
+          end
+
+          if length(collect(keys(filter(pair -> length(intersect(last(pair), map(o -> o.id, next_objects_with_type))) == 1, closest_objects)))) == 0
+            # every remaining object to be mapped is equidistant to at least two closest objects, or zero objects
+            # perform a brute force assignment
+            while !isempty(curr_objects_with_type) && !isempty(next_objects_with_type)
+              # do something
+              object = curr_objects_with_type[1]
+              next_object = next_objects_with_type[1]
+              @show curr_objects_with_type
+              @show next_objects_with_type
+              curr_objects_with_type = filter(o -> o.id != object.id, curr_objects_with_type)
+              next_objects_with_type = filter(o -> o.id != next_object.id, next_objects_with_type)
+              
+              next_object.id = object.id
+              push!(object_mapping[object.id], next_object)
+            end
+            break
+          end
+        end
+      end
+
+      max_id = length(collect(keys(object_mapping)))
+      if isempty(curr_objects_with_type) && !(isempty(next_objects_with_type))
+        # handle addition of objects
+        for i in 1:length(next_objects_with_type)
+          next_object = next_objects_with_type[i]
+          next_object.id = max_id + i
+          object_mapping[next_object.id] = [[nothing for i in 1:(time - 1)]..., next_object]
+        end
+      elseif !(isempty(curr_objects_with_type)) && isempty(next_objects_with_type)
+        # handle removal of objects
+        for object in curr_objects_with_type
+          push!(object_mapping[object.id], nothing)
+        end
+      end
+    end
+
+    objects = next_objects
+
+  end
+  (object_types, object_mapping, background, dim)  
+end
+
+function compute_closest_objects(curr_objects, next_objects)
+  closest_objects = Dict{Int, AbstractArray}()
+  for object in curr_objects
+    distances = map(o -> distance(object.position, o.position), next_objects)
+    closest_objects[object.id] = map(obj -> obj.id, filter(o -> distance(object.position, o.position) == minimum(distances), next_objects))
+  end
+  closest_objects
+end
+
+function distance(pos1, pos2)
+  pos1_x, pos1_y = pos1
+  pos2_x, pos2_y = pos2
+  # sqrt(Float((pos1_x - pos2_x)^2 + (pos1_y - pos2_y)^2))
+  abs(pos1_x - pos2_x) + abs(pos1_y - pos2_y)
+end
+
+function render_equals(hypothesis_object, actual_object)
+  translated_hypothesis_object = map(cell -> (cell.position.x + hypothesis_object.origin.x, cell.position.y + hypothesis_object.origin.y), hypothesis_object.render)
+  translated_actual_object = map(pos -> (pos[1] + actual_object.position[1], pos[2] + actual_object.position[2]), actual_object.type.shape)
+  translated_hypothesis_object == translated_actual_object
+end
+
+function generate_observations(m::Module)
+  state = m.init(nothing, nothing, nothing, nothing, nothing)
+  observations = []
+  for i in 0:9
+    if i % 2 == 1
+      state = m.next(state, nothing, nothing, nothing, nothing, nothing)
+      # state = m.next(state, m.Click(rand(5:10), rand(5:10)), nothing, nothing, nothing, nothing)
+    else
+      state = m.next(state, nothing, nothing, nothing, nothing, nothing)
+    end
+    push!(observations, m.render(state.scene))
+  end
+  observations
+end
+
+function singletimestepsolution_program(observations, grid_size=16)
+  
+  matrix, object_decomposition, _ = singletimestepsolution_matrix(observations, grid_size)
+  singletimestepsolution_program_given_matrix(matrix, object_decomposition, grid_size)
+end
+
+function singletimestepsolution_program_given_matrix(matrix, object_decomposition, grid_size=16)
+  object_types, object_mapping, background, _ = object_decomposition
+  
+  objects = sort(filter(obj -> obj != nothing, [object_mapping[i][1] for i in 1:length(collect(keys(object_mapping)))]), by=(x -> x.id))
+  
+  program_no_update_rules = program_string_synth((object_types, objects, background, grid_size))
+  
+  list_variables = join(map(type -> 
+  """(: addedObjType$(type.id)List (List ObjType$(type.id)))\n  (= addedObjType$(type.id)List (initnext (list) (prev addedObjType$(type.id)List)))\n""", 
+  object_types),"\n  ")
+  
+  time = """(: time Int)\n  (= time (initnext 0 (+ time 1)))"""
+
+  update_rule_times = filter(time -> join(map(l -> l[1], matrix[:, time]), "") != "", [1:size(matrix)[2]...])
+  update_rules = join(map(time -> """(on (== time $(time))\n  (let\n    ($(join(map(l -> l[1], matrix[:, time]), "\n    "))))\n  )""", update_rule_times), "\n  ")
+
+  
+  string(program_no_update_rules[1:end-2], 
+        "\n\n  $(list_variables)",
+        "\n\n  $(time)", 
+        "\n\n  $(update_rules)", 
+        ")")
 end
 
 end
