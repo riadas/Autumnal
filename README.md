@@ -1,3 +1,6 @@
 # Causal Discovery Web Interface
 
-[http://www.logic.toys](http://www.logic.toys)
+```
+> git clone https://github.com/riadas/autumnal.git && cd autumnal 
+> bin/server
+```
