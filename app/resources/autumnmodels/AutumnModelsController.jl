@@ -1418,7 +1418,6 @@ function color_contiguity_autumn(position_to_color, pos1, pos2)
 end
 
 function parsescene_autumn(render_output::AbstractArray, dim::Int=16, background::String="white"; color=true)
-  
   position_to_color = Dict()
   for cell in render_output
     if (cell.position.x, cell.position.y) in keys(position_to_color)
@@ -1453,16 +1452,23 @@ function parsescene_autumn(render_output::AbstractArray, dim::Int=16, background
 
   types = []
   objects = []
+  # @show length(objectshapes)
   for objectshape in objectshapes
     objectcolor = position_to_color[objectshape[1]][1]
-    
+    # @show objectcolor 
+    # @show objectshape
     translated = map(pos -> dim * pos[2] + pos[1], objectshape)
     translated = length(translated) % 2 == 0 ? translated[1:end-1] : translated # to produce a single median
     centerPos = objectshape[findall(x -> x == median(translated), translated)[1]]
     translatedShape = unique(map(pos -> (pos[1] - centerPos[1], pos[2] - centerPos[2]), objectshape))
 
-    push!(types, ObjType(translatedShape, objectcolor, [], length(types) + 1))
-    push!(objects, Obj(types[length(types)], centerPos, [], length(objects) + 1))
+    if !((translatedShape, objectcolor) in map(type -> (type.shape, type.color) , types))
+      push!(types, ObjType(translatedShape, objectcolor, [], length(types) + 1))
+      push!(objects, Obj(types[length(types)], centerPos, [], length(objects) + 1))
+    else
+      type_id = findall(type -> (type.shape, type.color) == (translatedShape, objectcolor), types)[1]
+      push!(objects, Obj(types[type_id], centerPos, [], length(objects) + 1))
+    end
   end
   (types, objects, background, dim)
 end
@@ -1902,10 +1908,13 @@ global_iters = 0
 """Synthesize a set of update functions that """
 function synthesize_update_functions(object_id, time, object_decomposition, prev_used_rules, grid_size=16, max_iters=50)
   object_types, object_mapping, background, _ = object_decomposition
-  prev_object = object_mapping[object_id][time - 1]
-  next_object = object_mapping[object_id][time]
   @show object_id 
   @show time
+  prev_object = object_mapping[object_id][time - 1]
+  
+  next_object = object_mapping[object_id][time]
+  #@show object_id 
+  #@show time
   #@show prev_object 
   #@show next_object
   # @show isnothing(prev_object) && isnothing(next_object)
@@ -1941,7 +1950,7 @@ function synthesize_update_functions(object_id, time, object_decomposition, prev
       hypothesis_program = string(hypothesis_program[1:end-2], "\n\t (on true ", update_rule, ")\n)")
       # println(hypothesis_program)
       # @show global_iters
-      #@show update_rule
+      # @show update_rule
 
       global expr = striplines(compiletojulia(parseautumn(hypothesis_program)))
       @show expr
@@ -1987,7 +1996,7 @@ end
 """Parse observations into object types and objects, and assign 
    objects in current observed frame to objects in next frame"""
 function parse_and_map_objects(observations)
-  object_mapping = Dict{Int, AbstractArray}()
+  object_mapping = Dict{Int, Array{Union{Nothing, Obj}}}()
 
   # initialize object mapping with object_decomposition from first observation
   object_types, objects, background, dim = parsescene_autumn(observations[1]) # parsescene_autumn_singlecell
@@ -1999,7 +2008,9 @@ function parse_and_map_objects(observations)
     next_object_types, next_objects, _, _ = parsescene_autumn(observations[time]) # parsescene_autumn_singlecell
 
     # update object_types with new elements in next_object_types 
-    new_object_types = filter(type -> !((type.shape, type.color) in map(t -> (t.shape, t.color), object_types)), next_object_types)
+    new_object_types = filter(type -> !((repr(sort(type.shape)), type.color) in map(t -> (repr(sort(t.shape)), t.color), object_types)), next_object_types)
+    @show object_types 
+    @show new_object_types
     if length(new_object_types) != 0
       for i in 1:length(new_object_types)
         new_type = new_object_types[i]
@@ -2066,7 +2077,7 @@ function parse_and_map_objects(observations)
       elseif !(isempty(curr_objects_with_type)) && isempty(next_objects_with_type)
         # handle removal of objects
         for object in curr_objects_with_type
-          push!(object_mapping[object.id], nothing)
+          push!(object_mapping[object.id], [nothing for i in time:length(observations)]...)
         end
       end
     end
@@ -2102,10 +2113,10 @@ end
 function generate_observations(m::Module)
   state = m.init(nothing, nothing, nothing, nothing, nothing)
   observations = []
-  for i in 0:9
-    if i % 2 == 1
-      state = m.next(state, nothing, nothing, nothing, nothing, nothing)
-      # state = m.next(state, m.Click(rand(5:10), rand(5:10)), nothing, nothing, nothing, nothing)
+  for i in 0:10
+    if i % 3 == 2
+      # state = m.next(state, nothing, nothing, nothing, nothing, nothing)
+      state = m.next(state, m.Click(rand(5:10), rand(5:10)), nothing, nothing, nothing, nothing)
     else
       state = m.next(state, nothing, nothing, nothing, nothing, nothing)
     end
@@ -2135,7 +2146,6 @@ function singletimestepsolution_program_given_matrix(matrix, object_decompositio
 
   update_rule_times = filter(time -> join(map(l -> l[1], matrix[:, time]), "") != "", [1:size(matrix)[2]...])
   update_rules = join(map(time -> """(on (== time $(time))\n  (let\n    ($(join(map(l -> l[1], matrix[:, time]), "\n    "))))\n  )""", update_rule_times), "\n  ")
-
   
   string(program_no_update_rules[1:end-2], 
         "\n\n  $(list_variables)",
