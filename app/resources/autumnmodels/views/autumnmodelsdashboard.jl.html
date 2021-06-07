@@ -33,6 +33,7 @@
         <button id="balls-button-2" class="control-button example-button">BALLS II</button>
         <button id="space-button" class="control-button example-button">SPACE INVADERS</button>
         <button id="gol-button" class="control-button example-button">GoL</button>
+        <button id="sokoban-button" class="control-button example-button">SOKOBAN</button>
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
         <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RANDOM PROGRAM</button>
         <button id="random-button-3" style="background-color: orange !important" class="control-button example-button">RANDOM GROUPED PROGRAM</button>
@@ -102,6 +103,7 @@
       document.getElementById("balls-button-2").addEventListener("click", balls2Click);
       document.getElementById("space-button").addEventListener("click", spaceInvadersClick);
       document.getElementById("gol-button").addEventListener("click", gameOfLifeClick);
+      document.getElementById("sokoban-button").addEventListener("click", sokobanClick);
       document.getElementById("random-button").addEventListener("click", randomClick);
       document.getElementById("random-button-2").addEventListener("click", randomClick2);
       document.getElementById("random-button-3").addEventListener("click", randomClick3);
@@ -134,6 +136,7 @@
         balls2Button = document.getElementById("balls-button-2");
         spaceButton = document.getElementById("space-button");
         golButton = document.getElementById("gol-button");
+        sokobanButton = document.getElementById("sokoban-button");
         randomButton = document.getElementById("random-button");
         randomButton2 = document.getElementById("random-button-2");
         randomButton3 = document.getElementById("random-button-3");
@@ -165,6 +168,7 @@
           balls2Button.classList.add("disabled");
           spaceButton.classList.add("disabled");
           golButton.classList.add("disabled");
+          sokobanButton.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -259,6 +263,7 @@
           balls2Button.classList.remove("disabled");
           spaceButton.classList.remove("disabled");
           golButton.classList.remove("disabled");
+          sokobanButton.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -642,18 +647,15 @@
 
   (: ants (List Ant))
   (= ants (initnext (map Ant (randomPositions GRID_SIZE 6)) 
-                    (updateObj (prev ants) nextAnt)))
+                    (updateObj (prev ants) (--> obj (move obj (unitVector obj (closest obj Food)))))))
 
   (: foods (List Food))
   (= foods (initnext (list) 
-                     (updateObj (prev foods) (--> obj (if (== (distance obj (closest obj Ant)) 0)
-                                             then (removeObj obj)
-                                   else obj)))))
-
+                     (updateObj (prev foods) (--> obj (if (intersects obj ants)
+                                                       then (removeObj obj)
+                                                       else obj)))))
+  
   (on clicked (= foods (addObj (prev foods) (map Food (randomPositions GRID_SIZE 4)))))
-
-  (: nextAnt (-> Ant Ant))
-  (= nextAnt (fn (ant) (move ant (unitVector ant (closest ant Food)))))
 )`);
     }
 
@@ -1423,6 +1425,56 @@
                                         (== (length (filter (--> o (.. o living)) (adjacentObjsDiag obj))) 3))
 								  then (updateObj obj "living" true)
                                   else obj))))))
+)`)
+  }
+
+  function sokobanClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 8)
+  
+  (object Agent (Cell 0 0 "blue"))
+  (object Box (Cell 0 0 "black"))
+  
+  (: agent Agent)
+  (= agent (initnext (Agent (Position 3 3)) (prev agent)))
+     
+  (: boxes (List Box))
+  (= boxes (initnext (list (Box (Position 1 2)) (Box (Position 6 4)) (Box (Position 3 6))) (prev boxes)))
+    
+  (on left (let ((= boxes (updateObj 
+                            (prev boxes) 
+                            (--> obj (if (& (!= (.. obj origin) (.. (moveLeftNoCollision obj) origin)) 
+											(== (displacement (.. obj origin) (.. agent origin)) (Position 1 0)))
+									  then (moveLeftNoCollision obj)
+									  else obj))))
+
+                 (= agent (if (| (intersects (list (moveLeft agent)) boxes) 
+                                 (! (isWithinBounds (moveLeft agent)))) 
+                             then agent 
+                             else (moveLeft agent)))))) 
+
+  (on right (let ((= boxes (updateObj (prev boxes) (--> obj (if (& (!= (.. obj origin) (.. (moveRightNoCollision obj) origin)) (== (displacement (.. obj origin) (.. agent origin)) (Position -1 0)))
+                                                             then (moveRightNoCollision obj)
+                                                             else obj)))) 
+                 (= agent (if (| (intersects (list (moveRight agent)) boxes) (! (isWithinBounds (moveRight agent))))                              
+                             then agent 
+                             else (moveRight agent))))))
+
+  (on up (let ((= boxes (updateObj (prev boxes) (--> obj (if (& (!= (.. obj origin) (.. (moveUpNoCollision obj) origin)) (== (displacement (.. obj origin) (.. agent origin)) (Position 0 1)))
+                                                          then (moveUpNoCollision obj)
+                                                          else obj)))) 
+                 (= agent (if (| (intersects (list (moveUp agent)) boxes) (! (isWithinBounds (moveUp agent))))                              
+                             then agent 
+                             else (moveUp agent))))))
+
+  (on down (let ((= boxes (updateObj (prev boxes) (--> obj (if (& (!= (.. obj origin) (.. (moveDownNoCollision obj) origin)) (== (displacement (.. obj origin) (.. agent origin)) (Position 0 -1)))
+                                                            then (moveDownNoCollision obj)
+                                                            else obj)))) 
+                 (= agent (if (| (intersects (list (moveDown agent)) boxes) (! (isWithinBounds (moveDown agent))))                              
+                           then agent 
+                           else (moveDown agent))))))
+
+  (on (& clicked (isFree click)) (= boxes (addObj boxes (Box (Position (.. click x) (.. click y))))))
 )`)
   }
 
