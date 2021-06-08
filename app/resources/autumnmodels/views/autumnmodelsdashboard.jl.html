@@ -753,8 +753,8 @@
   (on (clicked vesselButton) (= currentParticle "vessel"))
   (on (clicked plugButton) (= currentParticle "plug"))
   (on (clicked waterButton) (= currentParticle "water"))
-  (on (clicked removeButton) (= plugs (list)))
-  (on (clicked clearButton) (let ((= vessels (list)) (= plugs (list)) (= water (list)))))  
+  (on (clicked removeButton) (= plugs (removeObj plugs (--> obj true))))
+  (on (clicked clearButton) (let ((= vessels (removeObj vessels (--> obj true))) (= plugs (removeObj plugs (--> obj true))) (= water (removeObj water (--> obj true))))))  
 )`);
     }
 
