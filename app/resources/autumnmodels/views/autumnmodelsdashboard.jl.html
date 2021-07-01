@@ -34,6 +34,9 @@
         <button id="space-button" class="control-button example-button">SPACE INVADERS</button>
         <button id="gol-button" class="control-button example-button">GoL</button>
         <button id="sokoban-button" class="control-button example-button">SOKOBAN</button>
+        <button id="grow-button" class="control-button example-button">GROW</button>
+        <button id="mario-button" class="control-button example-button">MARIO</button>
+        <button id="sand-button" class="control-button example-button">SAND</button>
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
         <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RANDOM PROGRAM</button>
         <button id="random-button-3" style="background-color: orange !important" class="control-button example-button">RANDOM GROUPED PROGRAM</button>
@@ -104,6 +107,9 @@
       document.getElementById("space-button").addEventListener("click", spaceInvadersClick);
       document.getElementById("gol-button").addEventListener("click", gameOfLifeClick);
       document.getElementById("sokoban-button").addEventListener("click", sokobanClick);
+      document.getElementById("grow-button").addEventListener("click", growClick);
+      document.getElementById("mario-button").addEventListener("click", marioClick);
+      document.getElementById("sand-button").addEventListener("click", sandClick);
       document.getElementById("random-button").addEventListener("click", randomClick);
       document.getElementById("random-button-2").addEventListener("click", randomClick2);
       document.getElementById("random-button-3").addEventListener("click", randomClick3);
@@ -137,6 +143,9 @@
         spaceButton = document.getElementById("space-button");
         golButton = document.getElementById("gol-button");
         sokobanButton = document.getElementById("sokoban-button");
+        growButton = document.getElementById("grow-button");
+        marioButton = document.getElementById("mario-button");
+        sandButton = document.getElementById("sand-button");
         randomButton = document.getElementById("random-button");
         randomButton2 = document.getElementById("random-button-2");
         randomButton3 = document.getElementById("random-button-3");
@@ -169,6 +178,9 @@
           spaceButton.classList.add("disabled");
           golButton.classList.add("disabled");
           sokobanButton.classList.add("disabled");
+          growButton.classList.add("disabled");
+          marioButton.classList.add("disabled");
+          sandButton.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -264,6 +276,9 @@
           spaceButton.classList.remove("disabled");
           golButton.classList.remove("disabled");
           sokobanButton.classList.remove("disabled");
+          growButton.classList.remove("disabled");
+          marioButton.classList.remove("disabled");
+          sandButton.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -1475,6 +1490,139 @@
                            else (moveDown agent))))))
 
   (on (& clicked (isFree click)) (= boxes (addObj boxes (Box (Position (.. click x) (.. click y))))))
+)`)
+  }
+
+  function growClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 8)
+  
+  (object Water (Cell 0 0 "blue"))
+  (object Leaf (: color String) (Cell 0 0 color))
+  (object Cloud (list (Cell -1 0 "gray") 
+                      (Cell 0 0 "gray") 
+                      (Cell 1 0 "gray")))
+  
+  (object Sun (list (Cell 0 0 "gold")
+                    (Cell 0 1 "gold")
+                    (Cell 1 0 "gold")
+                    (Cell 1 1 "gold")))
+
+  
+  (: sun Sun)
+  (= sun (initnext (Sun (Position 6 0)) (prev sun)))
+
+  (: water (List Water))
+  (= water (initnext (list) (updateObj (prev water) (--> obj (if (! (isWithinBounds obj)) then (removeObj obj) else (moveDown obj))))))
+  
+  (: cloud Cloud)
+  (= cloud (initnext (Cloud (Position 1 0)) (prev cloud)))
+  
+  (: leaves (List Leaf))
+  (= leaves (initnext (list (Leaf "green" (Position 1 7) ) (Leaf "green" (Position 3 7)) (Leaf "green" (Position 5 7)) ) (prev leaves)))
+      
+  (on down
+    (= water (addObj (prev water) (Water (.. (moveDown (prev cloud)) origin)))))
+
+  (on (intersects (map (--> obj (moveDown obj)) (prev water) ) (prev leaves))
+    (= water (removeObj (prev water) (--> obj (intersects (moveDown obj) (prev leaves))) ) ) )
+
+  (on (& (intersects (map (--> obj (moveDown obj)) (prev water)) (filter (--> obj (== (.. obj color) "green")) (prev leaves))) (! (intersects (prev sun) (prev cloud))))
+    (= leaves (addObj (prev leaves) (map (--> obj (Leaf (if (== (.. (.. (moveUp obj) origin) y) 4) then "mediumpurple" else "green") (.. (moveUp obj) origin))) (filter (--> obj (intersects (moveUp obj) (prev water))) (prev leaves))))))
+    
+  (on left (= cloud (moveLeft (prev cloud))))
+  (on right (= cloud (moveRight (prev cloud))))
+)`)
+  }
+
+  function marioClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  (= background "skyblue")
+  
+  (object Mario (: bullets Int) (Cell 0 0 "red"))
+  (object Step (list (Cell -1 0 "darkorange") (Cell 0 0 "darkorange") (Cell 1 0 "darkorange")))
+  (object Coin (Cell 0 0 "gold"))
+  (object Enemy (: movingLeft Bool) (: lives Int) (list (Cell -1 0 "blue") (Cell 0 0 "blue") (Cell 1 0 "blue")
+	                  									(Cell -1 1 "blue") (Cell 0 1 "blue") (Cell 1 1 "blue")))
+  (object Bullet (Cell 0 0 "mediumpurple"))
+  
+  (: mario Mario)
+  (= mario (initnext (Mario 0 (Position 7 15)) (if (intersects (moveDown (prev mario)) (prev coins)) then (moveDown (prev mario)) else (moveDownNoCollision (prev mario)))))
+
+  (: steps (List Step))
+  (= steps (initnext (list (Step (Position 4 13)) (Step (Position 8 10)) (Step (Position 11 7))) (prev steps)))
+
+  (: coins (List Coin))
+  (= coins (initnext (list (Coin (Position 4 12)) (Coin (Position 7 4)) (Coin (Position 11 6))) (prev coins)))
+
+  (: enemy Enemy)
+  (= enemy (initnext (Enemy true 2 (Position 7 0)) (if (.. (prev enemy) movingLeft) then (moveLeft (prev enemy)) else (moveRight (prev enemy)))))
+
+  (: bullets (List Bullet))
+  (= bullets (initnext (list) (updateObj (prev bullets) (--> obj (if (intersects (moveUp obj) (prev steps)) then (removeObj obj) else (moveUp obj))))))
+
+  (on (== (.. (.. (prev enemy) origin) x) 1) (= enemy (moveRight (updateObj (prev enemy) "movingLeft" false))))
+  (on (== (.. (.. (prev enemy) origin) x) 14) (= enemy (moveLeft (updateObj (prev enemy) "movingLeft" true))))
+
+  (on left (= mario (if (intersects (moveLeft (prev mario)) (prev coins)) then (moveLeft (prev mario)) else (moveLeftNoCollision (prev mario)))))
+  (on right (= mario (if (intersects (moveRight (prev mario)) (prev coins)) then (moveRight (prev mario)) else (moveRightNoCollision (prev mario)))))
+  (on (& up (== (moveDownNoCollision (prev mario)) (prev mario))) (= mario (moveNoCollision (prev mario) 0 -4)))
+
+  (on (intersects (prev mario) (prev coins)) 
+    (let ((= coins (removeObj (prev coins) (--> obj (intersects obj (prev mario))))) 
+          (= mario (updateObj (prev mario) "bullets" (+ (.. (prev mario) bullets) 1))))) )
+
+  (on (& clicked (> (.. (prev mario) bullets) 0)) 
+    (let ((= bullets (addObj (prev bullets) (Bullet (.. (prev mario) origin)))) 
+          (= mario (updateObj (prev mario) "bullets" (- (.. (prev mario) bullets) 1))))))
+
+  (on (intersects (prev enemy) (prev bullets))
+    (let ((= bullets (removeObj (prev bullets) (--> obj (intersects obj (prev enemy))))) 
+          (= enemy (if (== (.. (prev enemy) lives) 1) then (removeObj (prev enemy)) else (updateObj (prev enemy) "lives" (- (.. (prev enemy) lives) 1)))))))
+)`)
+
+  }
+
+  function sandClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 10)
+  
+  (object Button (: color String) (Cell 0 0 color))
+  (object Sand (: liquid Bool) (Cell 0 0 (if liquid then "sandybrown" else "tan")))
+  (object Water (Cell 0 0 "skyblue"))
+  
+  (: sandButton Button)
+  (= sandButton (initnext (Button "tan" (Position 2 0)) (prev sandButton)))
+  
+  (: waterButton Button)
+  (= waterButton (initnext (Button "skyblue" (Position 7 0)) (prev waterButton)))
+  
+  (: sand (List Sand))
+  (= sand (initnext (list (Sand false (Position 2 9)) (Sand false (Position 2 8)) (Sand false (Position 2 7)) (Sand false (Position 2 6)) (Sand false (Position 2 5))
+                          (Sand false (Position 3 9)) (Sand false (Position 3 8))
+                    	  (Sand false (Position 4 9)) (Sand false (Position 4 8)) (Sand false (Position 4 7)) (Sand false (Position 4 6)) (Sand false (Position 4 5))
+                          (Sand false (Position 5 9)) (Sand false (Position 5 8))  
+                    	  (Sand false (Position 6 9)) (Sand false (Position 6 8)) (Sand false (Position 6 7)) (Sand false (Position 6 6)) (Sand false (Position 6 5))  
+                    ) 
+            (updateObj (prev sand) (--> obj (if (.. obj liquid) 
+											 then (nextLiquid obj)
+											 else (nextSolid obj))))))
+  
+  (: water (List Water))
+  (= water (initnext (list) (updateObj (prev water) (--> obj (nextLiquid obj)))))
+  
+    
+  (: clickType String)
+  (= clickType (initnext "sand" (prev clickType)))
+  
+  (on true (= sand (updateObj (prev sand) (--> obj (updateObj obj "liquid" true)) (--> obj (& (! (.. obj liquid)) (intersects (adjacentObjs obj) (prev water)))))))
+  
+  (on (clicked sandButton) (= clickType "sand"))
+  (on (clicked waterButton) (= clickType "water"))
+  (on (& (& clicked (isFree click)) (== clickType "sand"))  (= sand (addObj sand (Sand false (Position (.. click x) (.. click y))))))
+  (on (& (& clicked (isFree click)) (== clickType "water")) (= water (addObj water (Water (Position (.. click x) (.. click y))))))
+
 )`)
   }
 

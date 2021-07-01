@@ -1033,7 +1033,26 @@ const builtInDict = Dict([
                     end
 
                     function moveNoCollision(object::Object, x::Int, y::Int)
-                      (isWithinBounds(move(object, x, y)) && isFree(move(object, x, y), object)) ? move(object, x, y) : object 
+                      isClear = true
+                      if x == 0
+                        positions = map(c -> (x, c), y > 0 ? collect(0:y) : collect(y:0))
+                        isClear = foldl(&, map(pos -> (isWithinBounds(move(object, pos[1], pos[2])) && isFree(move(object, pos[1], pos[2]), object)), positions), init=true)
+                      elseif y == 0
+                        positions = map(c -> (c, y), x > 0 ? collect(0:x) : collect(x:0))
+                        isClear = foldl(&, map(pos -> (isWithinBounds(move(object, pos[1], pos[2])) && isFree(move(object, pos[1], pos[2]), object)), positions), init=true)
+                      end
+
+                      if isClear
+                        move(object, x, y)
+                      else
+                        object
+                      end
+                    
+                    end
+
+                    function moveNoCollision(position1::Position, position2::Position)
+                      hypothesis_position = move(position1, position2)
+                      (isWithinBounds(hypothesis_position) && isFree(hypothesis_position)) ? hypothesis_position : position1 
                     end
 
                     # ----- begin left/right moveNoCollision ----- #
@@ -1188,27 +1207,27 @@ const builtInDict = Dict([
                           if (length(leftHoles) == 0)
                             closestHole = closest(object, rightHoles)
                             if isFree(move(closestHole, Position(0, -1)), move(object.origin, Position(1, 0)))
-                              new_object.origin = move(object.origin, unitVector(object, move(closestHole, Position(0, -1))))
+                              new_object.origin = moveNoCollision(object.origin, unitVector(object, move(closestHole, Position(0, -1))))
                             end
                           elseif (length(rightHoles) == 0)
                             closestHole = closest(object, leftHoles)
                             if isFree(move(closestHole, Position(0, -1)), move(object.origin, Position(-1, 0)))
-                              new_object.origin = move(object.origin, unitVector(object, move(closestHole, Position(0, -1))))                      
+                              new_object.origin = moveNoCollision(object.origin, unitVector(object, move(closestHole, Position(0, -1))))                      
                             end
                           else
                             closestLeftHole = closest(object, leftHoles)
                             closestRightHole = closest(object, rightHoles)
                             if distance(object.origin, closestLeftHole) > distance(object.origin, closestRightHole)
                               if isFree(move(object.origin, Position(1, 0)), move(closestRightHole, Position(0, -1)))
-                                new_object.origin = move(object.origin, unitVector(new_object, move(closestRightHole, Position(0, -1))))
+                                new_object.origin = moveNoCollision(object.origin, unitVector(new_object, move(closestRightHole, Position(0, -1))))
                               elseif isFree(move(closestLeftHole, Position(0, -1)), move(object.origin, Position(-1, 0)))
-                                new_object.origin = move(object.origin, unitVector(new_object, move(closestLeftHole, Position(0, -1))))
+                                new_object.origin = moveNoCollision(object.origin, unitVector(new_object, move(closestLeftHole, Position(0, -1))))
                               end
                             else
                               if isFree(move(closestLeftHole, Position(0, -1)), move(object.origin, Position(-1, 0)))
-                                new_object.origin = move(object.origin, unitVector(new_object, move(closestLeftHole, Position(0, -1))))
+                                new_object.origin = moveNoCollision(object.origin, unitVector(new_object, move(closestLeftHole, Position(0, -1))))
                               elseif isFree(move(object.origin, Position(1, 0)), move(closestRightHole, Position(0, -1)))
-                                new_object.origin = move(object.origin, unitVector(new_object, move(closestRightHole, Position(0, -1))))
+                                new_object.origin = moveNoCollision(object.origin, unitVector(new_object, move(closestRightHole, Position(0, -1))))
                               end
                             end
                           end
@@ -1559,10 +1578,10 @@ function genObjectUpdateRule(object, environment; p=0.3)
     end
   else
     choices = [
-      ("moveLeft", [:(genObjectUpdateRule($(object), $(environment), p=0.9))]),
-      ("moveRight", [:(genObjectUpdateRule($(object), $(environment), p=0.9))]),
-      ("moveUp", [:(genObjectUpdateRule($(object), $(environment), p=0.9))]),
-      ("moveDown", [:(genObjectUpdateRule($(object), $(environment), p=0.9))]),
+      ("moveLeftNoCollision", [:(genObjectUpdateRule($(object), $(environment), p=0.9))]),
+      ("moveRightNoCollision", [:(genObjectUpdateRule($(object), $(environment), p=0.9))]),
+      ("moveUpNoCollision", [:(genObjectUpdateRule($(object), $(environment), p=0.9))]),
+      ("moveDownNoCollision", [:(genObjectUpdateRule($(object), $(environment), p=0.9))]),
       # ("moveNoCollision", [:(genObjectUpdateRule($(object), $(environment))), :(genPosition($(environment)))]),
       # ("nextLiquid", [:(genObjectUpdateRule($(object), $(environment)))]),
       # ("nextSolid", [:(genObjectUpdateRule($(object), $(environment)))]),
