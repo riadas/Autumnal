@@ -53,7 +53,7 @@ function compileautumn()
       # println("COMPILED SUCCESSFULLY")
       mod = eval(compiledAutumn)
       # println("EVALUATED SUCCESSFULLY")
-      content = showstring(parsedAutumn)
+      content = autumnString
       MODS[clientid] = mod
       # println("HERE 3")
     catch y
