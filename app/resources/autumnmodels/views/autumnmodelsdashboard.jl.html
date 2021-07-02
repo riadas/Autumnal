@@ -1499,24 +1499,22 @@
   
   (object Water (Cell 0 0 "blue"))
   (object Leaf (: color String) (Cell 0 0 color))
-  (object Cloud (list (Cell -1 0 "gray") 
-                      (Cell 0 0 "gray") 
-                      (Cell 1 0 "gray")))
+  (object Cloud (list (Cell -1 0 "gray") (Cell 0 0 "gray") (Cell 1 0 "gray")
+                      (Cell -1 1 "gray") (Cell 0 1 "gray") (Cell 1 1 "gray")))
   
-  (object Sun (list (Cell 0 0 "gold")
-                    (Cell 0 1 "gold")
-                    (Cell 1 0 "gold")
-                    (Cell 1 1 "gold")))
+  (object Sun (: movingLeft Bool) (list (Cell 0 0 "gold")
+				                        (Cell 0 1 "gold")
+                 				        (Cell 1 0 "gold")
+                    				    (Cell 1 1 "gold")))
 
-  
   (: sun Sun)
-  (= sun (initnext (Sun (Position 6 0)) (prev sun)))
+  (= sun (initnext (Sun false (Position 0 0)) (prev sun)))
 
   (: water (List Water))
   (= water (initnext (list) (updateObj (prev water) (--> obj (if (! (isWithinBounds obj)) then (removeObj obj) else (moveDown obj))))))
   
   (: cloud Cloud)
-  (= cloud (initnext (Cloud (Position 1 0)) (prev cloud)))
+  (= cloud (initnext (Cloud (Position 6 0)) (prev cloud)))
   
   (: leaves (List Leaf))
   (= leaves (initnext (list (Leaf "green" (Position 1 7) ) (Leaf "green" (Position 3 7)) (Leaf "green" (Position 5 7)) ) (prev leaves)))
@@ -1532,6 +1530,11 @@
     
   (on left (= cloud (moveLeft (prev cloud))))
   (on right (= cloud (moveRight (prev cloud))))
+
+  (on (== (.. (.. (prev sun) origin) x) 0) (= sun (updateObj (prev sun) "movingLeft" false)))
+  (on (== (.. (.. (prev sun) origin) x) 6) (= sun (updateObj (prev sun) "movingLeft" true)))
+
+  (on (clicked (prev sun)) (= sun (if (.. (prev sun) movingLeft) then (moveLeft (prev sun)) else (moveRight (prev sun)))))
 )`)
   }
 
