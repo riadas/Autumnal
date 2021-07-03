@@ -911,6 +911,21 @@ const builtInDict = Dict([
                       end
                     end
 
+                    function rect(pos1::Position, pos2::Position)
+                      min_x = pos1.x 
+                      max_x = pos2.x 
+                      min_y = pos1.y
+                      max_y = pos2.y 
+
+                      positions = []
+                      for x in min_x:max_x 
+                        for y in min_y:max_y
+                          push!(positions, Position(x, y))
+                        end
+                      end
+                      positions
+                    end
+
                     function unitVector(position1::Position, position2::Position)::Position
                       deltaX = position2.x - position1.x
                       deltaY = position2.y - position1.y

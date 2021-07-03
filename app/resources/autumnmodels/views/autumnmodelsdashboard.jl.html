@@ -37,6 +37,11 @@
         <button id="grow-button" class="control-button example-button">GROW</button>
         <button id="mario-button" class="control-button example-button">MARIO</button>
         <button id="sand-button" class="control-button example-button">SAND</button>
+        <button id="gravity-button" class="control-button example-button">GRAVITY</button>
+        <button id="egg-button" class="control-button example-button">EGG</button>
+        <button id="balloon-button" class="control-button example-button">BALLOON</button>
+
+
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
         <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RANDOM PROGRAM</button>
         <button id="random-button-3" style="background-color: orange !important" class="control-button example-button">RANDOM GROUPED PROGRAM</button>
@@ -110,6 +115,9 @@
       document.getElementById("grow-button").addEventListener("click", growClick);
       document.getElementById("mario-button").addEventListener("click", marioClick);
       document.getElementById("sand-button").addEventListener("click", sandClick);
+      document.getElementById("gravity-button").addEventListener("click", gravityClick);
+      document.getElementById("egg-button").addEventListener("click", eggClick);
+      document.getElementById("balloon-button").addEventListener("click", balloonClick);
       document.getElementById("random-button").addEventListener("click", randomClick);
       document.getElementById("random-button-2").addEventListener("click", randomClick2);
       document.getElementById("random-button-3").addEventListener("click", randomClick3);
@@ -146,6 +154,9 @@
         growButton = document.getElementById("grow-button");
         marioButton = document.getElementById("mario-button");
         sandButton = document.getElementById("sand-button");
+        gravityButton = document.getElementById("gravity-button");
+        eggButton = document.getElementById("egg-button");
+        balloonButton = document.getElementById("balloon-button");
         randomButton = document.getElementById("random-button");
         randomButton2 = document.getElementById("random-button-2");
         randomButton3 = document.getElementById("random-button-3");
@@ -181,6 +192,9 @@
           growButton.classList.add("disabled");
           marioButton.classList.add("disabled");
           sandButton.classList.add("disabled");
+          gravityButton.classList.add("disabled");
+          eggButton.classList.add("disabled");
+          balloonButton.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -279,6 +293,9 @@
           growButton.classList.remove("disabled");
           marioButton.classList.remove("disabled");
           sandButton.classList.remove("disabled");
+          gravityButton.classList.remove("disabled");
+          eggButton.classList.remove("disabled");
+          balloonButton.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -342,7 +359,7 @@
             } else { 
               compiled = true;
               myCodeMirror.setOption("readOnly", "nocursor");
-              myCodeMirror.setValue(`%% Compiled Autumn Code \n` + content);
+              myCodeMirror.setValue(content);
             }
             updateButtonStyles(); 
           }
@@ -1626,6 +1643,161 @@
   (on (& (& clicked (isFree click)) (== clickType "sand"))  (= sand (addObj sand (Sand false (Position (.. click x) (.. click y))))))
   (on (& (& clicked (isFree click)) (== clickType "water")) (= water (addObj water (Water (Position (.. click x) (.. click y))))))
 
+)`)
+  }
+
+  function gravityClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  (= background "black")
+    
+  (object Button (: color String) (Cell 0 0 color))
+  (object Blob (list (Cell 0 0 "blue") (Cell 0 1 "blue") (Cell 1 0 "blue") (Cell 1 1 "blue")))
+
+  (: leftButton Button)
+  (= leftButton (initnext (Button "red" (Position 0 7)) (prev leftButton)))
+  
+  (: rightButton Button)
+  (= rightButton (initnext (Button "darkorange" (Position 15 7)) (prev rightButton)))
+    
+  (: upButton Button)
+  (= upButton (initnext (Button "gold" (Position 7 0)) (prev upButton)))
+  
+  (: downButton Button)
+  (= downButton (initnext (Button "green" (Position 7 15)) (prev downButton)))
+  
+  (: blobs (List Blob))
+  (= blobs (initnext (list) (prev blobs)))
+  
+  (: gravity String)
+  (= gravity (initnext "down" (prev gravity)))
+  
+  (on (== gravity "left") (= blobs (updateObj (prev blobs) (--> obj (moveLeftNoCollision obj)))))
+  (on (== gravity "right") (= blobs (updateObj (prev blobs) (--> obj (moveRightNoCollision obj)))))
+  (on (== gravity "up") (= blobs (updateObj (prev blobs) (--> obj (moveUpNoCollision obj)))))
+  (on (== gravity "down") (= blobs (updateObj (prev blobs) (--> obj (moveDownNoCollision obj)))))
+  
+  (on (& clicked (isFree click)) (= blobs (addObj (prev blobs) (Blob (Position (.. click x) (.. click y))))) )
+  
+  (on (clicked leftButton) (= gravity "left"))
+
+  (on (clicked rightButton) (= gravity "right"))
+
+  (on (clicked upButton) (= gravity "up"))
+
+  (on (clicked downButton) (= gravity "down"))
+)`)
+  }
+
+  function eggClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  (= background "black")
+  
+  (object Button (: color String) (Cell 0 0 color))
+  (object Piece (Cell 0 0 "gold"))
+  (object Egg (list (Cell -1 -2 "tan") (Cell 0 -2 "tan") (Cell 1 -2 "tan")  
+                    (Cell -2 -1 "tan") (Cell -1 -1 "tan") (Cell 0 -1 "tan") (Cell 1 -1 "tan") (Cell 2 -1 "tan")
+                    (Cell -2 0 "tan") (Cell -1 0 "tan") (Cell 0 0 "tan") (Cell 1 0 "tan") (Cell 2 0 "tan") 
+                    (Cell -2 1 "tan") (Cell -1 1 "tan") (Cell 0 1 "tan") (Cell 1 1 "tan") (Cell 2 1 "tan") 
+              		(Cell -1 2 "tan") (Cell 0 2 "tan") (Cell 1 2 "tan")))
+
+  (: egg Egg)
+  (= egg (initnext (Egg (Position 7 13)) (prev egg)))
+  
+  (: pieces (List Piece))
+  (= pieces (initnext (list) (updateObj (prev pieces) (--> obj (nextLiquid obj)))))
+  
+  (: button Button)
+  (= button (initnext (Button "red" (Position 0 0)) (updateObj (prev button) "color" (if gravity then "pink" else "red"))))
+  
+  (: gravity Bool)
+  (= gravity (initnext false (prev gravity)))
+
+  (: height Int)
+  (= height (initnext 15 (prev height)))
+  
+  (on gravity (= egg (moveDownNoCollision (prev egg))))
+    
+  (on (& left (! gravity)) (= egg (moveLeftNoCollision (prev egg))))
+  (on (& right (! gravity)) (= egg (moveRightNoCollision (prev egg))))
+  (on (& up (! gravity)) (= egg (moveUpNoCollision (prev egg))))
+  (on (& down (! gravity)) (= egg (moveDownNoCollision (prev egg))))
+
+  (on (clicked (prev button)) 
+    (let ((= gravity (! (prev gravity)))
+          (= height (.. (.. (prev egg) origin) y)))))
+
+  (on (& (< height 7) (== (.. (.. egg origin) y) 13)) 
+    (let ((= egg (removeObj egg)) 
+          (= pieces (addObj (prev pieces) (map (--> obj (Piece (Position (.. (.. obj position) x) (+ 1 (.. (.. obj position) y))))) (render (prev egg))))))))
+
+)`)
+  }
+
+  function balloonClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  (= background "skyblue")
+  
+  (object Rock (Cell 0 0 "black"))
+  (object Balloon (: color String) (list (Cell -1 -2 color) (Cell 0 -2 color) (Cell 1 -2 color)  
+                      (Cell -2 -1 color) (Cell -1 -1 color) (Cell 0 -1 color) (Cell 1 -1 color) (Cell 2 -1 color)
+                      (Cell -2 0 color) (Cell -1 0 color) (Cell 0 0 color) (Cell 1 0 color) (Cell 2 0 color) 
+                      (Cell -2 1 color) (Cell -1 1 color) (Cell 0 1 color) (Cell 1 1 color) (Cell 2 1 color) 
+                 	  (Cell -1 2 color) (Cell 0 2 color) (Cell 1 2 color) 
+                      (Cell -1 3 "tan") (Cell 0 4 "tan") (Cell 1 3 "tan")
+                      (Cell -1 5 "tan") (Cell 1 5 "tan")
+                      (Cell -2 6 "brown") (Cell -2 7 "brown") (Cell -2 8 "brown")
+                      (Cell 2 6 "brown") (Cell 2 7 "brown") (Cell 2 8 "brown")
+                      (Cell -1 8 "brown") (Cell 0 8 "brown") (Cell 1 8 "brown")      
+                  ))
+
+  (: balloon Balloon)
+  (= balloon (initnext (Balloon "mediumpurple" (Position 7 7)) (prev balloon)))
+  
+  (: rocks (List Rock))
+  (= rocks (initnext (list) (updateObj (prev rocks) (--> obj (nextSolid obj)))) )
+  
+  (: weight Bool)
+  (= weight (initnext false (prev weight)))
+  
+  (on (>= (count (--> pos (intersects (list pos) (map (--> obj (.. obj origin)) (filter (--> obj (intersects obj (nextSolid obj))) (prev rocks)))) ) 
+           (rect (move (.. (prev balloon) origin) (Position -2 0)) 
+				 (move (.. (prev balloon) origin) (Position 2 7)))) 3)
+      (= weight true))
+
+  (on (< (count (--> pos (intersects (list pos) (map (--> obj (.. obj origin)) (filter (--> obj (intersects obj (nextSolid obj))) (prev rocks)))) ) 
+           (rect (move (.. (prev balloon) origin) (Position -2 0)) 
+				 (move (.. (prev balloon) origin) (Position 2 7)))) 3)
+      (= weight false))
+  
+  (on (prev weight) 
+    (let 
+       ((= rocks (updateObj 
+                   (prev rocks) 
+                   (--> obj (if (| (! (intersects obj (nextSolid obj))) (isWithinBounds (moveDown (prev balloon)))) then (moveDown obj) else obj)) 
+                   (--> obj (intersects (list (.. obj origin)) 
+							(rect (move (.. (prev balloon) origin) (Position -2 0)) 
+				 				  (move (.. (prev balloon) origin) (Position 2 7)))))))
+        (= balloon (if (! (isWithinBounds (moveDown (prev balloon)))) then (prev balloon) else (moveDown (prev balloon)))))))  
+
+  (on (! (prev weight)) 
+    (let 
+       ((= rocks (updateObj 
+                   (prev rocks) 
+                   (--> obj (if (! (isWithinBounds (moveUp (prev balloon)))) then (nextSolid obj) else (moveUp obj))) 
+                   (--> obj (intersects (list (.. obj origin)) 
+							(rect (move (.. (prev balloon) origin) (Position -2 0)) 
+				 				  (move (.. (prev balloon) origin) (Position 2 7)))))))
+        (= balloon (if (! (isWithinBounds (moveUp (prev balloon)))) then (prev balloon) else (moveUp (prev balloon)))))))  
+  
+  (on (& clicked (isFree click)) (= rocks (addObj (prev rocks) (Rock (Position (.. click x) (.. click y ))))))
+
+  (on (clicked (prev rocks)) 
+    (= rocks (removeObj 
+               (prev rocks) 
+               (--> obj (== (.. obj id) (.. (objClicked click (prev rocks)) id)))))) 
 )`)
   }
 
