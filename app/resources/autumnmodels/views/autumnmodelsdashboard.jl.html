@@ -40,7 +40,7 @@
         <button id="gravity-button" class="control-button example-button">GRAVITY</button>
         <button id="egg-button" class="control-button example-button">EGG</button>
         <button id="balloon-button" class="control-button example-button">BALLOON</button>
-
+        <button id="wind-button" class="control-button example-button">WIND</button>
 
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
         <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RANDOM PROGRAM</button>
@@ -118,6 +118,7 @@
       document.getElementById("gravity-button").addEventListener("click", gravityClick);
       document.getElementById("egg-button").addEventListener("click", eggClick);
       document.getElementById("balloon-button").addEventListener("click", balloonClick);
+      document.getElementById("wind-button").addEventListener("click", windClick);
       document.getElementById("random-button").addEventListener("click", randomClick);
       document.getElementById("random-button-2").addEventListener("click", randomClick2);
       document.getElementById("random-button-3").addEventListener("click", randomClick3);
@@ -157,6 +158,7 @@
         gravityButton = document.getElementById("gravity-button");
         eggButton = document.getElementById("egg-button");
         balloonButton = document.getElementById("balloon-button");
+        windButton = document.getElementById("wind-button");
         randomButton = document.getElementById("random-button");
         randomButton2 = document.getElementById("random-button-2");
         randomButton3 = document.getElementById("random-button-3");
@@ -195,6 +197,7 @@
           gravityButton.classList.add("disabled");
           eggButton.classList.add("disabled");
           balloonButton.classList.add("disabled");
+          windButton.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -296,6 +299,7 @@
           gravityButton.classList.remove("disabled");
           eggButton.classList.remove("disabled");
           balloonButton.classList.remove("disabled");
+          windButton.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -1798,6 +1802,47 @@
     (= rocks (removeObj 
                (prev rocks) 
                (--> obj (== (.. obj id) (.. (objClicked click (prev rocks)) id)))))) 
+)`)
+  }
+
+  function windClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 17)
+  (= background "darkblue")
+
+  (object Water (Cell 0 0 "lightblue"))
+  (object Cloud (map (--> pos (Cell (.. pos x) (.. pos y) "gray")) (rect (Position 0 0) (Position 16 1))) (prev cloud))
+  
+  (: water (List Water))
+  (= water (initnext (list) (updateObj (prev water) (--> obj (removeObj obj)) (--> obj (! (isWithinBounds obj)))))) 
+       
+  (: cloud Cloud)
+  (= cloud (initnext (Cloud (Position 0 0)) (prev cloud)))
+
+  (: wind Int)
+  (= wind (initnext 0 (prev wind)))
+  
+  (: time Int)
+  (= time (initnext 0 (+ (prev time) 1)))
+  
+  (on (== wind 0) (= water (updateObj (prev water) (--> obj (moveDown obj)))))
+  (on (== wind 1) (= water (updateObj (prev water) (--> obj (moveRight (moveDown obj))))))
+  (on (== wind -1) (= water (updateObj (prev water) (--> obj (moveLeft (moveDown obj))))))
+ 
+  (on left (= wind (if (== (prev wind) -1) then (prev wind) else (- (prev wind) 1))))
+  (on right (= wind (if (== (prev wind) 1) then (prev wind) else (+ (prev wind) 1))))
+  
+  
+  (on (== (% time 3) 2) 
+    (= water (addObj 
+               water 
+               (map (--> pos (Water pos)) (list (Position 2 2)
+                                                (Position 4 2)
+                                            	(Position 6 2)
+                                            	(Position 8 2)
+                                            	(Position 10 2)
+                                            	(Position 12 2)
+                                            	(Position 14 2))))))
 )`)
   }
 
