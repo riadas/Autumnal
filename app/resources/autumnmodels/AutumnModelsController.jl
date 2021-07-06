@@ -1125,25 +1125,25 @@ const builtInDict = Dict([
 
                     function moveLeftWrap(object::Object)::Object
                       new_object = deepcopy(object)
-                      new_object.position = moveWrap(object.origin, -1, 0)
+                      new_object.origin = moveWrap(object.origin, -1, 0)
                       new_object
                     end
                       
                     function moveRightWrap(object::Object)::Object
                       new_object = deepcopy(object)
-                      new_object.position = moveWrap(object.origin, 1, 0)
+                      new_object.origin = moveWrap(object.origin, 1, 0)
                       new_object
                     end
 
                     function moveUpWrap(object::Object)::Object
                       new_object = deepcopy(object)
-                      new_object.position = moveWrap(object.origin, 0, -1)
+                      new_object.origin = moveWrap(object.origin, 0, -1)
                       new_object
                     end
 
                     function moveDownWrap(object::Object)::Object
                       new_object = deepcopy(object)
-                      new_object.position = moveWrap(object.origin, 0, 1)
+                      new_object.origin = moveWrap(object.origin, 0, 1)
                       new_object
                     end
 

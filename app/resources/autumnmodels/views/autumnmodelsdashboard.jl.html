@@ -42,6 +42,7 @@
         <button id="balloon-button" class="control-button example-button">BALLOON</button>
         <button id="wind-button" class="control-button example-button">WIND</button>
         <button id="paint-button" class="control-button example-button">PAINT</button>
+        <button id="chase-button" class="control-button example-button">CHASE</button>
 
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
         <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RANDOM PROGRAM</button>
@@ -121,6 +122,7 @@
       document.getElementById("balloon-button").addEventListener("click", balloonClick);
       document.getElementById("wind-button").addEventListener("click", windClick);
       document.getElementById("paint-button").addEventListener("click", paintClick);
+      document.getElementById("chase-button").addEventListener("click", chaseClick);
       document.getElementById("random-button").addEventListener("click", randomClick);
       document.getElementById("random-button-2").addEventListener("click", randomClick2);
       document.getElementById("random-button-3").addEventListener("click", randomClick3);
@@ -162,6 +164,7 @@
         balloonButton = document.getElementById("balloon-button");
         windButton = document.getElementById("wind-button");
         paintButton = document.getElementById("paint-button");
+        chaseButton = document.getElementById("chase-button");
         randomButton = document.getElementById("random-button");
         randomButton2 = document.getElementById("random-button-2");
         randomButton3 = document.getElementById("random-button-3");
@@ -202,6 +205,7 @@
           balloonButton.classList.add("disabled");
           windButton.classList.add("disabled");
           paintButton.classList.add("disabled");
+          chaseButton.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -305,6 +309,7 @@
           balloonButton.classList.remove("disabled");
           windButton.classList.remove("disabled");
           paintButton.classList.remove("disabled");
+          chaseButton.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -1869,6 +1874,34 @@
   (on (& up (== (prev currColor) "green")) (= currColor "blue"))
   (on (& up (== (prev currColor) "blue")) (= currColor "purple"))
   (on (& up (== (prev currColor) "purple")) (= currColor "red"))
+)`)
+  }
+
+  function chaseClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  
+  (object Ant (Cell 0 0 "red"))
+  (object Agent (Cell 0 0 "green"))
+
+  (: ants (List Ant))
+  (= ants (initnext (map Ant (randomPositions GRID_SIZE 6)) 
+                    (updateObj (prev ants) (--> obj (move obj (unitVector obj (closest obj Agent)))) (--> obj (== (% time 2) 0)))))
+
+  (: agent Agent)
+  (= agent (initnext (Agent (Position 7 7)) (prev agent))) 
+                                                                                                                   
+  (: time Int)
+  (= time (initnext 0 (+ (prev time) 1)))                                                                                                                   
+                                                 
+  (on (== (% time 50) 9) (= ants (addObj (prev ants) (map Ant (randomPositions GRID_SIZE 1)))))
+  
+  (on left (= agent (moveLeftWrap (prev agent))))
+  (on right (= agent (moveRightWrap (prev agent))))
+  (on up (= agent (moveUpWrap (prev agent))))
+  (on down (= agent (moveDownWrap (prev agent))))
+           
+  (on (intersects (prev agent) (prev ants)) (= agent (removeObj (prev agent))))                                                                                                                   
 )`)
   }
 
