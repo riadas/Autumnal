@@ -1480,47 +1480,43 @@
   
   (object Agent (Cell 0 0 "blue"))
   (object Box (Cell 0 0 "black"))
+  (object Goal (Cell 0 0 "red"))
   
   (: agent Agent)
   (= agent (initnext (Agent (Position 3 3)) (prev agent)))
      
   (: boxes (List Box))
   (= boxes (initnext (list (Box (Position 1 2)) (Box (Position 6 4)) (Box (Position 3 6))) (prev boxes)))
-    
-  (on left (let ((= boxes (updateObj 
-                            (prev boxes) 
-                            (--> obj (if (& (!= (.. obj origin) (.. (moveLeftNoCollision obj) origin)) 
-											(== (displacement (.. obj origin) (.. agent origin)) (Position 1 0)))
-									  then (moveLeftNoCollision obj)
-									  else obj))))
+ 
+  (: goal Goal)
+  (= goal (initnext (Goal (Position 0 0)) (prev goal)))
+  
+  (on left (let ((= boxes (moveBoxes (prev boxes) (prev agent) (prev goal) -1 0)) 
+                 (= agent (moveAgent (prev agent) (prev boxes) (prev goal) -1 0))))) 
 
-                 (= agent (if (| (intersects (list (moveLeft agent)) boxes) 
-                                 (! (isWithinBounds (moveLeft agent)))) 
-                             then agent 
-                             else (moveLeft agent)))))) 
+  (on right (let ((= boxes (moveBoxes (prev boxes) (prev agent) (prev goal) 1 0)) 
+                  (= agent (moveAgent (prev agent) (prev boxes) (prev goal) 1 0))))) 
 
-  (on right (let ((= boxes (updateObj (prev boxes) (--> obj (if (& (!= (.. obj origin) (.. (moveRightNoCollision obj) origin)) (== (displacement (.. obj origin) (.. agent origin)) (Position -1 0)))
-                                                             then (moveRightNoCollision obj)
-                                                             else obj)))) 
-                 (= agent (if (| (intersects (list (moveRight agent)) boxes) (! (isWithinBounds (moveRight agent))))                              
-                             then agent 
-                             else (moveRight agent))))))
+  (on up (let ((= boxes (moveBoxes (prev boxes) (prev agent) (prev goal) 0 -1)) 
+               (= agent (moveAgent (prev agent) (prev boxes) (prev goal) 0 -1))))) 
 
-  (on up (let ((= boxes (updateObj (prev boxes) (--> obj (if (& (!= (.. obj origin) (.. (moveUpNoCollision obj) origin)) (== (displacement (.. obj origin) (.. agent origin)) (Position 0 1)))
-                                                          then (moveUpNoCollision obj)
-                                                          else obj)))) 
-                 (= agent (if (| (intersects (list (moveUp agent)) boxes) (! (isWithinBounds (moveUp agent))))                              
-                             then agent 
-                             else (moveUp agent))))))
-
-  (on down (let ((= boxes (updateObj (prev boxes) (--> obj (if (& (!= (.. obj origin) (.. (moveDownNoCollision obj) origin)) (== (displacement (.. obj origin) (.. agent origin)) (Position 0 -1)))
-                                                            then (moveDownNoCollision obj)
-                                                            else obj)))) 
-                 (= agent (if (| (intersects (list (moveDown agent)) boxes) (! (isWithinBounds (moveDown agent))))                              
-                           then agent 
-                           else (moveDown agent))))))
-
+  (on down (let ((= boxes (moveBoxes (prev boxes) (prev agent) (prev goal) 0 1)) 
+                 (= agent (moveAgent (prev agent) (prev boxes) (prev goal) 0 1))))) 
+  
   (on (& clicked (isFree click)) (= boxes (addObj boxes (Box (Position (.. click x) (.. click y))))))
+
+  (: moveBoxes (-> (List Box) Agent Goal Int Int (List Box)))
+  (= moveBoxes (fn (boxes agent goal x y) 
+                   (updateObj boxes 
+                     (--> obj (if (intersects (move obj x y) goal) then (removeObj obj) else (moveNoCollision obj x y))) 
+                     (--> obj (== (displacement (.. obj origin) (.. agent origin)) (Position (- 0 x) (- 0 y)))))))
+
+  (: moveAgent (-> Agent (List Box) Goal Int Int Agent))
+  (= moveAgent (fn (agent boxes goal x y) 
+                   (if (| (intersects (list (move agent x y)) (moveBoxes boxes agent goal x y)) 
+                          (! (isWithinBounds (move agent x y)))) 
+                    then agent 
+                    else (move agent x y))))
 )`)
   }
 
