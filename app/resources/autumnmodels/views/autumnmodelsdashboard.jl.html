@@ -34,6 +34,7 @@
         <button id="space-button" class="control-button example-button">SPACE INVADERS</button>
         <button id="gol-button" class="control-button example-button">GoL</button>
         <button id="sokoban-button" class="control-button example-button">SOKOBAN</button>
+        <button id="sokoban-button-2" class="control-button example-button">SOKOBAN II</button>
         <button id="grow-button" class="control-button example-button">GROW</button>
         <button id="mario-button" class="control-button example-button">MARIO</button>
         <button id="sand-button" class="control-button example-button">SAND</button>
@@ -114,6 +115,7 @@
       document.getElementById("space-button").addEventListener("click", spaceInvadersClick);
       document.getElementById("gol-button").addEventListener("click", gameOfLifeClick);
       document.getElementById("sokoban-button").addEventListener("click", sokobanClick);
+      document.getElementById("sokoban-button-2").addEventListener("click", sokobanClick2);
       document.getElementById("grow-button").addEventListener("click", growClick);
       document.getElementById("mario-button").addEventListener("click", marioClick);
       document.getElementById("sand-button").addEventListener("click", sandClick);
@@ -156,6 +158,7 @@
         spaceButton = document.getElementById("space-button");
         golButton = document.getElementById("gol-button");
         sokobanButton = document.getElementById("sokoban-button");
+        sokoban2Button = document.getElementById("sokoban-button-2");
         growButton = document.getElementById("grow-button");
         marioButton = document.getElementById("mario-button");
         sandButton = document.getElementById("sand-button");
@@ -197,6 +200,7 @@
           spaceButton.classList.add("disabled");
           golButton.classList.add("disabled");
           sokobanButton.classList.add("disabled");
+          sokoban2Button.classList.add("disabled");
           growButton.classList.add("disabled");
           marioButton.classList.add("disabled");
           sandButton.classList.add("disabled");
@@ -301,6 +305,7 @@
           spaceButton.classList.remove("disabled");
           golButton.classList.remove("disabled");
           sokobanButton.classList.remove("disabled");
+          sokoban2Button.classList.remove("disabled");
           growButton.classList.remove("disabled");
           marioButton.classList.remove("disabled");
           sandButton.classList.remove("disabled");
@@ -1514,6 +1519,76 @@
   (: moveAgent (-> Agent (List Box) Goal Int Int Agent))
   (= moveAgent (fn (agent boxes goal x y) 
                    (if (| (intersects (list (move agent x y)) (moveBoxes boxes agent goal x y)) 
+                          (! (isWithinBounds (move agent x y)))) 
+                    then agent 
+                    else (move agent x y))))
+)`)
+  }
+
+  function sokobanClick2() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 8)
+  
+  (object Agent (Cell 0 0 "blue"))
+  (object Box (Cell 0 0 "darkorange"))
+  (object Goal (Cell 0 0 "red"))
+  (object Teleporter (Cell 0 0 "green"))
+  (object Wall (Cell 0 0 "black"))
+  
+  (: agent Agent)
+  (= agent (initnext (Agent (Position 3 3)) (prev agent)))
+     
+  (: boxes (List Box))
+  (= boxes (initnext (list (Box (Position 1 6)) (Box (Position 4 1)) (Box (Position 6 4)) (Box (Position 3 6))) (prev boxes)))
+ 
+  (: goal Goal)
+  (= goal (initnext (Goal (Position 0 0)) (prev goal)))
+  
+  (: teleporter1 Teleporter)
+  (= teleporter1 (initnext (Teleporter (Position 2 6)) (prev teleporter1)))
+
+  (: teleporter2 Teleporter)
+  (= teleporter2 (initnext (Teleporter (Position 0 4)) (prev teleporter2)))
+  
+  (: walls (List Wall))
+  (= walls (initnext (list (Wall (Position 1 1)) 
+                       	   (Wall (Position 1 2)) 
+                           (Wall (Position 1 3)) 
+                           (Wall (Position 1 4)) 
+                           (Wall (Position 1 5))
+                       	   (Wall (Position 2 1))
+                           (Wall (Position 3 1))
+                           (Wall (Position 5 1))
+                       	   (Wall (Position 5 0))) (prev walls)))
+  
+  (on left (let ((= boxes (moveBoxes (prev boxes) (prev agent) (prev goal) -1 0)) 
+                 (= agent (moveAgent (prev agent) (prev boxes) (prev goal) -1 0))))) 
+
+  (on right (let ((= boxes (moveBoxes (prev boxes) (prev agent) (prev goal) 1 0)) 
+                  (= agent (moveAgent (prev agent) (prev boxes) (prev goal) 1 0))))) 
+
+  (on up (let ((= boxes (moveBoxes (prev boxes) (prev agent) (prev goal) 0 -1)) 
+               (= agent (moveAgent (prev agent) (prev boxes) (prev goal) 0 -1))))) 
+
+  (on down (let ((= boxes (moveBoxes (prev boxes) (prev agent) (prev goal) 0 1)) 
+                 (= agent (moveAgent (prev agent) (prev boxes) (prev goal) 0 1))))) 
+  
+  (on (& clicked (isFree click)) (= boxes (addObj boxes (Box (Position (.. click x) (.. click y))))))
+
+  (: moveBoxes (-> (List Box) Agent Goal Int Int (List Box)))
+  (= moveBoxes (fn (boxes agent goal x y) 
+                   (updateObj boxes 
+                     (--> obj (if (intersects (move obj x y) goal) 
+                               then (removeObj obj) 
+                               else (if (& (intersects (move obj x y) (prev teleporter1)) (! (intersects (prev teleporter2) (prev boxes)))) 
+                                     then (move obj (displacement (.. obj origin) (.. (prev teleporter2) origin))) 
+									 else (moveNoCollision obj (Position x y))))) 
+                     (--> obj (== (displacement (.. obj origin) (.. agent origin)) (Position (- 0 x) (- 0 y)))))))
+
+  (: moveAgent (-> Agent (List Box) Goal Int Int Agent))
+  (= moveAgent (fn (agent boxes goal x y) 
+                   (if (| (| (intersects (list (move agent x y)) (moveBoxes boxes agent goal x y))
+                             (intersects (list (move agent x y)) (prev walls)))
                           (! (isWithinBounds (move agent x y)))) 
                     then agent 
                     else (move agent x y))))
