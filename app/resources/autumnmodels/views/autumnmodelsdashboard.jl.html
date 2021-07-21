@@ -40,6 +40,7 @@
         <button id="sand-button" class="control-button example-button">SAND</button>
         <button id="gravity-button" class="control-button example-button">GRAVITY</button>
         <button id="gravity-button-2" class="control-button example-button">GRAVITY II</button>
+        <button id="gravity-button-3" class="control-button example-button">GRAVITY III</button>
         <button id="egg-button" class="control-button example-button">EGG</button>
         <button id="balloon-button" class="control-button example-button">BALLOON</button>
         <button id="wind-button" class="control-button example-button">WIND</button>
@@ -122,6 +123,7 @@
       document.getElementById("sand-button").addEventListener("click", sandClick);
       document.getElementById("gravity-button").addEventListener("click", gravityClick);
       document.getElementById("gravity-button-2").addEventListener("click", gravity2Click);
+      document.getElementById("gravity-button-3").addEventListener("click", gravity3Click);
       document.getElementById("egg-button").addEventListener("click", eggClick);
       document.getElementById("balloon-button").addEventListener("click", balloonClick);
       document.getElementById("wind-button").addEventListener("click", windClick);
@@ -166,6 +168,7 @@
         sandButton = document.getElementById("sand-button");
         gravityButton = document.getElementById("gravity-button");
         gravity2Button = document.getElementById("gravity-button-2");
+        gravity3Button = document.getElementById("gravity-button-3");
         eggButton = document.getElementById("egg-button");
         balloonButton = document.getElementById("balloon-button");
         windButton = document.getElementById("wind-button");
@@ -209,6 +212,7 @@
           sandButton.classList.add("disabled");
           gravityButton.classList.add("disabled");
           gravity2Button.classList.add("disabled");
+          gravity3Button.classList.add("disabled");
           eggButton.classList.add("disabled");
           balloonButton.classList.add("disabled");
           windButton.classList.add("disabled");
@@ -315,6 +319,7 @@
           sandButton.classList.remove("disabled");
           gravityButton.classList.remove("disabled");
           gravity2Button.classList.remove("disabled");
+          gravity3Button.classList.remove("disabled");
           eggButton.classList.remove("disabled");
           balloonButton.classList.remove("disabled");
           windButton.classList.remove("disabled");
@@ -1825,6 +1830,59 @@
   (on (clicked upButton) (= gravity "up"))
 
   (on (clicked downButton) (= gravity "down"))
+)`)
+  }
+
+  function gravity3Click() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 19)
+  (= background "black")
+    
+  (object Button (: color String) (Cell 0 0 color))
+  (object Blob (list (Cell 0 0 "blue")))
+
+  (: leftButton Button)
+  (= leftButton (initnext (Button "red" (Position 0 9)) (prev leftButton)))
+  
+  (: rightButton Button)
+  (= rightButton (initnext (Button "darkorange" (Position 18 9)) (prev rightButton)))
+    
+  (: upButton Button)
+  (= upButton (initnext (Button "gold" (Position 9 0)) (prev upButton)))
+  
+  (: downButton Button)
+  (= downButton (initnext (Button "green" (Position 9 18)) (prev downButton)))
+  
+  (: blobs (List Blob))
+  (= blobs (initnext (list (Blob (Position 9 9))) (prev blobs)))
+  
+  (: gravity String)
+  (= gravity (initnext "zero" (prev gravity)))
+  
+  (: velocity String)
+  (= velocity (initnext "zero" (prev velocity)))
+      
+  (on (== gravity "left") (= blobs (updateObj blobs (--> obj (moveLeftNoCollision obj)))))
+  (on (== gravity "right") (= blobs (updateObj blobs (--> obj (moveRightNoCollision obj)))))
+  (on (== gravity "up") (= blobs (updateObj blobs (--> obj (moveUpNoCollision obj)))))
+  (on (== gravity "down") (= blobs (updateObj blobs (--> obj (moveDownNoCollision obj)))))
+  
+  (on (== velocity "left") (= blobs (updateObj blobs (--> obj (moveLeftNoCollision obj)))))
+  (on (== velocity "right") (= blobs (updateObj blobs (--> obj (moveRightNoCollision obj)))))
+  (on (== velocity "up") (= blobs (updateObj blobs (--> obj (moveUpNoCollision obj)))))
+  (on (== velocity "down") (= blobs (updateObj blobs (--> obj (moveDownNoCollision obj)))))
+   
+  (on (clicked leftButton) (= gravity "left"))
+  (on (clicked rightButton) (= gravity "right"))
+  (on (clicked upButton) (= gravity "up"))
+  (on (clicked downButton) (= gravity "down"))
+  
+  (on left (= velocity "left"))
+  (on right (= velocity "right"))
+  (on up (= velocity "up"))
+  (on down (= velocity "down"))
+  
+  (on (& clicked (isFree click)) (= blobs (addObj blobs (Blob (Position (.. click x) (.. click y))))))
 )`)
   }
 
