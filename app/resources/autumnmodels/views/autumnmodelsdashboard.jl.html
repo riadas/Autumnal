@@ -379,6 +379,9 @@
                   const button = document.createElement("button")
                   button.classList.add("cell");
                   button.id = i.toString();
+                  button.padding = "12px"
+                  button.width = "0px"
+                  button.height = "0px"
                   button.onclick = function() { console.log(button.id); click(parseInt(button.id));};
                   grid.appendChild(button);
                 }
@@ -437,13 +440,22 @@
                     console.log("grid_size")
                     console.log(grid_size)
                     console.log(typeof(grid_size))
+
+                    cell_size = 25;
+                    if (grid_size > 20) {
+                      cell_size = Math.round(cell_size * 20/grid_size)
+                    }
+
                     Array.from(document.getElementsByClassName("grid")).forEach(function (grid) {
                       grid.innerHTML = "";
-                      grid.style = "grid-template-columns: repeat("+grid_size+", 25px); grid-template-rows: repeat("+grid_size+", 25px);"
+                      grid.style = "grid-template-columns: repeat("+grid_size+", "+ cell_size +"px); grid-template-rows: repeat("+grid_size+", " + cell_size + "px);"
                       for (i=0; i < grid_size*grid_size; i++) {
                         const button = document.createElement("button")
                         button.classList.add("cell");
                         button.id = i.toString();
+                        button.width = "0px"
+                        button.height = "0px"
+                        button.padding = Math.round(Math.max(cell_size/2 - 1, 1)).toString() + "px"
                         button.onclick = function() { console.log(button.id); click(parseInt(button.id));};
                         grid.appendChild(button);
                       }
@@ -1840,49 +1852,25 @@
     
   (object Button (: color String) (Cell 0 0 color))
   (object Blob (list (Cell 0 0 "blue")))
-
-  (: leftButton Button)
-  (= leftButton (initnext (Button "red" (Position 0 9)) (prev leftButton)))
-  
-  (: rightButton Button)
-  (= rightButton (initnext (Button "darkorange" (Position 18 9)) (prev rightButton)))
-    
-  (: upButton Button)
-  (= upButton (initnext (Button "gold" (Position 9 0)) (prev upButton)))
-  
-  (: downButton Button)
-  (= downButton (initnext (Button "green" (Position 9 18)) (prev downButton)))
   
   (: blobs (List Blob))
   (= blobs (initnext (list (Blob (Position 9 9))) (prev blobs)))
   
-  (: gravity String)
-  (= gravity (initnext "zero" (prev gravity)))
+  (: xVel Int)
+  (= xVel (initnext 0 (prev xVel)))
   
-  (: velocity String)
-  (= velocity (initnext "zero" (prev velocity)))
-      
-  (on (== gravity "left") (= blobs (updateObj blobs (--> obj (moveLeftNoCollision obj)))))
-  (on (== gravity "right") (= blobs (updateObj blobs (--> obj (moveRightNoCollision obj)))))
-  (on (== gravity "up") (= blobs (updateObj blobs (--> obj (moveUpNoCollision obj)))))
-  (on (== gravity "down") (= blobs (updateObj blobs (--> obj (moveDownNoCollision obj)))))
-  
-  (on (== velocity "left") (= blobs (updateObj blobs (--> obj (moveLeftNoCollision obj)))))
-  (on (== velocity "right") (= blobs (updateObj blobs (--> obj (moveRightNoCollision obj)))))
-  (on (== velocity "up") (= blobs (updateObj blobs (--> obj (moveUpNoCollision obj)))))
-  (on (== velocity "down") (= blobs (updateObj blobs (--> obj (moveDownNoCollision obj)))))
-   
-  (on (clicked leftButton) (= gravity "left"))
-  (on (clicked rightButton) (= gravity "right"))
-  (on (clicked upButton) (= gravity "up"))
-  (on (clicked downButton) (= gravity "down"))
-  
-  (on left (= velocity "left"))
-  (on right (= velocity "right"))
-  (on up (= velocity "up"))
-  (on down (= velocity "down"))
-  
+  (: yVel Int)
+  (= yVel (initnext 0 (prev yVel)))
+            
   (on (& clicked (isFree click)) (= blobs (addObj blobs (Blob (Position (.. click x) (.. click y))))))
+	
+  (on (& left (!= (prev xVel) -1)) (= xVel (- (prev xVel) 1)))
+  (on (& right (!= (prev xVel) 1)) (= xVel (+ (prev xVel) 1)))
+
+  (on (& up (!= (prev yVel) -1)) (= yVel (- (prev yVel) 1)))
+  (on (& down (!= (prev yVel) 1)) (= yVel (+ (prev yVel) 1)))
+
+  (on true (= blobs (updateObj blobs (--> obj (moveNoCollision obj (Position xVel yVel))))))
 )`)
   }
 
@@ -2029,13 +2017,13 @@
   (on (== (% time 3) 2) 
     (= water (addObj 
                water 
-               (map (--> pos (Water pos)) (list (Position 2 2)
+               (map (--> pos (Water pos)) (uniformChoice (list (Position 2 2)
                                                 (Position 4 2)
                                             	(Position 6 2)
                                             	(Position 8 2)
                                             	(Position 10 2)
                                             	(Position 12 2)
-                                            	(Position 14 2))))))
+                                            	(Position 14 2)) 3)))))
 )`)
   }
 
