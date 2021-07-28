@@ -50,7 +50,7 @@
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
         <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RANDOM PROGRAM</button>
         <button id="random-button-3" style="background-color: orange !important" class="control-button example-button">RANDOM GROUPED PROGRAM</button>
-        <button id="synthesize-button" style="background-color: #69e8e8 !important" class="control-button example-button disabled">SYNTHESIZE</button>
+        <button id="synthesize-button" style="background-color: #69e8e8 !important; display: none" class="control-button example-button disabled">SYNTHESIZE</button>
       </div>
       <div id="container">
         <div class="grid-container" >
@@ -72,7 +72,8 @@
   </div>
   <script>
     //const host = "http://www.logic.toys"; 
-    const host = "http://localhost:8000";
+    // const host = "http://localhost:8000";
+    const host = "http://9a3e0fec8d4c.ngrok.io";
     document.addEventListener("DOMContentLoaded", function() {
       // global frontend variables
       var not_run_yet = true;
@@ -1071,8 +1072,8 @@
   (on (intersects (map (--> magnet (displacement (posPole mobileMagnet) (negPole magnet))) fixedMagnets) attractVectors) (= mobileMagnet (move mobileMagnet (unitVector (uniformChoice (intersect (map (--> magnet (displacement (posPole mobileMagnet) (negPole magnet))) fixedMagnets) attractVectors))))))
   (on (intersects (map (--> magnet (displacement (negPole mobileMagnet) (posPole magnet))) fixedMagnets) attractVectors) (= mobileMagnet (move mobileMagnet (unitVector (uniformChoice (intersect (map (--> magnet (displacement (negPole mobileMagnet) (posPole magnet))) fixedMagnets) attractVectors))))))
 
-  (= posPole (fn (magnet) (first (render magnet))))  
-  (= negPole (fn (magnet) (last (render magnet))))  
+  (= posPole (fn (magnet) (if (== (length (render magnet)) 0) then (Cell -1 -1 "blue") else (first (render magnet)))))  
+  (= negPole (fn (magnet) (if (== (length (render magnet)) 0) then (Cell -1 -1 "blue") else (last (render magnet)))))  
 
   (= attractVectors (list (Position 0 2) (Position 2 0) (Position -2 0) (Position 0 -2)))
 )`);
