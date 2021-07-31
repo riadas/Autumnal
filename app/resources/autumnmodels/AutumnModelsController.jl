@@ -9,8 +9,8 @@ using Random
 using MacroTools: striplines
 using DataStructures
 using Statistics: median
-import Base.min
 using SExpressions
+using Distributions: Categorical
 
 MODS = Dict{Int, Any}(); 
 HISTORY = Dict{Int, Dict{Int, Any}}()
@@ -48,13 +48,9 @@ function compileautumn()
   if !haskey(MODS, clientid)
     try
       parsedAutumn = eval(Meta.parse("au\"\"\"$(autumnString)\"\"\""))
-      # println("PARSED SUCCESSFULLY")
-      compiledAutumn = compiletojulia(parsedAutumn)
-      # println("COMPILED SUCCESSFULLY")
-      mod = eval(compiledAutumn)
-      # println("EVALUATED SUCCESSFULLY")
       content = autumnString
-      MODS[clientid] = mod
+      MODS[clientid] = parsedAutumn
+      @show typeof(MODS[clientid])
       # println("HERE 3")
     catch y
       # println("PARSING OR COMPILING FAILURE!")
@@ -70,29 +66,32 @@ function compileautumn()
 end
 
 function step()
-  # println("step")
+  # println("click")
   clientid = parse(Int64, @params(:clientid))
-  mod = MODS[clientid]
-  state = mod.state
-  # println(state.time)
-  next_state = mod.next(state, nothing, nothing, nothing, nothing, nothing)
-  background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  HISTORY[clientid][next_state.time] = mod.render(next_state.scene)
+  aex, env = MODS[clientid]
+  env_ = step(aex, env, empty_env())
+  MODS[clientid] = (aex, env_)
+  background = env_.state.scene.background  
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
   json(vcat(background, cells))
+  #json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))))) : []))
 end
 
 function startautumn()
   # println("startautumn")
   clientid = parse(Int64, @params(:clientid))
-  mod = MODS[clientid]
-  state = mod.init(nothing, nothing, nothing, nothing, nothing)
+  new_aex = MODS[clientid]
+  if !(new_aex isa AExpr) 
+    new_aex = new_aex[1]
+  end
+  println("HERE")
+  @show typeof(new_aex)
+  new_aex, env_ = start(new_aex)
+  MODS[clientid] = (new_aex, env_)
   # println(state.time)
-  grid_size = state.GRID_SIZEHistory[state.time]
-  background = :backgroundHistory in fieldnames(typeof(state)) ? state.backgroundHistory[state.time] : "#ffffff00"
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(state.scene))
-  HISTORY[clientid] = Dict{Int, Any}()
-  HISTORY[clientid][state.time] = mod.render(state.scene)
+  grid_size = env_.GRID_SIZE
+  background = env_.state.scene.background
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
   json(vcat(grid_size, background, cells))
   # json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].init(nothing)) : []))
 end
@@ -100,13 +99,11 @@ end
 function clicked()
   # println("click")
   clientid = parse(Int64, @params(:clientid))
-  mod = MODS[clientid]
-  state = mod.state
-  # println(state.time)
-  next_state = mod.next(state, mod.Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))), nothing, nothing, nothing, nothing)
-  background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  HISTORY[clientid][next_state.time] = mod.render(next_state.scene)
+  aex, env = MODS[clientid]
+  env_ = step(aex, env, (click=Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))),))
+  MODS[clientid] = (aex, env_)
+  background = env_.state.scene.background  
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
   json(vcat(background, cells))
   #json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))))) : []))
 end
@@ -114,48 +111,44 @@ end
 function up()
   # println("up")
   clientid = parse(Int64, @params(:clientid))
-  mod = MODS[clientid]
-  state = mod.state
-  next_state = mod.next(state, nothing, nothing, nothing, mod.Up(), nothing)
-  background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  HISTORY[clientid][next_state.time] = mod.render(next_state.scene)
+  aex, env = MODS[clientid]
+  env_ = step(aex, env, (up=true,))
+  MODS[clientid] = (aex, env_)
+  background = env_.state.scene.background  
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
   json(vcat(background, cells))
 end
 
 function down()
-  # println("down")
+  # println("up")
   clientid = parse(Int64, @params(:clientid))
-  mod = MODS[clientid]
-  state = mod.state
-  next_state = mod.next(state, nothing, nothing, nothing, nothing, mod.Down())
-  background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  HISTORY[clientid][next_state.time] = mod.render(next_state.scene)
+  aex, env = MODS[clientid]
+  env_ = step(aex, env, (down=true,))
+  MODS[clientid] = (aex, env_)
+  background = env_.state.scene.background  
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
   json(vcat(background, cells))
 end
 
 function right()
-  # println("right")
+  # println("up")
   clientid = parse(Int64, @params(:clientid))
-  mod = MODS[clientid]
-  state = mod.state
-  next_state = mod.next(state, nothing, nothing, mod.Right(), nothing, nothing)
-  background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  HISTORY[clientid][next_state.time] = mod.render(next_state.scene)
+  aex, env = MODS[clientid]
+  env_ = step(aex, env, (right=true,))
+  MODS[clientid] = (aex, env_)
+  background = env_.state.scene.background  
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
   json(vcat(background, cells))
 end
 
 function left()
-  # println("left")
+  # println("up")
   clientid = parse(Int64, @params(:clientid))
-  mod = MODS[clientid]
-  state = mod.state
-  next_state = mod.next(state, nothing, mod.Left(), nothing, nothing, nothing)
-  background = (:backgroundHistory in fieldnames(typeof(next_state))) ? next_state.backgroundHistory[next_state.time] : "#ffffff00"
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], mod.render(next_state.scene))
-  HISTORY[clientid][next_state.time] = mod.render(next_state.scene)
+  aex, env = MODS[clientid]
+  env_ = step(aex, env, (left=true,))
+  MODS[clientid] = (aex, env_)
+  background = env_.state.scene.background  
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
   json(vcat(background, cells))
 end
 
@@ -2227,5 +2220,1389 @@ function singletimestepsolution_program_given_matrix(matrix, object_decompositio
         "\n\n  $(update_rules)", 
         ")")
 end
+
+# autumnstdlib.jl 
+
+update_nt(Γ, x::Symbol, v) = merge(Γ, NamedTuple{(x,)}((v,)))
+
+abstract type Object end
+abstract type KeyPress end
+
+struct Left <: KeyPress end
+struct Right <: KeyPress end
+struct Up <: KeyPress end
+struct Down <: KeyPress end
+
+struct Click
+  x::Int
+  y::Int                    
+end
+
+Click(x, y, state) = Click(x, y)
+
+struct Position
+  x::Int
+  y::Int
+end
+
+Position(x, y, state) = Position(x, y) 
+
+struct Cell 
+  position::Position
+  color::String
+  opacity::Float64
+end
+
+Cell(position::Position, color::String) = Cell(position, color, 0.8)
+Cell(x::Int, y::Int, color::String) = Cell(Position(floor(Int, x), floor(Int, y)), color, 0.8)
+# Cell(x::Int, y::Int, color::String, opacity::Float64) = Cell(Position(floor(Int, x), floor(Int, y)), color, opacity)
+
+Cell(x, y, color::String, state) = Cell(floor(Int, x), floor(Int, y), color)
+Cell(position::Position, color::String, state) = Cell(position::Position, color::String)
+
+# struct Scene
+#   objects::Array{Object}
+#   background::String
+# end
+
+# Scene(objects::AbstractArray) = Scene(objects, "#ffffff00")
+
+# function render(scene)::Array{Cell}
+#   vcat(map(obj -> render(obj), filter(obj -> obj.alive, scene.objects))...)
+# end
+
+function render(obj::NamedTuple, state=nothing)::Array{Cell}
+  if !(:id in keys(obj))
+    vcat(map(o -> render(o), filter(x -> x.alive, obj.objects))...)
+  else
+    if obj.alive
+      map(cell -> Cell(move(cell.position, obj.origin), cell.color), obj.render)
+    else
+      []
+    end
+  end
+end
+
+
+function occurred(click, state=nothing)
+  !isnothing(click)
+end
+
+function uniformChoice(freePositions, state)
+  freePositions[rand(state.rng, Categorical(ones(length(freePositions))/length(freePositions)))]
+end
+
+function uniformChoice(freePositions, n::Union{Int, BigInt}, state)
+  map(idx -> freePositions[idx], rand(state.rng, Categorical(ones(length(freePositions))/length(freePositions)), n))
+end
+
+function min(arr, state=nothing)
+  Base.min(arr...)
+end
+
+function range(start::Int, stop::Int, state=nothing)
+  [start:stop;]
+end
+
+function isWithinBounds(obj::NamedTuple, state)::Bool
+  # println(filter(cell -> !isWithinBounds(cell.position),render(obj)))
+  length(filter(cell -> !isWithinBounds(cell.position, state), render(obj))) == 0
+end
+
+function clicked(click::Union{Click, Nothing}, object::NamedTuple, state)::Bool
+  if click == nothing
+    false
+  else
+    GRID_SIZE = state.GRID_SIZEHistory[0]
+    nums = map(cell -> GRID_SIZE*cell.position.y + cell.position.x, render(object))
+    (GRID_SIZE * click.y + click.x) in nums
+  end
+end
+
+function clicked(click::Union{Click, Nothing}, objects::AbstractArray, state)  
+  # println("LOOK AT ME")
+  # println(reduce(&, map(obj -> clicked(click, obj), objects)))
+  reduce(|, map(obj -> clicked(click, obj, state), objects))
+end
+
+function objClicked(click::Union{Click, Nothing}, objects::AbstractArray, state=nothing)::Union{Object, Nothing}
+  println(click)
+  if isnothing(click)
+    nothing
+  else
+    clicked_objects = filter(obj -> clicked(click, obj, state), objects)
+    if length(clicked_objects) == 0
+      nothing
+    else
+      clicked_objects[1]
+    end
+  end
+
+end
+
+function clicked(click::Union{Click, Nothing}, x::Int, y::Int, state)::Bool
+  if click == nothing
+    false
+  else
+    click.x == x && click.y == y                         
+  end
+end
+
+function clicked(click::Union{Click, Nothing}, pos::Position, state)::Bool
+  if click == nothing
+    false
+  else
+    click.x == pos.x && click.y == pos.y                         
+  end
+end
+
+function intersects(obj1::NamedTuple, obj2::NamedTuple, state)::Bool
+  nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj1))
+  nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj2))
+  length(intersect(nums1, nums2)) != 0
+end
+
+function intersects(obj1::NamedTuple, obj2::AbstractArray, state)::Bool
+  nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj1))
+  nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
+  length(intersect(nums1, nums2)) != 0
+end
+
+function intersects(obj1::AbstractArray, obj2::AbstractArray, state)::Bool
+  nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj1)...))
+  nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
+  length(intersect(nums1, nums2)) != 0
+end
+
+function intersects(list1, list2, state=nothing)::Bool
+  length(intersect(list1, list2)) != 0 
+end
+
+function intersects(object::NamedTuple, state)::Bool
+  objects = state.scene.objects
+  intersects(object, objects, state)
+end
+
+function addObj(list::AbstractArray, obj::NamedTuple, state=nothing)
+  obj = update_nt(obj, :changed, true)
+  new_list = vcat(list, obj)
+  new_list
+end
+
+function addObj(list::AbstractArray, objs::AbstractArray, state=nothing)
+  objs = map(obj -> update_nt(obj, :changed, true), objs)
+  new_list = vcat(list, objs)
+  new_list
+end
+
+function removeObj(list::AbstractArray, obj::NamedTuple, state=nothing)
+  new_list = deepcopy(list)
+  for x in filter(o -> o.id == obj.id, new_list)
+    index = findall(o -> o.id == x.id, new_list)[1]
+    new_list[index] = update_nt(update_nt(x, :alive, false), :changed, true)
+    #x.alive = false 
+    #x.changed = true
+  end
+  new_list
+end
+
+function removeObj(list::AbstractArray, fn, state=nothing)
+  new_list = deepcopy(list)
+  for x in filter(obj -> fn(obj), new_list)
+    index = findall(o -> o.id == x.id, new_list)[1]
+    new_list[index] = update_nt(update_nt(x, :alive, false), :changed, true)
+    #x.alive = false 
+    #x.changed = true
+  end
+  new_list
+end
+
+function removeObj(obj::NamedTuple, state=nothing)
+  new_obj = deepcopy(obj)
+  new_obj = update_nt(update_nt(new_obj, :alive, false), :changed, true)
+  # new_obj.alive = false
+  # new_obj.changed = true
+  # new_obj
+end
+
+function updateObj(obj::NamedTuple, field::String, value, state=nothing)
+  fields = fieldnames(typeof(obj))
+  custom_fields = fields[5:end-1]
+  origin_field = (fields[2],)
+
+  constructor_fields = (custom_fields..., origin_field...)
+  constructor_values = map(x -> x == Symbol(field) ? value : getproperty(obj, x), constructor_fields)
+
+  new_obj = typeof(obj)(constructor_values...)
+  setproperty!(new_obj, :id, obj.id)
+  setproperty!(new_obj, :alive, obj.alive)
+  setproperty!(new_obj, :changed, obj.changed)
+
+  setproperty!(new_obj, Symbol(field), value)
+  state.objectsCreated -= 1    
+  new_obj
+end
+
+function filter_fallback(obj::NamedTuple, state=nothing)
+  true
+end
+
+function updateObj(list::AbstractArray, map_fn, filter_fn, state::NamedTuple=nothing)
+  orig_list = filter(obj -> !filter_fn(obj), list)
+  filtered_list = filter(filter_fn, list)
+  new_filtered_list = map(map_fn, filtered_list)
+  foreach(obj -> obj.changed = true, new_filtered_list)
+  vcat(orig_list, new_filtered_list)
+end
+
+function updateObj(list::AbstractArray, map_fn, state::NamedTuple=nothing)
+  orig_list = filter(obj -> false, list)
+  filtered_list = filter(obj -> true, list)
+  new_filtered_list = map(map_fn, filtered_list)
+  foreach(obj -> obj.changed = true, new_filtered_list)
+  vcat(orig_list, new_filtered_list)
+end
+
+function adjPositions(position::Position, state)::Array{Position}
+  filter(x -> isWithinBounds(x, state), [Position(position.x, position.y + 1), Position(position.x, position.y - 1), Position(position.x + 1, position.y), Position(position.x - 1, position.y)])
+end
+
+function isWithinBounds(position::Position, state)::Bool
+  (position.x >= 0) && (position.x < state.GRID_SIZEHistory[0]) && (position.y >= 0) && (position.y < state.GRID_SIZEHistory[0])                          
+end
+
+function isFree(position::Position, state)::Bool
+  length(filter(cell -> cell.position.x == position.x && cell.position.y == position.y, render(state.scene))) == 0
+end
+
+function isFree(click::Union{Click, Nothing}, state)::Bool
+  if click == nothing
+    false
+  else
+    isFree(Position(click.x, click.y), state)
+  end
+end
+
+function rect(pos1::Position, pos2::Position, state=nothing)
+  min_x = pos1.x 
+  max_x = pos2.x 
+  min_y = pos1.y
+  max_y = pos2.y 
+
+  positions = []
+  for x in min_x:max_x 
+    for y in min_y:max_y
+      push!(positions, Position(x, y))
+    end
+  end
+  positions
+end
+
+function unitVector(position1::Position, position2::Position, state)::Position
+  deltaX = position2.x - position1.x
+  deltaY = position2.y - position1.y
+  if (floor(Int, abs(sign(deltaX))) == 1 && floor(Int, abs(sign(deltaY))) == 1)
+    Position(sign(deltaX), 0)
+    # uniformChoice(rng, [Position(sign(deltaX), 0), Position(0, sign(deltaY))])
+  else
+    Position(sign(deltaX), sign(deltaY))  
+  end
+end
+
+function unitVector(object1::NamedTuple, object2::NamedTuple, state)::Position
+  position1 = object1.origin
+  position2 = object2.origin
+  unitVector(position1, position2, state)
+end
+
+function unitVector(object::NamedTuple, position::Position, state)::Position
+  unitVector(object.origin, position, state)
+end
+
+function unitVector(position::Position, object::NamedTuple, state)::Position
+  unitVector(position, object.origin, state)
+end
+
+function unitVector(position::Position, state)::Position
+  unitVector(Position(0,0), position, state)
+end 
+
+function displacement(position1::Position, position2::Position, state=nothing)::Position
+  Position(floor(Int, position2.x - position1.x), floor(Int, position2.y - position1.y))
+end
+
+function displacement(cell1::Cell, cell2::Cell, state=nothing)::Position
+  displacement(cell1.position, cell2.position)
+end
+
+function adjacent(position1::Position, position2::Position, state=nothing)::Bool
+  displacement(position1, position2) in [Position(0,1), Position(1, 0), Position(0, -1), Position(-1, 0)]
+end
+
+function adjacent(cell1::Cell, cell2::Cell, state=nothing)::Bool
+  adjacent(cell1.position, cell2.position)
+end
+
+function adjacent(cell::Cell, cells::Array{Cell}, state=nothing)
+  length(filter(x -> adjacent(cell, x), cells)) != 0
+end
+
+function adjacentObjs(obj::NamedTuple, state)
+  filter(o -> adjacent(o.origin, obj.origin) && (obj.id != o.id), state.scene.objects)
+end
+
+function adjacentObjsDiag(obj::NamedTuple, state)
+  filter(o -> adjacentDiag(o.origin, obj.origin) && (obj.id != o.id), state.scene.objects)
+end
+
+function adjacentDiag(position1::Position, position2::Position, state=nothing)
+  displacement(position1, position2) in [Position(0,1), Position(1, 0), Position(0, -1), Position(-1, 0),
+                                         Position(1,1), Position(1, -1), Position(-1, 1), Position(-1, -1)]
+end
+
+function rotate(object::NamedTuple, state=nothing)::NamedTuple
+  new_object = deepcopy(object)
+  new_object = update_nt(new_object, :render, map(x -> Cell(rotate(x.position), x.color), new_object.render))
+  new_object
+end
+
+function rotate(position::Position, state=nothing)::Position
+  Position(-position.y, position.x)
+ end
+
+function rotateNoCollision(object::NamedTuple, state)::NamedTuple
+  (isWithinBounds(rotate(object), state) && isFree(rotate(object), object), state) ? rotate(object) : object
+end
+
+function move(position1::Position, position2::Position, state=nothing)
+  Position(position1.x + position2.x, position1.y + position2.y)
+end
+
+function move(position::Position, cell::Cell, state=nothing)
+  Position(position.x + cell.position.x, position.y + cell.position.y)
+end
+
+function move(cell::Cell, position::Position, state=nothing)
+  Position(position.x + cell.position.x, position.y + cell.position.y)
+end
+
+function move(object::NamedTuple, position::Position, state=nothing)
+  new_object = deepcopy(object)
+  new_object = update_nt(new_object, :origin, move(object.origin, position))
+  new_object
+end
+
+function move(object::NamedTuple, x::Int, y::Int, state=nothing)::NamedTuple
+  move(object, Position(x, y))                          
+end
+
+# ----- begin left/right move ----- #
+
+function moveLeft(object::NamedTuple, state=nothing)::NamedTuple
+  move(object, Position(-1, 0))                          
+end
+
+function moveRight(object::NamedTuple, state=nothing)::NamedTuple
+  move(object, Position(1, 0))                          
+end
+
+function moveUp(object::NamedTuple, state=nothing)::NamedTuple
+  move(object, Position(0, -1))                          
+end
+
+function moveDown(object::NamedTuple, state=nothing)::NamedTuple
+  move(object, Position(0, 1))                          
+end
+
+# ----- end left/right move ----- #
+
+function moveNoCollision(object::NamedTuple, position::Position, state)::NamedTuple
+  (isWithinBounds(move(object, position), state) && isFree(move(object, position.x, position.y), object, state)) ? move(object, position.x, position.y) : object 
+end
+
+function moveNoCollision(object::NamedTuple, x::Int, y::Int, state)
+  (isWithinBounds(move(object, x, y), state) && isFree(move(object, x, y), object, state)) ? move(object, x, y) : object 
+end
+
+# ----- begin left/right moveNoCollision ----- #
+
+function moveLeftNoCollision(object::NamedTuple, state)::NamedTuple
+  (isWithinBounds(move(object, -1, 0), state) && isFree(move(object, -1, 0), object, state)) ? move(object, -1, 0) : object 
+end
+
+function moveRightNoCollision(object::NamedTuple, state)::NamedTuple
+  (isWithinBounds(move(object, 1, 0), state) && isFree(move(object, 1, 0), object, state)) ? move(object, 1, 0) : object 
+end
+
+function moveUpNoCollision(object::NamedTuple, state)::NamedTuple
+  (isWithinBounds(move(object, 0, -1), state) && isFree(move(object, 0, -1), object, state)) ? move(object, 0, -1) : object 
+end
+
+function moveDownNoCollision(object::NamedTuple, state)::NamedTuple
+  (isWithinBounds(move(object, 0, 1), state) && isFree(move(object, 0, 1), object, state)) ? move(object, 0, 1) : object 
+end
+
+# ----- end left/right moveNoCollision ----- #
+
+function moveWrap(object::NamedTuple, position::Position, state)::NamedTuple
+  new_object = deepcopy(object)
+  new_object = update_nt(new_object, :origin, moveWrap(object.origin, position.x, position.y, state))
+  new_object
+end
+
+function moveWrap(cell::Cell, position::Position, state)
+  moveWrap(cell.position, position.x, position.y, state)
+end
+
+function moveWrap(position::Position, cell::Cell, state)
+  moveWrap(cell.position, position, state)
+end
+
+function moveWrap(object::NamedTuple, x::Int, y::Int, state)::NamedTuple
+  new_object = deepcopy(object)
+  new_object = update_nt(new_object, :origin, moveWrap(object.origin, x, y, state))
+  new_object
+end
+
+function moveWrap(position1::Position, position2::Position, state)::Position
+  moveWrap(position1, position2.x, position2.y, state)
+end
+
+function moveWrap(position::Position, x::Int, y::Int, state)::Position
+  GRID_SIZE = state.GRID_SIZEHistory[0]
+  # println("hello")
+  # println(Position((position.x + x + GRID_SIZE) % GRID_SIZE, (position.y + y + GRID_SIZE) % GRID_SIZE))
+  Position((position.x + x + GRID_SIZE) % GRID_SIZE, (position.y + y + GRID_SIZE) % GRID_SIZE)
+end
+
+# ----- begin left/right moveWrap ----- #
+
+function moveLeftWrap(object::NamedTuple, state=nothing)::NamedTuple
+  new_object = deepcopy(object)
+  new_object = update_nt(new_object, :origin, moveWrap(object.origin, -1, 0, state))
+  new_object
+end
+  
+function moveRightWrap(object::NamedTuple, state=nothing)::NamedTuple
+  new_object = deepcopy(object)
+  new_object = update_nt(new_object, :origin, moveWrap(object.origin, 1, 0, state))
+  new_object
+end
+
+function moveUpWrap(object::NamedTuple, state=nothing)::NamedTuple
+  new_object = deepcopy(object)
+  new_object = update_nt(new_object, :origin, moveWrap(object.origin, 0, -1, state))
+  new_object
+end
+
+function moveDownWrap(object::NamedTuple, state=nothing)::NamedTuple
+  new_object = deepcopy(object)
+  new_object = update_nt(new_object, :origin, moveWrap(object.origin, 0, 1, state))
+  new_object
+end
+
+# ----- end left/right moveWrap ----- #
+
+function randomPositions(GRID_SIZE::Int, n::Int, state=nothing)::Array{Position}
+  nums = uniformChoice([0:(GRID_SIZE * GRID_SIZE - 1);], n, state)
+  # println(nums)
+  # println(map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums))
+  map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums)
+end
+
+function distance(position1::Position, position2::Position, state=nothing)::Int
+  abs(position1.x - position2.x) + abs(position1.y - position2.y)
+end
+
+function distance(object1::NamedTuple, object2::NamedTuple, state=nothing)::Int
+  position1 = object1.origin
+  position2 = object2.origin
+  distance(position1, position2)
+end
+
+function distance(object::NamedTuple, position::Position, state=nothing)::Int
+  distance(object.origin, position)
+end
+
+function distance(position::Position, object::NamedTuple, state=nothing)::Int
+  distance(object.origin, position)
+end
+
+function closest(object::NamedTuple, type::Symbol, state)::Position
+  objects_of_type = filter(obj -> (obj.type == type) && (obj.alive), state.scene.objects)
+  if length(objects_of_type) == 0
+    object.origin
+  else
+    min_distance = min(map(obj -> distance(object, obj), objects_of_type))
+    filter(obj -> distance(object, obj) == min_distance, objects_of_type)[1].origin
+  end
+end
+
+function mapPositions(constructor, GRID_SIZE::Int, filterFunction, args, state=nothing)::Union{Object, Array{<:Object}}
+  map(pos -> constructor(args..., pos), filter(filterFunction, allPositions(GRID_SIZE)))
+end
+
+function allPositions(GRID_SIZE::Int, state=nothing)
+  nums = [0:(GRID_SIZE * GRID_SIZE - 1);]
+  map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums)
+end
+
+function updateOrigin(object::NamedTuple, new_origin::Position, state=nothing)::NamedTuple
+  new_object = deepcopy(object)
+  new_object = update_nt(new_object, :origin, new_origin)
+  new_object
+end
+
+function updateAlive(object::NamedTuple, new_alive::Bool, state=nothing)::NamedTuple
+  new_object = deepcopy(object)
+  new_object = update_nt(new_object, :alive, new_alive)
+  new_object
+end
+
+function nextLiquid(object::NamedTuple, state)::NamedTuple 
+  # println("nextLiquid")
+  GRID_SIZE = state.GRID_SIZEHistory[0]
+  new_object = deepcopy(object)
+  if object.origin.y != GRID_SIZE - 1 && isFree(move(object.origin, Position(0, 1)), state)
+    new_object = update_nt(new_object, :origin, move(object.origin, Position(0, 1)))
+  else
+    leftHoles = filter(pos -> (pos.y == object.origin.y + 1)
+                               && (pos.x < object.origin.x)
+                               && isFree(pos, state), allPositions(state))
+    rightHoles = filter(pos -> (pos.y == object.origin.y + 1)
+                               && (pos.x > object.origin.x)
+                               && isFree(pos, state), allPositions(state))
+    if (length(leftHoles) != 0) || (length(rightHoles) != 0)
+      if (length(leftHoles) == 0)
+        closestHole = closest(object, rightHoles)
+        if isFree(move(closestHole, Position(0, -1)), move(object.origin, Position(1, 0)), state)
+          new_object = update_nt(new_object, :origin, move(object.origin, unitVector(object, move(closestHole, Position(0, -1)), state), state))
+        end
+      elseif (length(rightHoles) == 0)
+        closestHole = closest(object, leftHoles)
+        if isFree(move(closestHole, Position(0, -1)), move(object.origin, Position(-1, 0)), state)
+          new_object = update_nt(new_object, :origin, move(object.origin, unitVector(object, move(closestHole, Position(0, -1)), state)))                      
+        end
+      else
+        closestLeftHole = closest(object, leftHoles)
+        closestRightHole = closest(object, rightHoles)
+        if distance(object.origin, closestLeftHole) > distance(object.origin, closestRightHole)
+          if isFree(move(object.origin, Position(1, 0)), move(closestRightHole, Position(0, -1)), state)
+            new_object = update_nt(new_object, :origin, move(object.origin, unitVector(new_object, move(closestRightHole, Position(0, -1)), state)))
+          elseif isFree(move(closestLeftHole, Position(0, -1)), move(object.origin, Position(-1, 0)), state)
+            new_object = update_nt(new_object, :origin, move(object.origin, unitVector(new_object, move(closestLeftHole, Position(0, -1)), state)))
+          end
+        else
+          if isFree(move(closestLeftHole, Position(0, -1)), move(object.origin, Position(-1, 0)), state)
+            new_object = update_nt(new_object, :origin, move(object.origin, unitVector(new_object, move(closestLeftHole, Position(0, -1)), state)))
+          elseif isFree(move(object.origin, Position(1, 0)), move(closestRightHole, Position(0, -1)), state)
+            new_object = update_nt(new_object, :origin, move(object.origin, unitVector(new_object, move(closestRightHole, Position(0, -1)), state)))
+          end
+        end
+      end
+    end
+  end
+  new_object
+end
+
+function nextSolid(object::NamedTuple, state)::NamedTuple 
+  # println("nextSolid")
+  GRID_SIZE = state.GRID_SIZEHistory[0] 
+  new_object = deepcopy(object)
+  if (isWithinBounds(move(object, Position(0, 1)), state) && reduce(&, map(x -> isFree(x, object, state), map(cell -> move(cell.position, Position(0, 1)), render(object)))))
+    new_object = update_nt(new_object, :origin, move(object.origin, Position(0, 1)))
+  end
+  new_object
+end
+
+function closest(object::NamedTuple, positions::Array{Position}, state=nothing)::Position
+  closestDistance = sort(map(pos -> distance(pos, object.origin), positions))[1]
+  closest = filter(pos -> distance(pos, object.origin) == closestDistance, positions)[1]
+  closest
+end
+
+function isFree(start::Position, stop::Position, state)::Bool 
+  GRID_SIZE = state.GRID_SIZEHistory[0]
+  nums = [(GRID_SIZE * start.y + start.x):(GRID_SIZE * stop.y + stop.x);]
+  reduce(&, map(num -> isFree(Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), state), nums))
+end
+
+function isFree(start::Position, stop::Position, object::NamedTuple, state)::Bool 
+  GRID_SIZE = state.GRID_SIZEHistory[0]
+  nums = [(GRID_SIZE * start.y + start.x):(GRID_SIZE * stop.y + stop.x);]
+  reduce(&, map(num -> isFree(Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), object, state), nums))
+end
+
+function isFree(position::Position, object::NamedTuple, state)
+  length(filter(cell -> cell.position.x == position.x && cell.position.y == position.y, 
+  render((objects=filter(obj -> obj.id != object.id , state.scene.objects), background=state.scene.background)))) == 0
+end
+
+function isFree(object::NamedTuple, orig_object::NamedTuple, state)::Bool
+  reduce(&, map(x -> isFree(x, orig_object, state), map(cell -> cell.position, render(object))))
+end
+
+function allPositions(state)
+  GRID_SIZE = state.GRID_SIZEHistory[0]
+  nums = [1:GRID_SIZE*GRID_SIZE - 1;]
+  map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums)
+end
+
+function unfold(A, state=nothing)
+  V = []
+  for x in A
+      for elt in x
+        push!(V, elt)
+      end
+  end
+  V
+end
+
+# interpretutils.jl 
+
+function sub(aex::AExpr, (x, v))
+  # print("SUb")
+  # # # # @show aex
+  # # # # @show x
+  # # # # @show v
+  arr = [aex.head, aex.args...]
+  # next(x) = interpret(x, Γ)
+  if (x isa AExpr) && ([x.head, x.args...] == arr)  
+    v 
+  else
+    MLStyle.@match arr begin
+      [:fn, args, body]                                       => AExpr(:fn, args, sub(body, x => v))
+      [:if, c, t, e]                                          => AExpr(:if, sub(c, x => v), sub(t, x => v), sub(e, x => v))
+      [:assign, a1, a2]                                       => AExpr(:assign, a1, sub(a2, x => v))
+      [:list, args...]                                        => AExpr(:list, map(arg -> sub(arg, x => v), args)...)
+      [:typedecl, args...]                                    => AExpr(:typedecl, args...)
+      [:let, args...]                                         => AExpr(:let, map(arg -> sub(arg, x => v), args)...)      
+      # [:case, args...] => compilecase(expr, data)            
+      # [:typealias, args...] => compiletypealias(expr, data)      
+      [:lambda, args, body]                                   => AExpr(:fn, args, sub(body, x => v))
+      [:call, f, args...]                                     => AExpr(:call, f, map(arg -> sub(arg, x => v) , args)...)      
+      [:field, o, fieldname]                                  => AExpr(:field, sub(o, x => v), fieldname)
+      [:object, args...]                                      => AExpr(:object, args...)
+      [:on, event, update]                                    => AExpr(:on, sub(event, x => v), sub(update, x => v))
+      [args...]                                               => throw(AutumnError(string("Invalid AExpr Head: ", expr.head)))
+      _                                                       => error("Could not sub $arr")
+    end
+  end
+end
+
+sub(aex::Symbol, (x, v)) = aex == x ? v : aex
+sub(aex, (x, v)) = aex # aex is a value
+
+const Environment = NamedTuple
+empty_env() = NamedTuple()
+std_env() = empty_env()
+
+"Produces new environment Γ' s.t. `Γ(x) = v` (and everything else unchanged)"
+update(Γ, x::Symbol, v) = merge(Γ, NamedTuple{(x,)}((v,)))
+
+# primitive function handling 
+prim_to_func = Dict(:+ => +,
+                    :- => -,
+                    :* => *,
+                    :/ => /,
+                    :& => &,
+                    :! => !,
+                    :| => |,
+                    :> => >,
+                    :>= => >=,
+                    :< => <,
+                    :<= => <=,
+                    :(==) => ==,
+                    :% => %,
+                    :!= => !=)
+
+isprim(f) = f in keys(prim_to_func)
+primapl(f, x...) = (prim_to_func[f](x[1:end-1]...), x[end])
+
+lib_to_func = Dict(:Position => Position,
+                   :Cell => Cell,
+                   :Click => Click,
+                   :render => render, 
+                   :occurred => occurred,
+                   :uniformChoice => uniformChoice, 
+                   :min => min,
+                   :isWithinBounds => isWithinBounds, 
+                   :clicked => clicked, 
+                   :objClicked => objClicked, 
+                   :intersects => intersects, 
+                   :addObj => addObj, 
+                   :removeObj => removeObj, 
+                   :updateObj => updateObj,
+                   :filter_fallback => filter_fallback,
+                   :adjPositions => adjPositions,
+                   :isWithinBounds => isWithinBounds,
+                   :isFree => isFree, 
+                   :rect => rect, 
+                   :unitVector => unitVector, 
+                   :displacement => displacement, 
+                   :adjacent => adjacent, 
+                   :adjacentObjs => adjacentObjs, 
+                   :adjacentObjsDiag => adjacentObjsDiag,
+                   :rotate => rotate, 
+                   :rotateNoCollision => rotateNoCollision, 
+                   :move => move, 
+                   :moveLeft => moveLeft, 
+                   :moveRight => moveRight, 
+                   :moveUp => moveUp, 
+                   :moveDown => moveDown, 
+                   :moveNoCollision => moveNoCollision, 
+                   :moveLeftNoCollision => moveLeftNoCollision, 
+                   :moveRightNoCollision => moveRightNoCollision, 
+                   :moveDownNoCollision => moveDownNoCollision, 
+                   :moveUpNoCollision => moveUpNoCollision, 
+                   :moveWrap => moveWrap, 
+                   :moveLeftWrap => moveLeftWrap,
+                   :moveRightWrap => moveRightWrap, 
+                   :moveUpWrap => moveUpWrap, 
+                   :moveDownWrap => moveDownWrap, 
+                   :randomPositions => randomPositions, 
+                   :distance => distance,
+                   :closest => closest, 
+                   :mapPositions => mapPositions, 
+                   :allPositions => allPositions, 
+                   :updateOrigin => updateOrigin, 
+                   :updateAlive => updateAlive, 
+                   :nextLiquid => nextLiquid, 
+                   :nextSolid => nextSolid,
+                   :unfold => unfold
+                  )
+islib(f) = f in keys(lib_to_func)
+
+# library function handling 
+function libapl(f, args, Γ)
+  # println("libapl")
+  # @show f 
+  # @show args 
+
+  if f == :clicked && (length(args) == 0)
+    interpret(f, Γ)
+  elseif f == :clicked
+    lib_to_func[f](interpret(:click, Γ)[1], args..., Γ.state), Γ
+  else
+    has_function_arg = false
+    for arg in args 
+      if (arg isa AbstractArray) && (length(arg) == 2) && (arg[1] isa AExpr || arg[1] isa Symbol) && (arg[2] isa AExpr || arg[2] isa Symbol)
+        has_function_arg = true
+      end
+    end
+  
+    if !has_function_arg && (f != :updateObj)
+      # # println("CHECK HERE")
+      # # @show f
+      # # @show args
+      # # @show keys(Γ.state)
+      # @show args 
+      lib_to_func[f](map(x -> interpret(x, Γ)[1], args)..., Γ.state), Γ    
+    else
+      if f == :updateObj 
+        interpret_updateObj(args, Γ)
+      else # f == :removeObj 
+        interpret_removeObj(args, Γ)
+      end
+    end
+  end
+end
+
+julia_lib_to_func = Dict(:get => get, 
+                         :map => map,
+                         :filter => filter,
+                         :first => first,
+                         :last => last,
+                         :in => in)
+isjulialib(f) = f in keys(julia_lib_to_func)
+
+function julialibapl(f, args, Γ)
+  # println("julialibapl")
+  # @show f 
+  # @show args 
+  if !(f in [:map, :filter])
+    julia_lib_to_func[f](args...), Γ
+  elseif f == :map 
+    interpret_julia_map(args, Γ)
+  elseif f == :filter 
+    interpret_julia_filter(args, Γ)
+  end
+end
+
+function interpret(aex::AExpr, Γ)
+  arr = [aex.head, aex.args...]
+  # # # # println()
+  # # # # println("Env:")
+  # display(Γ)
+  # # # # @show arr 
+  # next(x) = interpret(x, Γ)
+  isaexpr(x) = x isa AExpr
+  t = MLStyle.@match arr begin
+    [:if, c, t, e]                                             => let (v, Γ2) = interpret(c, Γ) 
+                                                                      if v == true
+                                                                        interpret(t, Γ2)
+                                                                      else
+                                                                        interpret(e, Γ2)
+                                                                      end
+                                                                  end
+    [:assign, x, v::AExpr] && if v.head == :initnext end       => interpret_init_next(x, v, Γ)
+    [:assign, x, v::Union{AExpr, Symbol}]                      => let (v2, Γ_) = interpret(v, Γ)
+                                                                    # @show v 
+                                                                    # @show x
+                                                                    interpret(AExpr(:assign, x, v2), Γ_)
+                                                                  end
+    [:assign, x, v]                                            => (aex, update(Γ, x, v))
+    [:list, args...]                                           => interpret_list(args, Γ)
+    [:typedecl, args...]                                       => (aex, Γ)
+    [:let, args...]                                            => interpret_let(args, Γ) 
+    [:lambda, args...]                                         => (args, Γ)
+    [:fn, args...]                                             => (args, Γ)
+    [:call, f, arg1] && if isprim(f) end                       => let (new_arg, Γ2) = interpret(arg1, Γ)
+                                                                    primapl(f, new_arg, Γ2)
+                                                                  end
+                                                                    
+    [:call, f, arg1, arg2] && if isprim(f) end                 => let (new_arg1, Γ2) = interpret(arg1, Γ)
+                                                                      (new_arg2, Γ2) = interpret(arg2, Γ2)
+                                                                      primapl(f, new_arg1, new_arg2, Γ2)
+                                                                  end
+    [:call, f, args...] && if islib(f) end                     => interpret_lib(f, args, Γ)
+    [:call, f, args...] && if isjulialib(f) end                => interpret_julia_lib(f, args, Γ)
+    [:call, f, args...] && if f == :prev end                   => interpret(AExpr(:call, Symbol(string(f, uppercasefirst(string(args[1])))), :state), Γ)
+    [:call, f, args...] && if f in keys(Γ[:object_types]) end  => interpret_object_call(f, args, Γ)
+    [:call, f, args...]                                        => interpret_call(f, args, Γ)
+
+    
+    [:field, x, fieldname]                                     => interpret_field(x, fieldname, Γ)
+    [:object, args...]                                         => interpret_object(args, Γ)
+    [:on, args...]                                             => interpret_on(args, Γ)
+    [args...]                                                  => error(string("Invalid AExpr Head: ", aex.head))
+    _                                                          => error("Could not interpret $arr")
+  end
+  # # # # println("FINSIH", arr)
+  # # # # @show(t)
+  t
+end
+
+function interpret(x::Symbol, Γ)
+  # @show keys(Γ)
+  if x == Symbol("false")
+    false, Γ
+  elseif x == Symbol("true")
+    true, Γ
+  elseif x == :clicked 
+    interpret(AExpr(:call, :occurred, :click), Γ)
+  elseif x in keys(Γ[:object_types])
+    x, Γ
+  elseif x in keys(Γ)
+    # @show eval(:($(Γ).$(x)))
+    eval(:($(Γ).$(x))), Γ
+  else
+    error("Could not interpret $x")
+  end
+end
+
+# if x is not an AExpr or a Symbol, it is just a value (return it)
+function interpret(x, Γ)
+  if x isa BigInt 
+    (convert(Int, x), Γ)
+  else
+    (x, Γ)
+  end
+end 
+
+function interpret_list(args, Γ)
+  new_list = []
+  for arg in args
+    new_arg, Γ = interpret(arg, Γ)
+    push!(new_list, new_arg)
+  end
+  new_list, Γ
+end
+
+function interpret_lib(f, args, Γ)
+  # println("INTERPRET_LIB")
+  # @show f 
+  # @show args 
+  new_args = []
+  for arg in args 
+    new_arg, Γ = interpret(arg, Γ)
+    push!(new_args, new_arg)
+  end
+  # @show new_args
+  libapl(f, new_args, Γ)
+end
+
+function interpret_julia_lib(f, args, Γ)
+  # @show f 
+  # @show args
+  new_args = []
+  for arg in args 
+    # @show arg 
+    new_arg, Γ = interpret(arg, Γ)
+    # @show new_arg 
+    # @show Γ
+    push!(new_args, new_arg)
+  end
+  julialibapl(f, new_args, Γ)
+end
+
+function interpret_field(x, f, Γ)
+  # # println("INTERPRET_FIELD")
+  # # @show keys(Γ)
+  # # @show x 
+  # # @show f 
+  val, Γ2 = interpret(x, Γ)
+  if val isa NamedTuple 
+    (val[f], Γ2)
+  else
+    (eval(:($(val).$(f))), Γ2)
+  end
+end
+
+function interpret_let(args::AbstractArray, Γ)
+  Γ2 = Γ
+  for arg in args[1:end-1] # all lines in let except last
+    v2, Γ2 = interpret(arg, Γ2)
+  end
+
+  if args[end] isa AExpr
+    if args[end].head == :assign # all assignments are global; no return value 
+      v2, Γ2 = interpret(args[end], Γ2)
+      (AExpr(:let, args...), Γ2)
+    else # return value is AExpr   
+      v2, Γ2 = interpret(args[end], Γ2)
+      (v2, Γ)
+    end
+  else # return value is not AExpr
+    (interpret(args[end], Γ2)[1], Γ)
+  end
+end
+
+function interpret_call(f, params, Γ)
+  func, Γ = interpret(f, Γ)
+  func_args = func[1]
+  func_body = func[2]
+
+  # construct environment 
+  Γ2 = Γ
+  if func_args isa AExpr 
+    for i in 1:length(func_args.args)
+      param_name = func_args.args[i]
+      param_val, Γ2 = interpret(params[i], Γ2)
+      Γ2 = update(Γ2, param_name, param_val)
+    end
+  elseif func_args isa Symbol
+    param_name = func_args
+    param_val, Γ2 = interpret(params[1], Γ2)
+    Γ2 = update(Γ2, param_name, param_val)
+  else
+    error("Could not interpret $(func_args)")
+  end
+  # # # @show typeof(Γ2)
+  # evaluate func_body in environment 
+  v, Γ2 = interpret(func_body, Γ2)
+  
+  # return value and original environment, except with state updated 
+  Γ = update(Γ, :state, update(Γ.state, :objectsCreated, Γ2.state.objectsCreated))
+  # # # println("DONE")
+  (v, Γ)
+end
+
+function interpret_object_call(f, args, Γ)
+  # # # println("BEFORE")
+  # # # @show Γ.state.objectsCreated 
+  origin, Γ = interpret(args[end], Γ)
+  object_repr = (origin=origin, type=f, alive=true, changed=false, id=Γ.state.objectsCreated)
+
+  new_state = update(Γ.state, :objectsCreated, Γ.state.objectsCreated + 1)
+  Γ = update(Γ, :state, new_state)
+
+  Γ2 = Γ
+  fields = Γ2.object_types[f][:fields]
+  for i in 1:length(fields)
+    field_name = fields[i].args[1]
+    field_value, Γ2 = interpret(args[i], Γ2)
+    object_repr = update(object_repr, field_name, field_value)
+    Γ2 = update(Γ2, field_name, field_value)
+  end
+
+  render, Γ2 = interpret(Γ.object_types[f][:render], Γ2)
+  render = render isa AbstractArray ? render : [render]
+  object_repr = update(object_repr, :render, render)
+  # # # println("AFTER")
+  # # # @show Γ.state.objectsCreated
+  (object_repr, Γ)  
+end
+
+function interpret_init_next(var_name, var_val, Γ)
+  # println("INTERPRET INIT NEXT")
+  init_func = var_val.args[1]
+  next_func = var_val.args[2]
+
+  Γ2 = Γ
+  if !(var_name in keys(Γ2)) # variable not initialized; use init clause
+    # println("HELLO")
+    # initialize var_name
+    var_val, Γ2 = interpret(init_func, Γ2)
+    Γ2 = update(Γ2, var_name, var_val)
+
+    # construct history variable in state 
+    new_state = update(Γ2.state, Symbol(string(var_name, "History")), Dict())
+    Γ2 = update(Γ2, :state, new_state)
+
+    # construct prev function 
+    _, Γ2 = interpret(AExpr(:assign, Symbol(string(:prev, uppercasefirst(string(var_name)))), parseautumn("""(fn (state) (get (.. state $(string(var_name, "History"))) (- (.. state time) 1) -1))""")), Γ2) 
+
+  elseif Γ.state.time > 0 # variable initialized; use next clause if simulation time > 0  
+    # update var_val 
+    var_val = Γ[var_name]
+    if var_val isa Array 
+      changed_val = filter(x -> x.changed, var_val) # values changed by on-clauses
+      unchanged_val = filter(x -> !x.changed, var_val) # values unchanged by on-clauses; apply default behavior
+      # # @show var_val 
+      # # @show changed_val 
+      # # @show unchanged_val
+      # replace (prev var_name) or var_name with unchanged_val 
+      modified_next_func = sub(next_func, AExpr(:call, :prev, var_name) => unchanged_val)
+      modified_next_func = sub(modified_next_func, var_name => unchanged_val)
+      # # println("HERE I AM ONCE AGAIN")
+      # # @show Γ.state.objectsCreated
+      default_val, Γ = interpret(modified_next_func, Γ)
+      # # @show default_val 
+      # # println("HERE I AM ONCE AGAIN 2")
+      # # @show Γ.state.objectsCreated
+      final_val = map(o -> update(o, :changed, false), filter(obj -> obj.alive, vcat(changed_val, default_val)))
+    else # variable is not an array
+      if var_name in keys(Γ[:on_clauses])
+        events = Γ[:on_clauses][var_name]
+      else
+        events = []
+      end
+      changed = false 
+      for e in events 
+        v, Γ = interpret(e, Γ)
+        if v == true 
+          changed = true
+        end
+      end
+      if !changed 
+        final_val, Γ = interpret(next_func, Γ)
+      else
+        final_val = var_val
+      end
+    end
+    Γ2 = update(Γ, var_name, final_val)
+  end
+  (AExpr(:assign, var_name, var_val), Γ2)
+end
+
+function interpret_object(args, Γ)
+  object_name = args[1]
+  object_fields = args[2:end-1]
+  object_render = args[end]
+
+  # construct object creation function 
+  object_tuple = (render=object_render, fields=object_fields)
+  Γ = update(Γ, :object_types, update(Γ[:object_types], object_name, object_tuple))
+  (AExpr(:object, args...), Γ)
+end
+
+function interpret_on(args, Γ)
+  # println("INTERPRET ON")
+  event = args[1]
+  update_ = args[2]
+  # @show event 
+  # @show update_
+  Γ2 = Γ
+  if Γ2.state.time == 0 
+    if update_.head == :assign
+      var_name = update_.args[1]
+      if !(var_name in keys(Γ2[:on_clauses]))
+        Γ2 = update(Γ2, :on_clauses, update(Γ2[:on_clauses], var_name, [event]))
+      else
+        Γ2 = update(Γ2, :on_clauses, update(Γ2[:on_clauses], var_name, vcat(event, Γ2[:on_clauses][var_name])))
+      end
+    elseif update_.head == :let 
+      assignments = update_.args
+      if (assignments[end] isa AExpr) && (assignments[end].head == :assign)
+        for a in assignments 
+          var_name = a.args[1]
+          if !(var_name in keys(Γ2[:on_clauses]))
+            Γ2 = update(Γ2, :on_clauses, update(Γ2[:on_clauses], var_name, [event]))
+          else
+            Γ2 = update(Γ2, :on_clauses, update(Γ2[:on_clauses], var_name, vcat(event, Γ2[:on_clauses][var_name])))
+          end
+        end
+      end
+    else
+      error("Could not interpret $(update_)")
+    end
+  else
+    # # println("ON CLAUSE")
+    # # @show event 
+    # # @show update_  
+    # @show repr(event)
+    e, Γ2 = interpret(event, Γ2) 
+    # @show e 
+    if e == true
+      # # println("EVENT IS TRUE!") 
+      ex, Γ2 = interpret(update_, Γ2)
+    end
+  end
+  (AExpr(:on, args...), Γ2)
+end
+
+# evaluate updateObj on arguments that include functions 
+function interpret_updateObj(args, Γ)
+  # # println("MADE IT!")
+  Γ2 = Γ
+  numFunctionArgs = count(x -> x == true, map(arg -> (arg isa AbstractArray) && (length(arg) == 2) && (arg[1] isa AExpr || arg[1] isa Symbol) && (arg[2] isa AExpr || arg[2] isa Symbol), args))
+  if numFunctionArgs == 1
+    list = args[1]
+    map_func = args[2]
+
+    # # @show list 
+    # # @show map_func
+
+    new_list = []
+    for item in list 
+      # # # println("PRE=PLS WORK")
+      # # # @show Γ2.state.objectsCreated      
+      new_item, Γ2 = interpret(AExpr(:call, map_func, item), Γ2)
+      # # # println("PLS WORK")
+      # # # @show Γ2.state.objectsCreated
+      push!(new_list, new_item)
+    end
+    new_list, Γ2
+  elseif numFunctionArgs == 2
+    list = args[1]
+    map_func = args[2]
+    filter_func = args[3]
+
+    # # @show list 
+    # # @show map_func
+
+
+    new_list = []
+    for item in list 
+      pred, Γ2 = interpret(AExpr(:call, filter_func, item), Γ2)
+      if pred == true 
+        new_item, Γ2 = interpret(AExpr(:call, map_func, item), Γ2)
+        push!(new_list, new_item)
+      else
+        push!(new_list, item)
+      end
+    end
+    new_list, Γ2
+  elseif numFunctionArgs == 0
+    obj = args[1]
+    field_string = args[2]
+    new_value = args[3]
+    new_obj = update(obj, Symbol(field_string), new_value)
+
+    # update render 
+    object_type = Γ[:object_types][obj.type]
+    
+    Γ3 = Γ2
+    fields = object_type[:fields]
+    for i in 1:length(fields)
+      field_name = fields[i].args[1]
+      field_value = new_obj[field_name]
+      Γ3 = update(Γ3, field_name, field_value)
+    end
+  
+    render, Γ3 = interpret(Γ.object_types[obj.type][:render], Γ3)
+    render = render isa AbstractArray ? render : [render]
+    new_obj = update(new_obj, :render, render)
+
+    new_obj, Γ2
+    # Γ2 = update(Γ2, :state, update(Γ2.state, :objectsCreated, Γ2.state.objectsCreated + 1))
+
+  else
+    error("Could not interpret updateObj")
+  end
+end
+
+function interpret_removeObj(args, Γ)
+  # @show args
+  list = args[1]
+  func = args[2]
+  new_list = []
+  for item in list
+    pred, Γ = interpret(AExpr(:call, func, item), Γ) 
+    if pred == false 
+      push!(new_list, item)
+    end
+  end
+  new_list, Γ
+end
+
+function interpret_julia_map(args, Γ)
+  new_list = []
+  map_func = args[1]
+  list = args[2]
+  for arg in list  
+    new_arg, Γ = interpret(AExpr(:call, map_func, arg), Γ)
+    push!(new_list, new_arg)
+  end
+  new_list, Γ
+end
+
+function interpret_julia_filter(args, Γ)
+  new_list = []
+  filter_func = args[1]
+  list = args[2]
+  for arg in list
+    v, Γ = interpret(AExpr(:call, filter_func, arg), Γ)
+    if v == true 
+      push!(new_list, interpret(arg, Γ)[1])
+    end
+  end
+  new_list, Γ
+end
+
+# interpret.jl
+
+function interpret_program(aex, Γ)
+  aex.head == :program || error("Must be a program aex")
+  for line in aex.args
+    v, Γ = interpret(line, Γ)
+  end
+  return aex, Γ
+end
+
+function start(aex::AExpr, rng=Random.GLOBAL_RNG)
+  aex.head == :program || error("Must be a program aex")
+  env = (object_types=empty_env(), 
+         on_clauses=empty_env(),
+         left=false, 
+         right=false,
+         up=false,
+         down=false,
+         click=nothing, 
+         state=(time=0, objectsCreated=0, rng=rng, scene=empty_env()))
+  lines = aex.args 
+
+  # reorder program lines
+  grid_params_and_object_type_lines = filter(l -> !(l.head in [:assign, :on]), lines) # || (l.head == :assign && l.args[1] in [:GRID_SIZE, :background])
+  initnext_lines = filter(l -> l.head == :assign && (l.args[2] isa AExpr && l.args[2].head == :initnext), lines)
+  lifted_lines = filter(l -> l.head == :assign && (!(l.args[2] isa AExpr) || l.args[2].head != :initnext), lines) # GRID_SIZE and background here
+  on_clause_lines = filter(l -> l.head == :on, lines)
+
+  reordered_lines = vcat(grid_params_and_object_type_lines, 
+                         on_clause_lines, 
+                         initnext_lines, 
+                         lifted_lines)
+
+  # add prev functions and variable history to state for lifted variables 
+  for line in lifted_lines
+    var_name = line.args[1] 
+    # construct history variable in state
+    new_state = update(env.state, Symbol(string(var_name, "History")), Dict())
+    env = update(env, :state, new_state)
+
+    # construct prev function 
+    _, env = interpret(AExpr(:assign, Symbol(string(:prev, uppercasefirst(string(var_name)))), parseautumn("""(fn () (get (.. state $(string(var_name, "History"))) (- (.. state time) 1) $(var_name)))""")), env) 
+  end
+
+  # add background to scene 
+  background_assignments = filter(l -> l.args[1] == :background, lifted_lines)
+  background = background_assignments != [] ? background_assignments[end].args[2] : "#ffffff00"
+  env = update(env, :state, update(env.state, :scene, update(env.state.scene, :background, background)))
+
+
+  # initialize scene.objects 
+  env = update(env, :state, update(env.state, :scene, update(env.state.scene, :objects, [])))
+
+  # initialize lifted variables
+  env = update(env, :lifted, empty_env()) 
+  for line in lifted_lines
+    var_name = line.args[1]
+    env = update(env, :lifted, update(env.lifted, var_name, line.args[2])) 
+    if var_name in [:GRID_SIZE, :background]
+      env = update(env, var_name, line.args[2])
+    end
+  end 
+
+  new_aex = AExpr(:program, reordered_lines...)
+  @show new_aex
+  aex_, env_ = interpret_program(new_aex, env)
+
+  # update state (time, histories, scene)
+  env_ = update_state(env_)
+
+  new_aex, env_
+end
+
+function step(aex::AExpr, env, user_events=(click=nothing, left=false, right=false, down=false, up=false))
+  # update env with user event 
+  for user_event in keys(user_events)
+    if !isnothing(user_events[user_event])
+      env = update(env, user_event, user_events[user_event])
+    end
+  end
+
+  aex_, env_ = interpret_program(aex, env)
+
+  # update state (time, histories, scene) + reset user_event
+  env_ = update_state(env_)
+  
+  env_
+end
+
+"""Update the history variables, scene, and time fields of env_.state"""
+function update_state(env_)
+  # reset user events 
+  for user_event in [:left, :right, :up, :down]
+    env_ = update(env_, user_event, false)
+  end
+  env_ = update(env_, :click, nothing)
+
+  # add updated variable values to history
+  for key in filter(sym -> occursin("History", string(sym)), keys(env_.state))
+    var_name = Symbol(replace(string(key), "History" => ""))
+    env_.state[key][env_.state.time] = env_[var_name]
+  end
+
+  # update lifted variables 
+  for var_name in keys(env_.lifted)
+    env_ = update(env_, var_name, interpret(env_.lifted[var_name], env_)[1])
+  end
+
+  # update scene.objects 
+  new_scene_objects = []
+  for key in keys(env_)
+    if !(key in [:state, :object_types, :on_clauses, :lifted]) && ((env_[key] isa NamedTuple && (:id in keys(env_[key]))) || (env_[key] isa AbstractArray && (length(env_[key]) > 0) && (env_[key][1] isa NamedTuple)))
+      object_val = env_[key]
+      if object_val isa AbstractArray 
+        push!(new_scene_objects, object_val...)
+      else
+        push!(new_scene_objects, object_val)
+      end
+    end
+  end
+  env_ = update(env_, :state, update(env_.state, :scene, update(env_.state.scene, :objects, new_scene_objects)))
+
+  # update time 
+  new_state = update(env_.state, :time, env_.state.time + 1)
+  env_ = update(env_, :state, new_state)
+end
+
+function interpret_over_time(aex::AExpr, iters, user_events=[])
+  new_aex, env_ = start(aex)
+  if user_events == []
+    for i in 1:iters
+      @show i
+      env_ = step(new_aex, env_)
+    end
+  else
+    for i in 1:iters
+      @show i
+      env_ = step(new_aex, env_, user_events[i])
+    end
+  end
+  env_
+end
+
 
 end
