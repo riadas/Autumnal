@@ -1177,7 +1177,7 @@ const builtInDict = Dict([
                       end
                     end
 
-                    function mapPositions(constructor, GRID_SIZE::Int, filterFunction, args...)::Union{Object, Array{<:Object}}
+                    function mapPositions(constructor, GRID_SIZE::Int, filterFunction, args)::Union{Object, Array{<:Object}}
                       map(pos -> constructor(args..., pos), filter(filterFunction, allPositions(GRID_SIZE)))
                     end
 
@@ -2223,7 +2223,7 @@ end
 
 # autumnstdlib.jl 
 
-update_nt(Γ, x::Symbol, v) = merge(Γ, NamedTuple{(x,)}((v,)))
+update_nt(@nospecialize(Γ::NamedTuple), x::Symbol, v) = merge(Γ, NamedTuple{(x,)}((v,)))
 
 abstract type Object end
 abstract type KeyPress end
@@ -2238,14 +2238,14 @@ struct Click
   y::Int                    
 end
 
-Click(x, y, state) = Click(x, y)
+Click(x, y, @nospecialize(state::NamedTuple)) = Click(x, y)
 
 struct Position
   x::Int
   y::Int
 end
 
-Position(x, y, state) = Position(x, y) 
+Position(x, y, @nospecialize(state::NamedTuple)) = Position(x, y) 
 
 struct Cell 
   position::Position
@@ -2257,21 +2257,30 @@ Cell(position::Position, color::String) = Cell(position, color, 0.8)
 Cell(x::Int, y::Int, color::String) = Cell(Position(floor(Int, x), floor(Int, y)), color, 0.8)
 # Cell(x::Int, y::Int, color::String, opacity::Float64) = Cell(Position(floor(Int, x), floor(Int, y)), color, opacity)
 
-Cell(x, y, color::String, state) = Cell(floor(Int, x), floor(Int, y), color)
-Cell(position::Position, color::String, state) = Cell(position::Position, color::String)
+Cell(x, y, color::String, @nospecialize(state::NamedTuple)) = Cell(floor(Int, x), floor(Int, y), color)
+Cell(position::Position, color::String, @nospecialize(state::NamedTuple)) = Cell(position::Position, color::String)
 
 # struct Scene
 #   objects::Array{Object}
 #   background::String
 # end
 
-# Scene(objects::AbstractArray) = Scene(objects, "#ffffff00")
+# Scene(@nospecialize(objects::AbstractArray)) = Scene(objects, "#ffffff00")
 
 # function render(scene)::Array{Cell}
 #   vcat(map(obj -> render(obj), filter(obj -> obj.alive, scene.objects))...)
 # end
 
-function render(obj::NamedTuple, state=nothing)::Array{Cell}
+function prev(@nospecialize(obj::NamedTuple), @nospecialize(state))
+  prev_objects = filter(o -> o.id == obj.id, state.scene.objects)
+  if prev_objects != []
+    prev_objects[1]                            
+  else
+    obj
+  end
+end
+
+function render(@nospecialize(obj::NamedTuple), @nospecialize(state=nothing))::Array{Cell}
   if !(:id in keys(obj))
     vcat(map(o -> render(o), filter(x -> x.alive, obj.objects))...)
   else
@@ -2284,32 +2293,32 @@ function render(obj::NamedTuple, state=nothing)::Array{Cell}
 end
 
 
-function occurred(click, state=nothing)
+function occurred(click, @nospecialize(state=nothing))
   !isnothing(click)
 end
 
-function uniformChoice(freePositions, state)
+function uniformChoice(freePositions, @nospecialize(state::NamedTuple))
   freePositions[rand(state.rng, Categorical(ones(length(freePositions))/length(freePositions)))]
 end
 
-function uniformChoice(freePositions, n::Union{Int, BigInt}, state)
+function uniformChoice(freePositions, n::Union{Int, BigInt}, @nospecialize(state::NamedTuple))
   map(idx -> freePositions[idx], rand(state.rng, Categorical(ones(length(freePositions))/length(freePositions)), n))
 end
 
-function min(arr, state=nothing)
+function min(arr, @nospecialize(state=nothing))
   Base.min(arr...)
 end
 
-function range(start::Int, stop::Int, state=nothing)
+function range(start::Int, stop::Int, @nospecialize(state=nothing))
   [start:stop;]
 end
 
-function isWithinBounds(obj::NamedTuple, state)::Bool
+function isWithinBounds(@nospecialize(obj::NamedTuple), @nospecialize(state::NamedTuple))::Bool
   # println(filter(cell -> !isWithinBounds(cell.position),render(obj)))
   length(filter(cell -> !isWithinBounds(cell.position, state), render(obj))) == 0
 end
 
-function clicked(click::Union{Click, Nothing}, object::NamedTuple, state)::Bool
+function clicked(click::Union{Click, Nothing}, @nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::Bool
   if click == nothing
     false
   else
@@ -2319,13 +2328,13 @@ function clicked(click::Union{Click, Nothing}, object::NamedTuple, state)::Bool
   end
 end
 
-function clicked(click::Union{Click, Nothing}, objects::AbstractArray, state)  
+function clicked(click::Union{Click, Nothing}, @nospecialize(objects::AbstractArray), @nospecialize(state::NamedTuple))  
   # println("LOOK AT ME")
   # println(reduce(&, map(obj -> clicked(click, obj), objects)))
   reduce(|, map(obj -> clicked(click, obj, state), objects))
 end
 
-function objClicked(click::Union{Click, Nothing}, objects::AbstractArray, state=nothing)::Union{Object, Nothing}
+function objClicked(click::Union{Click, Nothing}, @nospecialize(objects::AbstractArray), @nospecialize(state=nothing))::Union{Object, Nothing}
   println(click)
   if isnothing(click)
     nothing
@@ -2340,7 +2349,7 @@ function objClicked(click::Union{Click, Nothing}, objects::AbstractArray, state=
 
 end
 
-function clicked(click::Union{Click, Nothing}, x::Int, y::Int, state)::Bool
+function clicked(click::Union{Click, Nothing}, x::Int, y::Int, @nospecialize(state::NamedTuple))::Bool
   if click == nothing
     false
   else
@@ -2348,7 +2357,7 @@ function clicked(click::Union{Click, Nothing}, x::Int, y::Int, state)::Bool
   end
 end
 
-function clicked(click::Union{Click, Nothing}, pos::Position, state)::Bool
+function clicked(click::Union{Click, Nothing}, pos::Position, @nospecialize(state::NamedTuple))::Bool
   if click == nothing
     false
   else
@@ -2356,46 +2365,53 @@ function clicked(click::Union{Click, Nothing}, pos::Position, state)::Bool
   end
 end
 
-function intersects(obj1::NamedTuple, obj2::NamedTuple, state)::Bool
+function intersects(@nospecialize(obj1::NamedTuple), @nospecialize(obj2::NamedTuple), @nospecialize(state::NamedTuple))::Bool
   nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj1))
   nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj2))
   length(intersect(nums1, nums2)) != 0
 end
 
-function intersects(obj1::NamedTuple, obj2::AbstractArray, state)::Bool
+function intersects(@nospecialize(obj1::NamedTuple), @nospecialize(obj2::AbstractArray), @nospecialize(state::NamedTuple))::Bool
   nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj1))
   nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
   length(intersect(nums1, nums2)) != 0
 end
 
-function intersects(obj1::AbstractArray, obj2::AbstractArray, state)::Bool
-  nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj1)...))
-  nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
-  length(intersect(nums1, nums2)) != 0
+function intersects(@nospecialize(obj1::AbstractArray), @nospecialize(obj2::AbstractArray), @nospecialize(state::NamedTuple))::Bool
+  # println("INTERSECTS")
+  # @show typeof(obj1) 
+  # @show typeof(obj2) 
+  if (length(obj1) == 0) || (length(obj2) == 0)
+    false  
+  elseif (obj1[1] isa NamedTuple) && (obj2[1] isa NamedTuple)
+    # println("MADE IT")
+    nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj1)...))
+    nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
+    length(intersect(nums1, nums2)) != 0
+  else
+    length(intersect(obj1, obj2)) != 0 
+  end
 end
 
-function intersects(list1, list2, state=nothing)::Bool
-  length(intersect(list1, list2)) != 0 
-end
 
-function intersects(object::NamedTuple, state)::Bool
+function intersects(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::Bool
   objects = state.scene.objects
   intersects(object, objects, state)
 end
 
-function addObj(list::AbstractArray, obj::NamedTuple, state=nothing)
+function addObj(@nospecialize(list::AbstractArray), @nospecialize(obj::NamedTuple), @nospecialize(state=nothing))
   obj = update_nt(obj, :changed, true)
   new_list = vcat(list, obj)
   new_list
 end
 
-function addObj(list::AbstractArray, objs::AbstractArray, state=nothing)
+function addObj(@nospecialize(list::AbstractArray), @nospecialize(objs::AbstractArray), @nospecialize(state=nothing))
   objs = map(obj -> update_nt(obj, :changed, true), objs)
   new_list = vcat(list, objs)
   new_list
 end
 
-function removeObj(list::AbstractArray, obj::NamedTuple, state=nothing)
+function removeObj(@nospecialize(list::AbstractArray), @nospecialize(obj::NamedTuple), @nospecialize(state=nothing))
   new_list = deepcopy(list)
   for x in filter(o -> o.id == obj.id, new_list)
     index = findall(o -> o.id == x.id, new_list)[1]
@@ -2406,7 +2422,7 @@ function removeObj(list::AbstractArray, obj::NamedTuple, state=nothing)
   new_list
 end
 
-function removeObj(list::AbstractArray, fn, state=nothing)
+function removeObj(@nospecialize(list::AbstractArray), fn, @nospecialize(state=nothing))
   new_list = deepcopy(list)
   for x in filter(obj -> fn(obj), new_list)
     index = findall(o -> o.id == x.id, new_list)[1]
@@ -2417,7 +2433,7 @@ function removeObj(list::AbstractArray, fn, state=nothing)
   new_list
 end
 
-function removeObj(obj::NamedTuple, state=nothing)
+function removeObj(@nospecialize(obj::NamedTuple), @nospecialize(state=nothing))
   new_obj = deepcopy(obj)
   new_obj = update_nt(update_nt(new_obj, :alive, false), :changed, true)
   # new_obj.alive = false
@@ -2425,7 +2441,7 @@ function removeObj(obj::NamedTuple, state=nothing)
   # new_obj
 end
 
-function updateObj(obj::NamedTuple, field::String, value, state=nothing)
+function updateObj(@nospecialize(obj::NamedTuple), field::String, value, @nospecialize(state=nothing))
   fields = fieldnames(typeof(obj))
   custom_fields = fields[5:end-1]
   origin_field = (fields[2],)
@@ -2443,11 +2459,11 @@ function updateObj(obj::NamedTuple, field::String, value, state=nothing)
   new_obj
 end
 
-function filter_fallback(obj::NamedTuple, state=nothing)
+function filter_fallback(@nospecialize(obj::NamedTuple), @nospecialize(state=nothing))
   true
 end
 
-function updateObj(list::AbstractArray, map_fn, filter_fn, state::NamedTuple=nothing)
+function updateObj(@nospecialize(list::AbstractArray), map_fn, filter_fn, @nospecialize(state::NamedTuple=nothing))
   orig_list = filter(obj -> !filter_fn(obj), list)
   filtered_list = filter(filter_fn, list)
   new_filtered_list = map(map_fn, filtered_list)
@@ -2455,7 +2471,7 @@ function updateObj(list::AbstractArray, map_fn, filter_fn, state::NamedTuple=not
   vcat(orig_list, new_filtered_list)
 end
 
-function updateObj(list::AbstractArray, map_fn, state::NamedTuple=nothing)
+function updateObj(@nospecialize(list::AbstractArray), map_fn, @nospecialize(state::NamedTuple=nothing))
   orig_list = filter(obj -> false, list)
   filtered_list = filter(obj -> true, list)
   new_filtered_list = map(map_fn, filtered_list)
@@ -2463,19 +2479,19 @@ function updateObj(list::AbstractArray, map_fn, state::NamedTuple=nothing)
   vcat(orig_list, new_filtered_list)
 end
 
-function adjPositions(position::Position, state)::Array{Position}
+function adjPositions(position::Position, @nospecialize(state::NamedTuple))::Array{Position}
   filter(x -> isWithinBounds(x, state), [Position(position.x, position.y + 1), Position(position.x, position.y - 1), Position(position.x + 1, position.y), Position(position.x - 1, position.y)])
 end
 
-function isWithinBounds(position::Position, state)::Bool
+function isWithinBounds(position::Position, @nospecialize(state::NamedTuple))::Bool
   (position.x >= 0) && (position.x < state.GRID_SIZEHistory[0]) && (position.y >= 0) && (position.y < state.GRID_SIZEHistory[0])                          
 end
 
-function isFree(position::Position, state)::Bool
+function isFree(position::Position, @nospecialize(state::NamedTuple))::Bool
   length(filter(cell -> cell.position.x == position.x && cell.position.y == position.y, render(state.scene))) == 0
 end
 
-function isFree(click::Union{Click, Nothing}, state)::Bool
+function isFree(click::Union{Click, Nothing}, @nospecialize(state::NamedTuple))::Bool
   if click == nothing
     false
   else
@@ -2483,7 +2499,7 @@ function isFree(click::Union{Click, Nothing}, state)::Bool
   end
 end
 
-function rect(pos1::Position, pos2::Position, state=nothing)
+function rect(pos1::Position, pos2::Position, @nospecialize(state=nothing))
   min_x = pos1.x 
   max_x = pos2.x 
   min_y = pos1.y
@@ -2498,7 +2514,7 @@ function rect(pos1::Position, pos2::Position, state=nothing)
   positions
 end
 
-function unitVector(position1::Position, position2::Position, state)::Position
+function unitVector(position1::Position, position2::Position, @nospecialize(state::NamedTuple))::Position
   deltaX = position2.x - position1.x
   deltaY = position2.y - position1.y
   if (floor(Int, abs(sign(deltaX))) == 1 && floor(Int, abs(sign(deltaY))) == 1)
@@ -2509,166 +2525,166 @@ function unitVector(position1::Position, position2::Position, state)::Position
   end
 end
 
-function unitVector(object1::NamedTuple, object2::NamedTuple, state)::Position
+function unitVector(object1::NamedTuple, object2::NamedTuple, @nospecialize(state::NamedTuple))::Position
   position1 = object1.origin
   position2 = object2.origin
   unitVector(position1, position2, state)
 end
 
-function unitVector(object::NamedTuple, position::Position, state)::Position
+function unitVector(@nospecialize(object::NamedTuple), position::Position, @nospecialize(state::NamedTuple))::Position
   unitVector(object.origin, position, state)
 end
 
-function unitVector(position::Position, object::NamedTuple, state)::Position
+function unitVector(position::Position, @nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::Position
   unitVector(position, object.origin, state)
 end
 
-function unitVector(position::Position, state)::Position
+function unitVector(position::Position, @nospecialize(state::NamedTuple))::Position
   unitVector(Position(0,0), position, state)
 end 
 
-function displacement(position1::Position, position2::Position, state=nothing)::Position
+function displacement(position1::Position, position2::Position, @nospecialize(state::NamedTuple=nothing))::Position
   Position(floor(Int, position2.x - position1.x), floor(Int, position2.y - position1.y))
 end
 
-function displacement(cell1::Cell, cell2::Cell, state=nothing)::Position
+function displacement(cell1::Cell, cell2::Cell, @nospecialize(state=nothing))::Position
   displacement(cell1.position, cell2.position)
 end
 
-function adjacent(position1::Position, position2::Position, state=nothing)::Bool
-  displacement(position1, position2) in [Position(0,1), Position(1, 0), Position(0, -1), Position(-1, 0)]
+function adjacent(position1::Position, position2::Position, @nospecialize(state=nothing))::Bool
+  displacement(position1, position2, state) in [Position(0,1), Position(1, 0), Position(0, -1), Position(-1, 0)]
 end
 
-function adjacent(cell1::Cell, cell2::Cell, state=nothing)::Bool
+function adjacent(cell1::Cell, cell2::Cell, @nospecialize(state=nothing))::Bool
   adjacent(cell1.position, cell2.position)
 end
 
-function adjacent(cell::Cell, cells::Array{Cell}, state=nothing)
+function adjacent(cell::Cell, cells::Array{Cell}, @nospecialize(state=nothing))
   length(filter(x -> adjacent(cell, x), cells)) != 0
 end
 
-function adjacentObjs(obj::NamedTuple, state)
+function adjacentObjs(@nospecialize(obj::NamedTuple), @nospecialize(state::NamedTuple))
   filter(o -> adjacent(o.origin, obj.origin) && (obj.id != o.id), state.scene.objects)
 end
 
-function adjacentObjsDiag(obj::NamedTuple, state)
+function adjacentObjsDiag(@nospecialize(obj::NamedTuple), @nospecialize(state::NamedTuple))
   filter(o -> adjacentDiag(o.origin, obj.origin) && (obj.id != o.id), state.scene.objects)
 end
 
-function adjacentDiag(position1::Position, position2::Position, state=nothing)
+function adjacentDiag(position1::Position, position2::Position, @nospecialize(state=nothing))
   displacement(position1, position2) in [Position(0,1), Position(1, 0), Position(0, -1), Position(-1, 0),
                                          Position(1,1), Position(1, -1), Position(-1, 1), Position(-1, -1)]
 end
 
-function rotate(object::NamedTuple, state=nothing)::NamedTuple
+function rotate(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :render, map(x -> Cell(rotate(x.position), x.color), new_object.render))
   new_object
 end
 
-function rotate(position::Position, state=nothing)::Position
+function rotate(position::Position, @nospecialize(state=nothing))::Position
   Position(-position.y, position.x)
  end
 
-function rotateNoCollision(object::NamedTuple, state)::NamedTuple
+function rotateNoCollision(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple
   (isWithinBounds(rotate(object), state) && isFree(rotate(object), object), state) ? rotate(object) : object
 end
 
-function move(position1::Position, position2::Position, state=nothing)
+function move(position1::Position, position2::Position, @nospecialize(state=nothing))
   Position(position1.x + position2.x, position1.y + position2.y)
 end
 
-function move(position::Position, cell::Cell, state=nothing)
+function move(position::Position, cell::Cell, @nospecialize(state=nothing))
   Position(position.x + cell.position.x, position.y + cell.position.y)
 end
 
-function move(cell::Cell, position::Position, state=nothing)
+function move(cell::Cell, position::Position, @nospecialize(state=nothing))
   Position(position.x + cell.position.x, position.y + cell.position.y)
 end
 
-function move(object::NamedTuple, position::Position, state=nothing)
+function move(@nospecialize(object::NamedTuple), position::Position, @nospecialize(state=nothing))
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, move(object.origin, position))
   new_object
 end
 
-function move(object::NamedTuple, x::Int, y::Int, state=nothing)::NamedTuple
+function move(@nospecialize(object::NamedTuple), x::Int, y::Int, @nospecialize(state=nothing))::NamedTuple
   move(object, Position(x, y))                          
 end
 
 # ----- begin left/right move ----- #
 
-function moveLeft(object::NamedTuple, state=nothing)::NamedTuple
+function moveLeft(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
   move(object, Position(-1, 0))                          
 end
 
-function moveRight(object::NamedTuple, state=nothing)::NamedTuple
+function moveRight(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
   move(object, Position(1, 0))                          
 end
 
-function moveUp(object::NamedTuple, state=nothing)::NamedTuple
+function moveUp(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
   move(object, Position(0, -1))                          
 end
 
-function moveDown(object::NamedTuple, state=nothing)::NamedTuple
+function moveDown(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
   move(object, Position(0, 1))                          
 end
 
 # ----- end left/right move ----- #
 
-function moveNoCollision(object::NamedTuple, position::Position, state)::NamedTuple
+function moveNoCollision(@nospecialize(object::NamedTuple), position::Position, @nospecialize(state::NamedTuple))::NamedTuple
   (isWithinBounds(move(object, position), state) && isFree(move(object, position.x, position.y), object, state)) ? move(object, position.x, position.y) : object 
 end
 
-function moveNoCollision(object::NamedTuple, x::Int, y::Int, state)
+function moveNoCollision(@nospecialize(object::NamedTuple), x::Int, y::Int, @nospecialize(state::NamedTuple))
   (isWithinBounds(move(object, x, y), state) && isFree(move(object, x, y), object, state)) ? move(object, x, y) : object 
 end
 
 # ----- begin left/right moveNoCollision ----- #
 
-function moveLeftNoCollision(object::NamedTuple, state)::NamedTuple
+function moveLeftNoCollision(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple
   (isWithinBounds(move(object, -1, 0), state) && isFree(move(object, -1, 0), object, state)) ? move(object, -1, 0) : object 
 end
 
-function moveRightNoCollision(object::NamedTuple, state)::NamedTuple
+function moveRightNoCollision(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple
   (isWithinBounds(move(object, 1, 0), state) && isFree(move(object, 1, 0), object, state)) ? move(object, 1, 0) : object 
 end
 
-function moveUpNoCollision(object::NamedTuple, state)::NamedTuple
+function moveUpNoCollision(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple
   (isWithinBounds(move(object, 0, -1), state) && isFree(move(object, 0, -1), object, state)) ? move(object, 0, -1) : object 
 end
 
-function moveDownNoCollision(object::NamedTuple, state)::NamedTuple
+function moveDownNoCollision(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple
   (isWithinBounds(move(object, 0, 1), state) && isFree(move(object, 0, 1), object, state)) ? move(object, 0, 1) : object 
 end
 
 # ----- end left/right moveNoCollision ----- #
 
-function moveWrap(object::NamedTuple, position::Position, state)::NamedTuple
+function moveWrap(@nospecialize(object::NamedTuple), position::Position, @nospecialize(state::NamedTuple))::NamedTuple
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, moveWrap(object.origin, position.x, position.y, state))
   new_object
 end
 
-function moveWrap(cell::Cell, position::Position, state)
+function moveWrap(cell::Cell, position::Position, @nospecialize(state::NamedTuple))
   moveWrap(cell.position, position.x, position.y, state)
 end
 
-function moveWrap(position::Position, cell::Cell, state)
+function moveWrap(position::Position, cell::Cell, @nospecialize(state::NamedTuple))
   moveWrap(cell.position, position, state)
 end
 
-function moveWrap(object::NamedTuple, x::Int, y::Int, state)::NamedTuple
+function moveWrap(@nospecialize(object::NamedTuple), x::Int, y::Int, @nospecialize(state::NamedTuple))::NamedTuple
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, moveWrap(object.origin, x, y, state))
   new_object
 end
 
-function moveWrap(position1::Position, position2::Position, state)::Position
+function moveWrap(position1::Position, position2::Position, @nospecialize(state::NamedTuple))::Position
   moveWrap(position1, position2.x, position2.y, state)
 end
 
-function moveWrap(position::Position, x::Int, y::Int, state)::Position
+function moveWrap(position::Position, x::Int, y::Int, @nospecialize(state::NamedTuple))::Position
   GRID_SIZE = state.GRID_SIZEHistory[0]
   # println("hello")
   # println(Position((position.x + x + GRID_SIZE) % GRID_SIZE, (position.y + y + GRID_SIZE) % GRID_SIZE))
@@ -2677,25 +2693,25 @@ end
 
 # ----- begin left/right moveWrap ----- #
 
-function moveLeftWrap(object::NamedTuple, state=nothing)::NamedTuple
+function moveLeftWrap(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, moveWrap(object.origin, -1, 0, state))
   new_object
 end
   
-function moveRightWrap(object::NamedTuple, state=nothing)::NamedTuple
+function moveRightWrap(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, moveWrap(object.origin, 1, 0, state))
   new_object
 end
 
-function moveUpWrap(object::NamedTuple, state=nothing)::NamedTuple
+function moveUpWrap(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, moveWrap(object.origin, 0, -1, state))
   new_object
 end
 
-function moveDownWrap(object::NamedTuple, state=nothing)::NamedTuple
+function moveDownWrap(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, moveWrap(object.origin, 0, 1, state))
   new_object
@@ -2703,32 +2719,32 @@ end
 
 # ----- end left/right moveWrap ----- #
 
-function randomPositions(GRID_SIZE::Int, n::Int, state=nothing)::Array{Position}
+function randomPositions(GRID_SIZE::Int, n::Int, @nospecialize(state=nothing))::Array{Position}
   nums = uniformChoice([0:(GRID_SIZE * GRID_SIZE - 1);], n, state)
   # println(nums)
   # println(map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums))
   map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums)
 end
 
-function distance(position1::Position, position2::Position, state=nothing)::Int
+function distance(position1::Position, position2::Position, @nospecialize(state=nothing))::Int
   abs(position1.x - position2.x) + abs(position1.y - position2.y)
 end
 
-function distance(object1::NamedTuple, object2::NamedTuple, state=nothing)::Int
+function distance(object1::NamedTuple, object2::NamedTuple, @nospecialize(state=nothing))::Int
   position1 = object1.origin
   position2 = object2.origin
   distance(position1, position2)
 end
 
-function distance(object::NamedTuple, position::Position, state=nothing)::Int
+function distance(@nospecialize(object::NamedTuple), position::Position, @nospecialize(state=nothing))::Int
   distance(object.origin, position)
 end
 
-function distance(position::Position, object::NamedTuple, state=nothing)::Int
+function distance(position::Position, @nospecialize(object::NamedTuple), @nospecialize(state=nothing))::Int
   distance(object.origin, position)
 end
 
-function closest(object::NamedTuple, type::Symbol, state)::Position
+function closest(@nospecialize(object::NamedTuple), type::Symbol, @nospecialize(state::NamedTuple))::Position
   objects_of_type = filter(obj -> (obj.type == type) && (obj.alive), state.scene.objects)
   if length(objects_of_type) == 0
     object.origin
@@ -2738,28 +2754,28 @@ function closest(object::NamedTuple, type::Symbol, state)::Position
   end
 end
 
-function mapPositions(constructor, GRID_SIZE::Int, filterFunction, args, state=nothing)::Union{Object, Array{<:Object}}
+function mapPositions(constructor, GRID_SIZE::Int, filterFunction, args, @nospecialize(state=nothing))::Union{Object, Array{<:Object}}
   map(pos -> constructor(args..., pos), filter(filterFunction, allPositions(GRID_SIZE)))
 end
 
-function allPositions(GRID_SIZE::Int, state=nothing)
+function allPositions(GRID_SIZE::Int, @nospecialize(state=nothing))
   nums = [0:(GRID_SIZE * GRID_SIZE - 1);]
   map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums)
 end
 
-function updateOrigin(object::NamedTuple, new_origin::Position, state=nothing)::NamedTuple
+function updateOrigin(@nospecialize(object::NamedTuple), new_origin::Position, @nospecialize(state=nothing))::NamedTuple
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, new_origin)
   new_object
 end
 
-function updateAlive(object::NamedTuple, new_alive::Bool, state=nothing)::NamedTuple
+function updateAlive(@nospecialize(object::NamedTuple), new_alive::Bool, @nospecialize(state=nothing))::NamedTuple
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :alive, new_alive)
   new_object
 end
 
-function nextLiquid(object::NamedTuple, state)::NamedTuple 
+function nextLiquid(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple 
   # println("nextLiquid")
   GRID_SIZE = state.GRID_SIZEHistory[0]
   new_object = deepcopy(object)
@@ -2805,7 +2821,7 @@ function nextLiquid(object::NamedTuple, state)::NamedTuple
   new_object
 end
 
-function nextSolid(object::NamedTuple, state)::NamedTuple 
+function nextSolid(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple 
   # println("nextSolid")
   GRID_SIZE = state.GRID_SIZEHistory[0] 
   new_object = deepcopy(object)
@@ -2815,40 +2831,40 @@ function nextSolid(object::NamedTuple, state)::NamedTuple
   new_object
 end
 
-function closest(object::NamedTuple, positions::Array{Position}, state=nothing)::Position
+function closest(@nospecialize(object::NamedTuple), positions::Array{Position}, @nospecialize(state=nothing))::Position
   closestDistance = sort(map(pos -> distance(pos, object.origin), positions))[1]
   closest = filter(pos -> distance(pos, object.origin) == closestDistance, positions)[1]
   closest
 end
 
-function isFree(start::Position, stop::Position, state)::Bool 
+function isFree(start::Position, stop::Position, @nospecialize(state::NamedTuple))::Bool 
   GRID_SIZE = state.GRID_SIZEHistory[0]
   nums = [(GRID_SIZE * start.y + start.x):(GRID_SIZE * stop.y + stop.x);]
   reduce(&, map(num -> isFree(Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), state), nums))
 end
 
-function isFree(start::Position, stop::Position, object::NamedTuple, state)::Bool 
+function isFree(start::Position, stop::Position, @nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::Bool 
   GRID_SIZE = state.GRID_SIZEHistory[0]
   nums = [(GRID_SIZE * start.y + start.x):(GRID_SIZE * stop.y + stop.x);]
   reduce(&, map(num -> isFree(Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), object, state), nums))
 end
 
-function isFree(position::Position, object::NamedTuple, state)
+function isFree(position::Position, @nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))
   length(filter(cell -> cell.position.x == position.x && cell.position.y == position.y, 
   render((objects=filter(obj -> obj.id != object.id , state.scene.objects), background=state.scene.background)))) == 0
 end
 
-function isFree(object::NamedTuple, orig_object::NamedTuple, state)::Bool
+function isFree(@nospecialize(object::NamedTuple), @nospecialize(orig_object::NamedTuple), @nospecialize(state::NamedTuple))::Bool
   reduce(&, map(x -> isFree(x, orig_object, state), map(cell -> cell.position, render(object))))
 end
 
-function allPositions(state)
+function allPositions(@nospecialize(state::NamedTuple))
   GRID_SIZE = state.GRID_SIZEHistory[0]
   nums = [1:GRID_SIZE*GRID_SIZE - 1;]
   map(num -> Position(num % GRID_SIZE, floor(Int, num / GRID_SIZE)), nums)
 end
 
-function unfold(A, state=nothing)
+function unfold(A, @nospecialize(state=nothing))
   V = []
   for x in A
       for elt in x
@@ -2898,7 +2914,7 @@ empty_env() = NamedTuple()
 std_env() = empty_env()
 
 "Produces new environment Γ' s.t. `Γ(x) = v` (and everything else unchanged)"
-update(Γ, x::Symbol, v) = merge(Γ, NamedTuple{(x,)}((v,)))
+update(@nospecialize(Γ::NamedTuple), x::Symbol, v) = merge(Γ, NamedTuple{(x,)}((v,)))
 
 # primitive function handling 
 prim_to_func = Dict(:+ => +,
@@ -2917,7 +2933,15 @@ prim_to_func = Dict(:+ => +,
                     :!= => !=)
 
 isprim(f) = f in keys(prim_to_func)
-primapl(f, x...) = (prim_to_func[f](x[1:end-1]...), x[end])
+# primapl(f, x...) = (prim_to_func[f](x[1:end-1]...), x[end])
+
+function primapl(f, x, @nospecialize(Γ::NamedTuple)) 
+  prim_to_func[f](x), Γ
+end
+
+function primapl(f, x1, x2, @nospecialize(Γ::NamedTuple))
+  prim_to_func[f](x1, x2), Γ
+end
 
 lib_to_func = Dict(:Position => Position,
                    :Cell => Cell,
@@ -2969,12 +2993,13 @@ lib_to_func = Dict(:Position => Position,
                    :updateAlive => updateAlive, 
                    :nextLiquid => nextLiquid, 
                    :nextSolid => nextSolid,
-                   :unfold => unfold
+                   :unfold => unfold,
+                   :prev => prev
                   )
 islib(f) = f in keys(lib_to_func)
 
 # library function handling 
-function libapl(f, args, Γ)
+function libapl(f, args, @nospecialize(Γ::NamedTuple))
   # println("libapl")
   # @show f 
   # @show args 
@@ -3009,14 +3034,14 @@ function libapl(f, args, Γ)
 end
 
 julia_lib_to_func = Dict(:get => get, 
-                         :map => map,
-                         :filter => filter,
-                         :first => first,
-                         :last => last,
-                         :in => in)
+                          :map => map,
+                          :filter => filter,
+                          :first => first,
+                          :last => last,
+                          :in => in)
 isjulialib(f) = f in keys(julia_lib_to_func)
 
-function julialibapl(f, args, Γ)
+function julialibapl(f, args, @nospecialize(Γ::NamedTuple))
   # println("julialibapl")
   # @show f 
   # @show args 
@@ -3029,7 +3054,7 @@ function julialibapl(f, args, Γ)
   end
 end
 
-function interpret(aex::AExpr, Γ)
+function interpret(aex::AExpr, @nospecialize(Γ::NamedTuple))
   arr = [aex.head, aex.args...]
   # # # # println()
   # # # # println("Env:")
@@ -3038,52 +3063,52 @@ function interpret(aex::AExpr, Γ)
   # next(x) = interpret(x, Γ)
   isaexpr(x) = x isa AExpr
   t = MLStyle.@match arr begin
-    [:if, c, t, e]                                             => let (v, Γ2) = interpret(c, Γ) 
-                                                                      if v == true
-                                                                        interpret(t, Γ2)
-                                                                      else
-                                                                        interpret(e, Γ2)
-                                                                      end
-                                                                  end
-    [:assign, x, v::AExpr] && if v.head == :initnext end       => interpret_init_next(x, v, Γ)
-    [:assign, x, v::Union{AExpr, Symbol}]                      => let (v2, Γ_) = interpret(v, Γ)
+    [:if, c, t, e]                                              => let (v, Γ2) = interpret(c, Γ) 
+                                                                        if v == true
+                                                                          interpret(t, Γ2)
+                                                                        else
+                                                                          interpret(e, Γ2)
+                                                                        end
+                                                                    end
+    [:assign, x, v::AExpr] && if v.head == :initnext end        => interpret_init_next(x, v, Γ)
+    [:assign, x, v::Union{AExpr, Symbol}]                       => let (v2, Γ_) = interpret(v, Γ)
                                                                     # @show v 
                                                                     # @show x
-                                                                    interpret(AExpr(:assign, x, v2), Γ_)
-                                                                  end
-    [:assign, x, v]                                            => (aex, update(Γ, x, v))
-    [:list, args...]                                           => interpret_list(args, Γ)
-    [:typedecl, args...]                                       => (aex, Γ)
-    [:let, args...]                                            => interpret_let(args, Γ) 
-    [:lambda, args...]                                         => (args, Γ)
-    [:fn, args...]                                             => (args, Γ)
-    [:call, f, arg1] && if isprim(f) end                       => let (new_arg, Γ2) = interpret(arg1, Γ)
-                                                                    primapl(f, new_arg, Γ2)
-                                                                  end
+                                                                      interpret(AExpr(:assign, x, v2), Γ_)
+                                                                    end
+    [:assign, x, v]                                             => (aex, update(Γ, x, v))
+    [:list, args...]                                            => interpret_list(args, Γ)
+    [:typedecl, args...]                                        => (aex, Γ)
+    [:let, args...]                                             => interpret_let(args, Γ) 
+    [:lambda, args...]                                          => (args, Γ)
+    [:fn, args...]                                              => (args, Γ)
+    [:call, f, arg1] && if isprim(f) end                        => let (new_arg, Γ2) = interpret(arg1, Γ)
+                                                                      primapl(f, new_arg, Γ2)
+                                                                    end
                                                                     
-    [:call, f, arg1, arg2] && if isprim(f) end                 => let (new_arg1, Γ2) = interpret(arg1, Γ)
-                                                                      (new_arg2, Γ2) = interpret(arg2, Γ2)
-                                                                      primapl(f, new_arg1, new_arg2, Γ2)
-                                                                  end
-    [:call, f, args...] && if islib(f) end                     => interpret_lib(f, args, Γ)
-    [:call, f, args...] && if isjulialib(f) end                => interpret_julia_lib(f, args, Γ)
-    [:call, f, args...] && if f == :prev end                   => interpret(AExpr(:call, Symbol(string(f, uppercasefirst(string(args[1])))), :state), Γ)
-    [:call, f, args...] && if f in keys(Γ[:object_types]) end  => interpret_object_call(f, args, Γ)
-    [:call, f, args...]                                        => interpret_call(f, args, Γ)
-
+    [:call, f, arg1, arg2] && if isprim(f) end                  => let (new_arg1, Γ2) = interpret(arg1, Γ)
+                                                                        (new_arg2, Γ2) = interpret(arg2, Γ2)
+                                                                        primapl(f, new_arg1, new_arg2, Γ2)
+                                                                    end
+    [:call, f, args...] && if f == :prev && args[1] != :obj end => interpret(AExpr(:call, Symbol(string(f, uppercasefirst(string(args[1])))), :state), Γ)
+    [:call, f, args...] && if islib(f) end                      => interpret_lib(f, args, Γ)
+    [:call, f, args...] && if isjulialib(f) end                 => interpret_julia_lib(f, args, Γ)
+    [:call, f, args...] && if f in keys(Γ[:object_types]) end   => interpret_object_call(f, args, Γ)
+    [:call, f, args...]                                         => interpret_call(f, args, Γ)
+  
     
-    [:field, x, fieldname]                                     => interpret_field(x, fieldname, Γ)
-    [:object, args...]                                         => interpret_object(args, Γ)
-    [:on, args...]                                             => interpret_on(args, Γ)
-    [args...]                                                  => error(string("Invalid AExpr Head: ", aex.head))
-    _                                                          => error("Could not interpret $arr")
+    [:field, x, fieldname]                                      => interpret_field(x, fieldname, Γ)
+    [:object, args...]                                          => interpret_object(args, Γ)
+    [:on, args...]                                              => interpret_on(args, Γ)
+    [args...]                                                   => error(string("Invalid AExpr Head: ", aex.head))
+    _                                                           => error("Could not interpret $arr")
   end
   # # # # println("FINSIH", arr)
   # # # # @show(t)
   t
 end
 
-function interpret(x::Symbol, Γ)
+function interpret(x::Symbol, @nospecialize(Γ::NamedTuple))
   # @show keys(Γ)
   if x == Symbol("false")
     false, Γ
@@ -3102,7 +3127,7 @@ function interpret(x::Symbol, Γ)
 end
 
 # if x is not an AExpr or a Symbol, it is just a value (return it)
-function interpret(x, Γ)
+function interpret(x, @nospecialize(Γ::NamedTuple))
   if x isa BigInt 
     (convert(Int, x), Γ)
   else
@@ -3110,7 +3135,7 @@ function interpret(x, Γ)
   end
 end 
 
-function interpret_list(args, Γ)
+function interpret_list(args, @nospecialize(Γ::NamedTuple))
   new_list = []
   for arg in args
     new_arg, Γ = interpret(arg, Γ)
@@ -3119,7 +3144,7 @@ function interpret_list(args, Γ)
   new_list, Γ
 end
 
-function interpret_lib(f, args, Γ)
+function interpret_lib(f, args, @nospecialize(Γ::NamedTuple))
   # println("INTERPRET_LIB")
   # @show f 
   # @show args 
@@ -3132,7 +3157,7 @@ function interpret_lib(f, args, Γ)
   libapl(f, new_args, Γ)
 end
 
-function interpret_julia_lib(f, args, Γ)
+function interpret_julia_lib(f, args, @nospecialize(Γ::NamedTuple))
   # @show f 
   # @show args
   new_args = []
@@ -3146,7 +3171,7 @@ function interpret_julia_lib(f, args, Γ)
   julialibapl(f, new_args, Γ)
 end
 
-function interpret_field(x, f, Γ)
+function interpret_field(x, f, @nospecialize(Γ::NamedTuple))
   # # println("INTERPRET_FIELD")
   # # @show keys(Γ)
   # # @show x 
@@ -3159,7 +3184,7 @@ function interpret_field(x, f, Γ)
   end
 end
 
-function interpret_let(args::AbstractArray, Γ)
+function interpret_let(args::AbstractArray, @nospecialize(Γ::NamedTuple))
   Γ2 = Γ
   for arg in args[1:end-1] # all lines in let except last
     v2, Γ2 = interpret(arg, Γ2)
@@ -3178,7 +3203,7 @@ function interpret_let(args::AbstractArray, Γ)
   end
 end
 
-function interpret_call(f, params, Γ)
+function interpret_call(f, params, @nospecialize(Γ::NamedTuple))
   func, Γ = interpret(f, Γ)
   func_args = func[1]
   func_body = func[2]
@@ -3208,14 +3233,14 @@ function interpret_call(f, params, Γ)
   (v, Γ)
 end
 
-function interpret_object_call(f, args, Γ)
+function interpret_object_call(f, args, @nospecialize(Γ::NamedTuple))
+  new_state = update(Γ.state, :objectsCreated, Γ.state.objectsCreated + 1)
+  Γ = update(Γ, :state, new_state)
+
   # # # println("BEFORE")
   # # # @show Γ.state.objectsCreated 
   origin, Γ = interpret(args[end], Γ)
   object_repr = (origin=origin, type=f, alive=true, changed=false, id=Γ.state.objectsCreated)
-
-  new_state = update(Γ.state, :objectsCreated, Γ.state.objectsCreated + 1)
-  Γ = update(Γ, :state, new_state)
 
   Γ2 = Γ
   fields = Γ2.object_types[f][:fields]
@@ -3230,11 +3255,11 @@ function interpret_object_call(f, args, Γ)
   render = render isa AbstractArray ? render : [render]
   object_repr = update(object_repr, :render, render)
   # # # println("AFTER")
-  # # # @show Γ.state.objectsCreated
+  # # # @show Γ.state.objectsCreated 
   (object_repr, Γ)  
 end
 
-function interpret_init_next(var_name, var_val, Γ)
+function interpret_init_next(var_name, var_val, @nospecialize(Γ::NamedTuple))
   # println("INTERPRET INIT NEXT")
   init_func = var_val.args[1]
   next_func = var_val.args[2]
@@ -3296,7 +3321,7 @@ function interpret_init_next(var_name, var_val, Γ)
   (AExpr(:assign, var_name, var_val), Γ2)
 end
 
-function interpret_object(args, Γ)
+function interpret_object(args, @nospecialize(Γ::NamedTuple))
   object_name = args[1]
   object_fields = args[2:end-1]
   object_render = args[end]
@@ -3307,7 +3332,7 @@ function interpret_object(args, Γ)
   (AExpr(:object, args...), Γ)
 end
 
-function interpret_on(args, Γ)
+function interpret_on(args, @nospecialize(Γ::NamedTuple))
   # println("INTERPRET ON")
   event = args[1]
   update_ = args[2]
@@ -3353,7 +3378,7 @@ function interpret_on(args, Γ)
 end
 
 # evaluate updateObj on arguments that include functions 
-function interpret_updateObj(args, Γ)
+function interpret_updateObj(args, @nospecialize(Γ::NamedTuple))
   # # println("MADE IT!")
   Γ2 = Γ
   numFunctionArgs = count(x -> x == true, map(arg -> (arg isa AbstractArray) && (length(arg) == 2) && (arg[1] isa AExpr || arg[1] isa Symbol) && (arg[2] isa AExpr || arg[2] isa Symbol), args))
@@ -3417,13 +3442,12 @@ function interpret_updateObj(args, Γ)
 
     new_obj, Γ2
     # Γ2 = update(Γ2, :state, update(Γ2.state, :objectsCreated, Γ2.state.objectsCreated + 1))
-
   else
     error("Could not interpret updateObj")
   end
 end
 
-function interpret_removeObj(args, Γ)
+function interpret_removeObj(args, @nospecialize(Γ::NamedTuple))
   # @show args
   list = args[1]
   func = args[2]
@@ -3437,10 +3461,10 @@ function interpret_removeObj(args, Γ)
   new_list, Γ
 end
 
-function interpret_julia_map(args, Γ)
+function interpret_julia_map(args, @nospecialize(Γ::NamedTuple))
   new_list = []
   map_func = args[1]
-  list = args[2]
+  list, Γ = interpret(args[2], Γ)
   for arg in list  
     new_arg, Γ = interpret(AExpr(:call, map_func, arg), Γ)
     push!(new_list, new_arg)
@@ -3448,10 +3472,10 @@ function interpret_julia_map(args, Γ)
   new_list, Γ
 end
 
-function interpret_julia_filter(args, Γ)
+function interpret_julia_filter(args, @nospecialize(Γ::NamedTuple))
   new_list = []
   filter_func = args[1]
-  list = args[2]
+  list, Γ = interpret(args[2], Γ)
   for arg in list
     v, Γ = interpret(AExpr(:call, filter_func, arg), Γ)
     if v == true 
@@ -3463,7 +3487,7 @@ end
 
 # interpret.jl
 
-function interpret_program(aex, Γ)
+function interpret_program(aex, @nospecialize(Γ::NamedTuple))
   aex.head == :program || error("Must be a program aex")
   for line in aex.args
     v, Γ = interpret(line, Γ)
@@ -3534,7 +3558,7 @@ function start(aex::AExpr, rng=Random.GLOBAL_RNG)
   new_aex, env_
 end
 
-function step(aex::AExpr, env, user_events=(click=nothing, left=false, right=false, down=false, up=false))
+function step(aex::AExpr, @nospecialize(env::NamedTuple), user_events=(click=nothing, left=false, right=false, down=false, up=false))::NamedTuple
   # update env with user event 
   for user_event in keys(user_events)
     if !isnothing(user_events[user_event])
@@ -3551,7 +3575,7 @@ function step(aex::AExpr, env, user_events=(click=nothing, left=false, right=fal
 end
 
 """Update the history variables, scene, and time fields of env_.state"""
-function update_state(env_)
+function update_state(@nospecialize(env_::NamedTuple))
   # reset user events 
   for user_event in [:left, :right, :up, :down]
     env_ = update(env_, user_event, false)
@@ -3588,7 +3612,7 @@ function update_state(env_)
   env_ = update(env_, :state, new_state)
 end
 
-function interpret_over_time(aex::AExpr, iters, user_events=[])
+function interpret_over_time(aex::AExpr, iters, user_events=[])::NamedTuple
   new_aex, env_ = start(aex)
   if user_events == []
     for i in 1:iters
