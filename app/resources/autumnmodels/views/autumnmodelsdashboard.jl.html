@@ -750,17 +750,16 @@
 
     function lightClick() {
       myCodeMirror.setValue(`(program
-  (= GRID_SIZE 10)
-  (= background "black")
-
-  (object Light (: on Bool) (Cell 0 0 (if on then "yellow" else "black")))
-
-  (: lights (List Light))
-  (= lights (initnext (mapPositions Light GRID_SIZE (--> pos (== (.. pos x) (.. pos y))) false) 
-                      (prev lights)))
-
-  (on (clicked lights) (= lights (updateObj lights (--> obj (updateObj obj "on" (! (.. obj on)))))))
-)`)
+                              (= GRID_SIZE 10)
+                            
+                              (object Light (: on Bool) (Cell 0 0 (if on then "yellow" else "white")))
+                            
+                              (: lights (List Light))
+                              (= lights (initnext (map (--> pos (Light false pos)) (filter (--> pos (== (.. pos x) (.. pos y))) (allPositions GRID_SIZE))) 
+                                                  (prev lights)))
+                            
+                              (on clicked (= lights (updateObj lights (--> obj (updateObj obj "on" (! (.. obj on)))))))
+                            )`)
     }
 
     function magnetsClick() {
@@ -817,7 +816,7 @@
   (: plugs (List Plug))
   (= plugs (initnext (list (Plug (Position 7 15)) (Plug (Position 8 15)) (Plug (Position 7 14)) (Plug (Position 8 14)) (Plug (Position 7 13)) (Plug (Position 8 13))) (prev plugs)))
   (: water (List Water))
-  (= water (initnext (list) (updateObj (prev water) nextLiquid)))
+  (= water (initnext (list) (updateObj (prev water) (--> obj (nextLiquid obj)))))
 
   (= currentParticle (initnext "vessel" (prev currentParticle)))
 
@@ -1072,8 +1071,8 @@
   (on (intersects (map (--> magnet (displacement (posPole mobileMagnet) (negPole magnet))) fixedMagnets) attractVectors) (= mobileMagnet (move mobileMagnet (unitVector (uniformChoice (intersect (map (--> magnet (displacement (posPole mobileMagnet) (negPole magnet))) fixedMagnets) attractVectors))))))
   (on (intersects (map (--> magnet (displacement (negPole mobileMagnet) (posPole magnet))) fixedMagnets) attractVectors) (= mobileMagnet (move mobileMagnet (unitVector (uniformChoice (intersect (map (--> magnet (displacement (negPole mobileMagnet) (posPole magnet))) fixedMagnets) attractVectors))))))
 
-  (= posPole (fn (magnet) (if (== (length (render magnet)) 0) then (Cell -1 -1 "blue") else (first (render magnet)))))  
-  (= negPole (fn (magnet) (if (== (length (render magnet)) 0) then (Cell -1 -1 "blue") else (last (render magnet)))))  
+  (= posPole (fn (magnet) (if (== (render magnet) (list)) then (Cell -1 -1 "blue") else (first (render magnet)))))  
+  (= negPole (fn (magnet) (if (== (render magnet) (list)) then (Cell -1 -1 "blue") else (last (render magnet)))))  
 
   (= attractVectors (list (Position 0 2) (Position 2 0) (Position -2 0) (Position 0 -2)))
 )`);
@@ -1414,19 +1413,14 @@
   (object EnemyBullet (Cell 0 0 "orange"))
   
   (: enemies1 (List Enemy))
-  (= enemies1 (initnext (mapPositions 
-                          Enemy 
-                          GRID_SIZE
-                          (--> pos (& (== (.. pos y) 1) (== (% (.. pos x) 2) 0
-                                                            )))) 
+  (= enemies1 (initnext (map 
+                          (--> pos (Enemy pos)) 
+                          (filter (--> pos (& (== (.. pos y) 1) (== (% (.. pos x) 2) 0))) (allPositions GRID_SIZE)))
                         (prev enemies1)))
 
-  (: enemies2 (List Enemy))
-  (= enemies2 (initnext (mapPositions 
-                          Enemy 
-                          GRID_SIZE
-                          (--> pos (& (== (.. pos y) 3) (== (% (.. pos x) 2) 1
-                                                            )))) 
+  (= enemies2 (initnext (map 
+                          (--> pos (Enemy pos)) 
+                          (filter (--> pos (& (== (.. pos y) 3) (== (% (.. pos x) 2) 1))) (allPositions GRID_SIZE)))
                         (prev enemies2)))
 
   
@@ -1441,7 +1435,7 @@
   
   (: time Int)
   (= time (initnext 0 (+ (prev time) 1)))                                                         
-                                                           
+                                                          
   (on left (= hero (moveLeftNoCollision (prev hero))))
   (on right (= hero (moveRightNoCollision (prev hero))))
   (on (& up (.. (prev hero) alive)) (= bullets (addObj (prev bullets) (Bullet (.. (prev hero) origin)))))  
@@ -1453,12 +1447,12 @@
   (on (== (% time 10) 0) (= enemies2 (updateObj (prev enemies2) (--> obj (moveLeft obj)))))
   
   (on (intersects (prev bullets) (prev enemies1))
-  	(let ((= bullets (removeObj (prev bullets) (--> obj (intersects obj (prev enemies1)))))
+    (let ((= bullets (removeObj (prev bullets) (--> obj (intersects obj (prev enemies1)))))
           (= enemies1 (removeObj (prev enemies1) (--> obj (intersects obj (prev bullets)))))))
   )          
-           
+          
   (on (intersects (prev bullets) (prev enemies2))
-  	(let ((= bullets (removeObj (prev bullets) (--> obj (intersects obj (prev enemies2)))))
+    (let ((= bullets (removeObj (prev bullets) (--> obj (intersects obj (prev enemies2)))))
           (= enemies2 (removeObj (prev enemies2) (--> obj (intersects obj (prev bullets)))))))
   )
           
@@ -1467,7 +1461,7 @@
 
   (on (intersects (prev bullets) (prev enemyBullets)) 
     (let 
-       ((= bullets (removeObj (prev bullets) (--> obj (intersects obj (prev enemyBullets))))) 
+      ((= bullets (removeObj (prev bullets) (--> obj (intersects obj (prev enemyBullets))))) 
         (= enemyBullets (removeObj (prev enemyBullets) (--> obj (intersects obj (prev bullets))))))))           
 )`)
   }
@@ -1480,7 +1474,7 @@
   
   (: particles (List Particle))
   (= particles 
-     (initnext (mapPositions Particle GRID_SIZE (--> pos true) false) 
+     (initnext (map (--> pos (Particle false pos)) (allPositions GRID_SIZE)) 
                (prev particles))) 
   
   (: time Int)

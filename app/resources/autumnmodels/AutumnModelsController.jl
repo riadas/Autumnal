@@ -2334,7 +2334,7 @@ function clicked(click::Union{Click, Nothing}, @nospecialize(objects::AbstractAr
   reduce(|, map(obj -> clicked(click, obj, state), objects))
 end
 
-function objClicked(click::Union{Click, Nothing}, @nospecialize(objects::AbstractArray), @nospecialize(state=nothing))::Union{Object, Nothing}
+function objClicked(click::Union{Click, Nothing}, @nospecialize(objects::AbstractArray), @nospecialize(state=nothing))
   println(click)
   if isnothing(click)
     nothing
@@ -2543,7 +2543,7 @@ function unitVector(position::Position, @nospecialize(state::NamedTuple))::Posit
   unitVector(Position(0,0), position, state)
 end 
 
-function displacement(position1::Position, position2::Position, @nospecialize(state::NamedTuple=nothing))::Position
+function displacement(position1::Position, position2::Position, @nospecialize(state=nothing))::Position
   Position(floor(Int, position2.x - position1.x), floor(Int, position2.y - position1.y))
 end
 
@@ -2559,7 +2559,7 @@ function adjacent(cell1::Cell, cell2::Cell, @nospecialize(state=nothing))::Bool
   adjacent(cell1.position, cell2.position)
 end
 
-function adjacent(cell::Cell, cells::Array{Cell}, @nospecialize(state=nothing))
+function adjacent(cell::Cell, cells::AbstractArray, @nospecialize(state=nothing))
   length(filter(x -> adjacent(cell, x), cells)) != 0
 end
 
@@ -2587,7 +2587,7 @@ function rotate(position::Position, @nospecialize(state=nothing))::Position
  end
 
 function rotateNoCollision(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple
-  (isWithinBounds(rotate(object), state) && isFree(rotate(object), object), state) ? rotate(object) : object
+  isWithinBounds(rotate(object), state) && isFree(rotate(object), object, state) ? rotate(object) : object
 end
 
 function move(position1::Position, position2::Position, @nospecialize(state=nothing))
@@ -3038,7 +3038,9 @@ julia_lib_to_func = Dict(:get => get,
                           :filter => filter,
                           :first => first,
                           :last => last,
-                          :in => in)
+                          :in => in,
+                          :intersect => intersect,
+                          :length => length)
 isjulialib(f) = f in keys(julia_lib_to_func)
 
 function julialibapl(f, args, @nospecialize(Γ::NamedTuple))
