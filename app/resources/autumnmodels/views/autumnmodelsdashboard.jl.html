@@ -83,7 +83,7 @@
       var compiled = false;
       var client_id = getRandomInt(1, 10000);
       console.log("client_id: "+client_id);
-      var grid_size = 16;
+      var grid_size = [16, 16];
       var history_mode = false;
       var historyIntervalID = -1;
       var history_response = '{}';
@@ -345,8 +345,8 @@
           cell.style.background = xml_json[0] == "#ffffff00" ? xml_json[0] : "linear-gradient(45deg, "+colorToRGBA(xml_json[0], 0.6)+", "+colorToRGBA(xml_json[0], 0.6)+")"
         })
         xml_json.slice(1, xml_json.length).forEach(function (particle) {
-          if ((particle[1] < grid_size && particle[1] >= 0) && (particle[0] < grid_size && particle[0] >= 0)) {
-            cell = document.getElementById((particle[1]*grid_size + particle[0]).toString())
+          if ((particle[1] < grid_size[1] && particle[1] >= 0) && (particle[0] < grid_size[0] && particle[0] >= 0)) {
+            cell = document.getElementById((particle[1]*grid_size[0] + particle[0]).toString())
             cell.style.background = cell.style.background != "linear-gradient(45deg, "+colorToRGBA(xml_json[0], 0.6)+", "+colorToRGBA(xml_json[0], 0.6)+")" ? 
             ["linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")", cell.style.background].join(", ") : "linear-gradient(45deg, "+colorToRGBA(particle[2], 0.6)+", "+colorToRGBA(particle[2], 0.6)+")";
           }
@@ -372,11 +372,11 @@
               myCodeMirror.setOption("readOnly", false);
               // particlesClick();
               // reset grid
-              grid_size = 16
+              grid_size = [16, 16]
               Array.from(document.getElementsByClassName("grid")).forEach(function (grid) {
                 grid.innerHTML = "";
-                grid.style = "grid-template-columns: repeat("+grid_size+", 25px); grid-template-rows: repeat("+grid_size+", 25px);"
-                for (i=0; i < grid_size*grid_size; i++) {
+                grid.style = "grid-template-columns: repeat("+grid_size[0]+", 25px); grid-template-rows: repeat("+grid_size[1]+", 25px);"
+                for (i=0; i < grid_size[0]*grid_size[1]; i++) {
                   const button = document.createElement("button")
                   button.classList.add("cell");
                   button.id = i.toString();
@@ -443,14 +443,14 @@
                     console.log(typeof(grid_size))
 
                     cell_size = 25;
-                    if (grid_size > 20) {
-                      cell_size = Math.round(cell_size * 20/grid_size)
+                    if (Math.max(grid_size[0], grid_size[1]) > 20) {
+                      cell_size = Math.round(cell_size * 20/Math.max(grid_size[0], grid_size[1]))
                     }
 
                     Array.from(document.getElementsByClassName("grid")).forEach(function (grid) {
                       grid.innerHTML = "";
-                      grid.style = "grid-template-columns: repeat("+grid_size+", "+ cell_size +"px); grid-template-rows: repeat("+grid_size+", " + cell_size + "px);"
-                      for (i=0; i < grid_size*grid_size; i++) {
+                      grid.style = "grid-template-columns: repeat("+grid_size[0]+", "+ cell_size +"px); grid-template-rows: repeat("+grid_size[1]+", " + cell_size + "px);"
+                      for (i=0; i < grid_size[0]*grid_size[1]; i++) {
                         const button = document.createElement("button")
                         button.classList.add("cell");
                         button.id = i.toString();
@@ -526,7 +526,7 @@
         if (!history_mode) {
           if (intervalID != -1) {
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", host + '/clicked?x='+(id % grid_size)+'&y='+Math.floor(id/grid_size)+'&clientid='+client_id, true);
+            xhr.open("GET", host + '/clicked?x='+(id % grid_size[0])+'&y='+Math.floor(id/grid_size[0])+'&clientid='+client_id, true);
 
             //Send the proper header information along with the request
             xhr.setRequestHeader("Content-Type", "application/json");
