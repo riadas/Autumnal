@@ -46,6 +46,9 @@
         <button id="wind-button" class="control-button example-button">WIND</button>
         <button id="paint-button" class="control-button example-button">PAINT</button>
         <button id="chase-button" class="control-button example-button">CHASE</button>
+        <button id="count-button" class="control-button example-button">COUNT</button>
+        <button id="arc-slack-button" class="control-button example-button">ARC SLACK</button>
+
 
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
         <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RANDOM PROGRAM</button>
@@ -130,6 +133,8 @@
       document.getElementById("wind-button").addEventListener("click", windClick);
       document.getElementById("paint-button").addEventListener("click", paintClick);
       document.getElementById("chase-button").addEventListener("click", chaseClick);
+      document.getElementById("count-button").addEventListener("click", countClick);
+      document.getElementById("arc-slack-button").addEventListener("click", arcSlackClick);
       document.getElementById("random-button").addEventListener("click", randomClick);
       document.getElementById("random-button-2").addEventListener("click", randomClick2);
       document.getElementById("random-button-3").addEventListener("click", randomClick3);
@@ -175,6 +180,8 @@
         windButton = document.getElementById("wind-button");
         paintButton = document.getElementById("paint-button");
         chaseButton = document.getElementById("chase-button");
+        countButton = document.getElementById("count-button");
+        arcSlackButton = document.getElementById("arc-slack-button");
         randomButton = document.getElementById("random-button");
         randomButton2 = document.getElementById("random-button-2");
         randomButton3 = document.getElementById("random-button-3");
@@ -219,6 +226,8 @@
           windButton.classList.add("disabled");
           paintButton.classList.add("disabled");
           chaseButton.classList.add("disabled");
+          countButton.classList.add("disabled");
+          arcSlackButton.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -326,6 +335,8 @@
           windButton.classList.remove("disabled");
           paintButton.classList.remove("disabled");
           chaseButton.classList.remove("disabled");
+          countButton.classList.remove("disabled");
+          arcSlackButton.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -750,16 +761,15 @@
 
     function lightClick() {
       myCodeMirror.setValue(`(program
-                              (= GRID_SIZE 10)
-                            
-                              (object Light (: on Bool) (Cell 0 0 (if on then "yellow" else "white")))
-                            
-                              (: lights (List Light))
-                              (= lights (initnext (map (--> pos (Light false pos)) (filter (--> pos (== (.. pos x) (.. pos y))) (allPositions GRID_SIZE))) 
-                                                  (prev lights)))
-                            
-                              (on clicked (= lights (updateObj lights (--> obj (updateObj obj "on" (! (.. obj on)))))))
-                            )`)
+  (= GRID_SIZE 10)
+
+  (object Light (: on Bool) (Cell 0 0 (if on then "yellow" else "white")))
+
+  (: lights (List Light))
+  (= lights (initnext (map (--> pos (Light false pos)) (filter (--> pos (== (.. pos x) (.. pos y))) (allPositions GRID_SIZE))) (prev lights)))
+
+  (on clicked (= lights (updateObj lights (--> obj (updateObj obj "on" (! (.. obj on)))))))
+)`)
     }
 
     function magnetsClick() {
@@ -1987,7 +1997,7 @@
   (= background "darkblue")
 
   (object Water (Cell 0 0 "lightblue"))
-  (object Cloud (map (--> pos (Cell (.. pos x) (.. pos y) "gray")) (rect (Position 0 0) (Position 16 1))) (prev cloud))
+  (object Cloud (map (--> pos (Cell (.. pos x) (.. pos y) "gray")) (rect (Position 0 0) (Position 16 1))))
   
   (: water (List Water))
   (= water (initnext (list) (updateObj (prev water) (--> obj (removeObj obj)) (--> obj (! (isWithinBounds obj)))))) 
@@ -2069,6 +2079,69 @@
            
   (on (intersects (prev agent) (prev ants)) (= agent (removeObj (prev agent))))                                                                                                                   
 )`)
+  }
+
+  function countClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 19)
+  (= background "black")
+    
+  (object Button (: color String) (Cell 0 0 color))
+  (object Blob (list (Cell 0 0 "blue")))
+  
+  (: blobs (List Blob))
+  (= blobs (initnext (list (Blob (Position 9 9))) (prev blobs)))
+  
+  (: xVel Int)
+  (= xVel (initnext 0 (prev xVel)))
+  
+  (: yVel Int)
+  (= yVel (initnext 0 (prev yVel)))
+  
+  (: xActive Bool)
+  (= xActive (initnext true (prev xActive)))
+
+  (on clicked (= xActive (! xActive)))
+  
+  (on (& left xActive) (= xVel (- (prev xVel) 1)))
+  (on (& right xActive) (= xVel (+ (prev xVel) 1)))
+
+  (on (& up (! xActive)) (= yVel (- (prev yVel) 1)))
+  (on (& down (! xActive)) (= yVel (+ (prev yVel) 1)))
+
+  (on true (= blobs (updateObj blobs (--> obj (moveNoCollision obj (Position (sign xVel) (sign yVel)))))))
+)`)
+  }
+
+  function arcSlackClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  
+  (object Particle (: active Bool) (: green Bool) (Cell 0 0 (if green then "green" else "gold")))
+  (object Button (: color String) (Cell 0 0 color))
+  
+  (: particles (List Particle))
+  (= particles (initnext (list (Particle true true (Position 1 1)) (Particle false true (Position 5 5)) (Particle false false (Position 11 14)) (Particle false true (Position 4 8)) (Particle false false (Position 9 9)) (Particle false true (Position 1 13)) (Particle false false (Position 14 5)))  
+               (prev particles)))
+
+  (: colorButton Button)
+  (= colorButton (initnext (Button "gray" (Position (- GRID_SIZE 1) 0)) (prev colorButton)))
+
+  (: removeButton Button)
+  (= removeButton (initnext (Button "orangered" (Position (- GRID_SIZE 1) 2)) (prev removeButton)))
+  
+  (on (clicked colorButton) (= particles (updateObj particles (--> obj (updateObj obj "green" (! (.. obj green)))) (--> obj (.. obj active)))))
+  (on (clicked removeButton) (= particles (updateObj particles (--> obj (removeObj obj)) (--> obj (.. obj active)))))  
+  (on (clicked particles) 
+      (let ((= particles (updateObj particles (--> obj (updateObj obj "active" false)) (--> obj (!= obj (objClicked click particles)))))
+            (= particles (updateObj particles (--> obj (updateObj obj "active" true)) (--> obj (== obj (objClicked click particles)))))) ))
+  
+  (on left (= particles (updateObj particles (--> obj (moveLeftNoCollision obj)) (--> obj (.. obj active)))))
+  (on right (= particles (updateObj particles (--> obj (moveRightNoCollision obj)) (--> obj (.. obj active)))))
+  (on up (= particles (updateObj particles (--> obj (moveUpNoCollision obj)) (--> obj (.. obj active)))))
+  (on down (= particles (updateObj particles (--> obj (moveDownNoCollision obj)) (--> obj (.. obj active)))))
+)
+`)
   }
 
   function randomClick() {
