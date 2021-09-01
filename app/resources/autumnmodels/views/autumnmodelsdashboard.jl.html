@@ -48,6 +48,7 @@
         <button id="chase-button" class="control-button example-button">CHASE</button>
         <button id="count-button" class="control-button example-button">COUNT</button>
         <button id="arc-slack-button" class="control-button example-button">ARC SLACK</button>
+        <button id="rink-button" class="control-button example-button">ICE RINK</button>
 
 
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
@@ -135,6 +136,7 @@
       document.getElementById("chase-button").addEventListener("click", chaseClick);
       document.getElementById("count-button").addEventListener("click", countClick);
       document.getElementById("arc-slack-button").addEventListener("click", arcSlackClick);
+      document.getElementById("rink-button").addEventListener("click", rinkClick);
       document.getElementById("random-button").addEventListener("click", randomClick);
       document.getElementById("random-button-2").addEventListener("click", randomClick2);
       document.getElementById("random-button-3").addEventListener("click", randomClick3);
@@ -182,6 +184,7 @@
         chaseButton = document.getElementById("chase-button");
         countButton = document.getElementById("count-button");
         arcSlackButton = document.getElementById("arc-slack-button");
+        rinkButton = document.getElementById("rink-button");
         randomButton = document.getElementById("random-button");
         randomButton2 = document.getElementById("random-button-2");
         randomButton3 = document.getElementById("random-button-3");
@@ -228,6 +231,7 @@
           chaseButton.classList.add("disabled");
           countButton.classList.add("disabled");
           arcSlackButton.classList.add("disabled");
+          rinkButton.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -337,6 +341,7 @@
           chaseButton.classList.remove("disabled");
           countButton.classList.remove("disabled");
           arcSlackButton.classList.remove("disabled");
+          rinkButton.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -2142,6 +2147,47 @@
   (on down (= particles (updateObj particles (--> obj (moveDownNoCollision obj)) (--> obj (.. obj active)))))
 )
 `)
+  }
+
+  function rinkClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 28)
+  (= background "black")
+  
+  (object Rink (map (--> pos (Cell pos "lightblue")) (rect (Position 0 0) (Position 21 21))))
+  (object Skater (Cell 0 0 "red"))
+   
+  (: rink Rink)
+  (= rink (initnext (Rink (Position 3 3)) (prev rink)) )
+  
+  (: skater Skater)
+  (= skater (initnext (Skater (Position 0 0)) (prev skater)))
+  
+  (: slide String)
+  (= slide (initnext "none" (prev slide)))
+  
+  (on left (= skater (moveLeft skater)))
+  (on right (= skater (moveRight skater)))
+  (on up (= skater (moveUp skater)))
+  (on down (= skater (moveDown skater)))
+    
+  (on (& left (! (in slide (list "none" "right")))) (= slide "left"))
+  (on (& right (! (in slide (list "none" "left")))) (= slide "right"))
+  (on (& up (! (in slide (list "none" "down")))) (= slide "up"))
+  (on (& down (! (in slide (list "none" "up")))) (= slide "down"))
+
+  (on (== slide "left") (= skater (move (prev skater) -2 0)))
+  (on (== slide "right") (= skater (move (prev skater) 2 0)))
+  (on (== slide "up") (= skater (move (prev skater) 0 -2)))
+  (on (== slide "down") (= skater (move (prev skater) 0 2)))
+
+  
+  (on (& (!= (prev slide) "none") (! (intersects (prev skater) rink))) 
+    (= slide "none")) 
+  
+  (on (& (! (intersects (prev skater) rink)) (intersects skater rink)) 
+    (= slide (if left then "left" else (if right then "right" else (if up then "up" else "down")))))    
+)`)
   }
 
   function randomClick() {
