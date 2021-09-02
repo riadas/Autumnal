@@ -12,7 +12,7 @@
     </div>
      
     <div id="grid-view" class="dashboard-panel" style="border-left: 3px solid black;">
-      <div style="display: flex; flex-wrap: wrap; height: fit-content; margin-left: 10px;">
+      <div id="button-div" style="display: flex; flex-wrap: wrap; height: fit-content; margin-left: 10px;">
         <button id="compile-button" class="control-button"></button>
         <button id="particles-button" class="control-button example-button">PARTICLES</button>
         <button id="ants-button" class="control-button example-button">ANTS</button>
@@ -41,6 +41,8 @@
         <button id="gravity-button" class="control-button example-button">GRAVITY</button>
         <button id="gravity-button-2" class="control-button example-button">GRAVITY II</button>
         <button id="gravity-button-3" class="control-button example-button">GRAVITY III</button>
+        <button id="gravity-button-4" class="control-button example-button">GRAVITY IV</button>
+        <button id="charge-button" class="control-button example-button">CHARGE</button>
         <button id="egg-button" class="control-button example-button">EGG</button>
         <button id="balloon-button" class="control-button example-button">BALLOON</button>
         <button id="wind-button" class="control-button example-button">WIND</button>
@@ -49,8 +51,10 @@
         <button id="count-button" class="control-button example-button">COUNT</button>
         <button id="arc-slack-button" class="control-button example-button">ARC SLACK</button>
         <button id="rink-button" class="control-button example-button">ICE RINK</button>
-
-
+        <button id="double-count-button" class="control-button example-button">DOUBLE COUNT I</button>
+        <button id="double-count-2-button" class="control-button example-button">DOUBLE COUNT II</button>
+        <button id="swap-button" class="control-button example-button">SWAP</button>
+        <button id="disease-2-button" class="control-button example-button">DISEASE II</button>
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
         <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RANDOM PROGRAM</button>
         <button id="random-button-3" style="background-color: orange !important" class="control-button example-button">RANDOM GROUPED PROGRAM</button>
@@ -68,6 +72,7 @@
               <button id="play-button" class="control-button" type="submit" id="run" style="margin-right: 10px;">▶</button>
               <button id="restart-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;">↻</button>
               <button id="save-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;"><i class="fa fa-floppy-o" aria-hidden="true"></i></button>
+              <button id="toggle-button" class="control-button">TOGGLE</button>
               <button id="history-button" class="control-button" type="submit" style="visibility: hidden; font-size: 15px; font-weight: bold;"><i class="fa fa-history" aria-hidden="true"></i></button>
           </div>
         </div>
@@ -129,6 +134,8 @@
       document.getElementById("gravity-button").addEventListener("click", gravityClick);
       document.getElementById("gravity-button-2").addEventListener("click", gravity2Click);
       document.getElementById("gravity-button-3").addEventListener("click", gravity3Click);
+      document.getElementById("gravity-button-4").addEventListener("click", gravity4Click);
+      document.getElementById("charge-button").addEventListener("click", chargeClick);
       document.getElementById("egg-button").addEventListener("click", eggClick);
       document.getElementById("balloon-button").addEventListener("click", balloonClick);
       document.getElementById("wind-button").addEventListener("click", windClick);
@@ -137,6 +144,11 @@
       document.getElementById("count-button").addEventListener("click", countClick);
       document.getElementById("arc-slack-button").addEventListener("click", arcSlackClick);
       document.getElementById("rink-button").addEventListener("click", rinkClick);
+      document.getElementById("double-count-button").addEventListener("click", doubleCountClick);
+      document.getElementById("double-count-2-button").addEventListener("click", doubleCount2Click);
+      document.getElementById("swap-button").addEventListener("click", swapClick);
+      document.getElementById("disease-2-button").addEventListener("click", disease2Click);
+      document.getElementById("toggle-button").addEventListener("click", toggleClick);
       document.getElementById("random-button").addEventListener("click", randomClick);
       document.getElementById("random-button-2").addEventListener("click", randomClick2);
       document.getElementById("random-button-3").addEventListener("click", randomClick3);
@@ -177,6 +189,8 @@
         gravityButton = document.getElementById("gravity-button");
         gravity2Button = document.getElementById("gravity-button-2");
         gravity3Button = document.getElementById("gravity-button-3");
+        gravity4Button = document.getElementById("gravity-button-4");
+        chargeButton = document.getElementById("charge-button");
         eggButton = document.getElementById("egg-button");
         balloonButton = document.getElementById("balloon-button");
         windButton = document.getElementById("wind-button");
@@ -185,6 +199,10 @@
         countButton = document.getElementById("count-button");
         arcSlackButton = document.getElementById("arc-slack-button");
         rinkButton = document.getElementById("rink-button");
+        doubleCountButton = document.getElementById("double-count-button");
+        doubleCount2Button = document.getElementById("double-count-2-button");
+        swapButton = document.getElementById("swap-button");
+        disease2Button = document.getElementById("disease-2-button");
         randomButton = document.getElementById("random-button");
         randomButton2 = document.getElementById("random-button-2");
         randomButton3 = document.getElementById("random-button-3");
@@ -224,6 +242,8 @@
           gravityButton.classList.add("disabled");
           gravity2Button.classList.add("disabled");
           gravity3Button.classList.add("disabled");
+          gravity4Button.classList.add("disabled");
+          chargeButton.classList.add("disabled");
           eggButton.classList.add("disabled");
           balloonButton.classList.add("disabled");
           windButton.classList.add("disabled");
@@ -232,6 +252,10 @@
           countButton.classList.add("disabled");
           arcSlackButton.classList.add("disabled");
           rinkButton.classList.add("disabled");
+          doubleCountButton.classList.add("disabled");
+          doubleCount2Button.classList.add("disabled");
+          swapButton.classList.add("disabled");
+          disease2Button.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -334,6 +358,8 @@
           gravityButton.classList.remove("disabled");
           gravity2Button.classList.remove("disabled");
           gravity3Button.classList.remove("disabled");
+          gravity4Button.classList.remove("disabled");
+          chargeButton.classList.remove("disabled");
           eggButton.classList.remove("disabled");
           balloonButton.classList.remove("disabled");
           windButton.classList.remove("disabled");
@@ -342,6 +368,10 @@
           countButton.classList.remove("disabled");
           arcSlackButton.classList.remove("disabled");
           rinkButton.classList.remove("disabled");
+          doubleCountButton.classList.remove("disabled");
+          doubleCount2Button.classList.remove("disabled");
+          swapButton.classList.remove("disabled");
+          disease2Button.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -459,8 +489,8 @@
                     console.log(typeof(grid_size))
 
                     cell_size = 25;
-                    if (Math.max(grid_size[0], grid_size[1]) > 20) {
-                      cell_size = Math.round(cell_size * 20/Math.max(grid_size[0], grid_size[1]))
+                    if (Math.max(grid_size[0], grid_size[1]) > 18) {
+                      cell_size = Math.round(cell_size * 18/Math.max(grid_size[0], grid_size[1]))
                     }
 
                     Array.from(document.getElementsByClassName("grid")).forEach(function (grid) {
@@ -1884,6 +1914,96 @@
 )`)
   }
 
+  function gravity4Click() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  (= background "black")
+    
+  (object Button (: color String) (Cell 0 0 color))
+  (object Blob (list (Cell 0 0 "blue") (Cell 0 1 "blue") (Cell 1 0 "blue") (Cell 1 1 "blue")))
+
+  (: button1 Button)
+  (= button1 (initnext (Button "red" (Position 0 0)) (prev button1)))
+  
+  (: button2 Button)
+  (= button2 (initnext (Button "darkorange" (Position (- GRID_SIZE 1) 0)) (prev button2)))
+    
+  (: button3 Button)
+  (= button3 (initnext (Button "gold" (Position (- GRID_SIZE 1) (- GRID_SIZE 1))) (prev button3)))
+  
+  (: button4 Button)
+  (= button4 (initnext (Button "green" (Position 0 (- GRID_SIZE 1))) (prev button4)))
+  
+  (: blobs (List Blob))
+  (= blobs (initnext (list) (prev blobs)))
+  
+  (: gravity String)
+  (= gravity (initnext "down" (prev gravity)))
+  
+  (on (== gravity "left") (= blobs (updateObj (prev blobs) (--> obj (moveLeftNoCollision obj)))))
+  (on (== gravity "right") (= blobs (updateObj (prev blobs) (--> obj (moveRightNoCollision obj)))))
+  (on (== gravity "up") (= blobs (updateObj (prev blobs) (--> obj (moveUpNoCollision obj)))))
+  (on (== gravity "down") (= blobs (updateObj (prev blobs) (--> obj (moveDownNoCollision obj)))))
+
+  (on (== gravity "left-up") (= blobs (updateObj (prev blobs) (--> obj (moveLeftNoCollision (moveUpNoCollision obj))))))
+  (on (== gravity "right-up") (= blobs (updateObj (prev blobs) (--> obj (moveRightNoCollision (moveUpNoCollision obj))))))
+  (on (== gravity "right-down") (= blobs (updateObj (prev blobs) (--> obj (moveRightNoCollision (moveDownNoCollision obj))))))
+  (on (== gravity "left-down") (= blobs (updateObj (prev blobs) (--> obj (moveLeftNoCollision (moveDownNoCollision obj))))))
+
+  
+  (on (& clicked (isFree click)) (= blobs (addObj (prev blobs) (Blob (Position (.. click x) (.. click y))))) )
+  
+  (on (clicked button1) (= gravity "left-up"))
+
+  (on (clicked button2) (= gravity "right-up"))
+
+  (on (clicked button3) (= gravity "right-down"))
+
+  (on (clicked button4) (= gravity "left-down"))
+
+  (on left (= gravity "left"))
+  (on right (= gravity "right"))
+  (on up (= gravity "up"))
+  (on down (= gravity "down"))
+)`)
+  }
+
+  function chargeClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  (= background "black")
+  
+  (object Jumper (map (--> pos (Cell pos "red")) (rect (Position 0 0) (Position 1 1))))
+  (object Stop (: gold Bool) (list (Cell 0 0 (if gold then "gold" else "blue")) (Cell 1 0 (if gold then "gold" else "blue"))))
+    
+  (: jumper Jumper)  
+  (= jumper (initnext (Jumper (Position 0 (- GRID_SIZE 2))) (moveDownNoCollision (prev jumper))))
+
+  (: stop Stop)
+  (= stop (initnext (Stop false (Position 7 3)) (prev stop)))
+  
+  (: energy Int)
+  (= energy (initnext 0 (prev energy)))
+  
+  (: time Int)
+  (= time (initnext 0 (+ (prev time) 1)))
+  
+  (on left (= jumper (moveLeftNoCollision jumper)))
+  (on right (= jumper (moveRightNoCollision jumper)))
+
+  (on (& (== (.. (.. (prev jumper) origin) y) (- GRID_SIZE 2)) (<= energy 10))
+      (= energy (+ energy 1)))
+
+  (on (& clicked (== (.. (.. (prev jumper) origin) y) (- GRID_SIZE 2))) 
+	  (let ((= jumper (move (prev jumper) (Position 0 (* -1 (prev energy)))))
+           (= energy 0))))
+
+  (on (intersects (prev stop) (adjacentObjs (prev jumper)))
+  	  (= stop (updateObj stop "gold" (! (.. stop gold)))))
+
+)`)
+  }
+
   function eggClick() {
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
@@ -2188,6 +2308,218 @@
   (on (& (! (intersects (prev skater) rink)) (intersects skater rink)) 
     (= slide (if left then "left" else (if right then "right" else (if up then "up" else "down")))))    
 )`)
+  }
+
+  function doubleCountClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 19)
+  (= background "black")
+    
+  (object Button (: color String) (Cell 0 0 color))
+  (object Blob (list (Cell 0 0 "blue")))
+  (object Coin (Cell 0 0 "gold"))
+  
+  (: blob Blob)
+  (= blob (initnext (Blob (Position 9 9)) (prev blob)))
+  
+  (: coins (List Coin))
+  (= coins (initnext (list (Coin (Position 3 3)) (Coin (Position 12 9)) (Coin (Position 11 14))) (prev coins)))
+  
+  (: xVel Int)
+  (= xVel (initnext 0 (prev xVel)))
+  
+  (: yVel Int)
+  (= yVel (initnext 0 (prev yVel)))
+  
+  (: xActive Bool)
+  (= xActive (initnext true (prev xActive)))
+
+  (on clicked (let ((= xVel 0) 
+                    (= yVel 0)
+                    (= xActive (! xActive)))))
+  
+  (on (& left xActive) (= xVel (- (prev xVel) 1)))
+  (on (& right xActive) (= xVel (+ (prev xVel) 1)))
+
+  (on (& up (! xActive)) (= yVel (- (prev yVel) 1)))
+  (on (& down (! xActive)) (= yVel (+ (prev yVel) 1)))
+
+  (on true (= blob (move blob (Position (sign xVel) (sign yVel)))))
+  (on (& (!= (prev xVel) 0) (intersects (prev blob) (prev coins))) (= xVel (if (> (prev xVel) 0) then (+ xVel 2) else (- xVel 2))))
+  (on (& (!= (prev yVel) 0) (intersects (prev blob) (prev coins))) (= yVel (if (> yVel 0) then (+ yVel 2) else (- yVel 2))))
+)`)
+  }
+
+  function doubleCount2Click() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE (list 25 1))
+  (= background "black")
+    
+  (object Button (: color String) (Cell 0 0 color))
+  (object Blob (list (Cell 0 0 "blue")))
+  (object Coin (Cell 0 0 "gold"))
+  (object Distraction (Cell 0 0 "red"))
+  
+  (: blob Blob)
+  (= blob (initnext (Blob (Position 14 0)) (prev blob)))
+  
+  (: coins (List Coin))
+  (= coins (initnext (list (Coin (Position 8 0)) (Coin (Position 17 0))) (prev coins)))
+  
+  (: distractions (List Distraction))
+  (= distractions (initnext (list (Distraction (Position 22 0)) (Distraction (Position 11 0)) (Distraction (Position 3 0))) (prev distractions)))
+  
+  (: xVel Int)
+  (= xVel (initnext 0 (prev xVel)))
+    
+  (on left (= xVel (- (prev xVel) 1)))
+  (on right (= xVel (+ (prev xVel) 1)))
+
+  (on clicked (= blob (move blob (Position (sign xVel) 0))))
+  (on (& (> (prev xVel) 0) (intersects (prev blob) (prev coins))) (= xVel (+ xVel 2)))
+  (on (& (< (prev xVel) 0) (intersects (prev blob) (prev coins))) (= xVel (- xVel 2)))
+)`)
+  }
+
+  function swapClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 40)
+  (= background "black")
+  
+  (object Blob (map (--> pos (Cell pos "mediumpurple")) (rect (Position 0 0) (Position 1 1))))
+  (object Button (: color String) (Cell 0 0 color))
+  
+  (: button1 Button)
+  (= button1 (initnext (Button "red" (Position 0 3)) (prev button1)))
+  
+  (: button2 Button)
+  (= button2 (initnext (Button "gold" (Position 0 6)) (prev button2)))
+  
+  (: button3 Button)
+  (= button3 (initnext (Button "green" (Position 0 9)) (prev button3)))
+  
+  (: button4 Button)
+  (= button4 (initnext (Button "blue" (Position 0 12)) (prev button4)))
+  
+  (: button5 Button)
+  (= button5 (initnext (Button "red" (Position (- GRID_SIZE 1) 3)) (prev button5)))
+  
+  (: button6 Button)
+  (= button6 (initnext (Button "gold" (Position (- GRID_SIZE 1) 6)) (prev button6)))
+  
+  (: button7 Button)
+  (= button7 (initnext (Button "green" (Position (- GRID_SIZE 1) 9)) (prev button7)))
+
+  (: button8 Button)
+  (= button8 (initnext (Button "blue" (Position (- GRID_SIZE 1) 12)) (prev button8)))
+  
+  (: swapButton Button)
+  (= swapButton (initnext (Button "red" (Position (/ GRID_SIZE 2) 0)) (prev swapButton)))
+
+  (: blob Blob)
+  (= blob (initnext (Blob (Position (/ GRID_SIZE 2) (/ GRID_SIZE 2))) (prev blob)))  
+  
+  (: globalState String)
+  (= globalState (initnext "none" (prev globalState)))
+  
+  (: swapState String)
+  (= swapState (initnext 1 (prev swapState)))
+  
+  (on (== globalState "left") (= blob (moveLeftNoCollision blob)))
+  (on (== globalState "right") (= blob (moveRightNoCollision blob)))
+  (on (== globalState "up") (= blob (moveUpNoCollision blob)))
+  (on (== globalState "down") (= blob (moveDownNoCollision blob)))
+  
+  (on (== globalState "left-up") (= blob (moveLeftNoCollision (moveUpNoCollision blob))))
+  (on (== globalState "right-up") (= blob (moveRightNoCollision (moveUpNoCollision blob))))
+  (on (== globalState "left-down") (= blob (moveLeftNoCollision (moveDownNoCollision blob))))
+  (on (== globalState "right-down") (= blob (moveRightNoCollision (moveDownNoCollision blob))))
+
+  (on (& (== swapState 1) (clicked button1)) (= globalState "left"))
+  (on (& (== swapState 1) (clicked button2)) (= globalState "right"))
+  (on (& (== swapState 1) (clicked button3)) (= globalState "up"))
+  (on (& (== swapState 1) (clicked button4)) (= globalState "down"))
+  
+  (on (& (== swapState 2) (clicked button5)) (= globalState "left-up"))
+  (on (& (== swapState 2) (clicked button6)) (= globalState "right-up"))
+  (on (& (== swapState 2) (clicked button7)) (= globalState "left-down"))
+  (on (& (== swapState 2) (clicked button8)) (= globalState "right-down"))
+  
+  (on (& (== (prev swapState) 1) (clicked swapButton)) 
+    (let ((= swapState 2)
+          (= globalState "left-up"))))
+  
+  (on (& (== (prev swapState) 2) (clicked swapButton)) 
+    (let ((= swapState 1)
+          (= globalState "left"))))
+
+)
+`)
+  }
+  
+  function disease2Click() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 30)
+  (= background "black")
+  
+  (object Hospital (map (--> pos (Cell pos "darkorange")) (rect (Position 0 0) (Position 5 5))))
+  (object DiseasePool (: color String) (map (--> pos (Cell pos color)) (rect (Position 0 0) (Position 5 5))))
+  (object Person (: active Bool) (: health Int) (Cell 0 0 "mediumpurple"))
+  
+  (: hospital Hospital)
+  (= hospital (initnext (Hospital (Position 0 0)) (prev hospital)))
+  
+  (: diseasePool1 DiseasePool)
+  (= diseasePool1 (initnext (DiseasePool "darkgreen" (Position (- GRID_SIZE 6) 6)) (prev diseasePool1)))
+
+  (: diseasePool2 DiseasePool)
+  (= diseasePool2 (initnext (DiseasePool "darkblue" (Position (- GRID_SIZE 6) 12)) (prev diseasePool2)))
+
+  (: diseasePool3 DiseasePool)
+  (= diseasePool3 (initnext (DiseasePool "darkkhaki" (Position (- GRID_SIZE 6) 18)) (prev diseasePool3)))
+
+  (: diseasePool4 DiseasePool)
+  (= diseasePool4 (initnext (DiseasePool "gray" (Position 0 (- GRID_SIZE 6))) (prev diseasePool4)))
+
+  (: people (List Person))
+  (= people (initnext (list (Person true 6 (Position 14 15)) (Person false 6 (Position 7 1)) (Person false 6 (Position 2 10)) (Person false 6 (Position 11 11))) (prev people)))
+
+  (on left (= people (updateObj people (--> obj (move obj (* -1 (.. obj health)) 0)) (--> obj (.. obj active)))))
+  (on right (= people (updateObj people (--> obj (move obj (* 1 (.. obj health)) 0)) (--> obj (.. obj active)))))
+  (on up (= people (updateObj people (--> obj (move obj 0 (* -1 (.. obj health)))) (--> obj (.. obj active)))))
+  (on down (= people (updateObj people (--> obj (move obj 0 (* 1 (.. obj health)))) (--> obj (.. obj active)))))
+
+  (on (clicked people) (let ((= people (updateObj people (--> obj (updateObj obj "active" false)) (--> obj (!= obj (objClicked click people)))))
+                             (= people (updateObj people (--> obj (updateObj obj "active" true)) (--> obj (== obj (objClicked click people))))))))
+
+  (on (& clicked (isFree click)) (let ((= people (updateObj people (--> obj (updateObj obj "active" false))))
+                                       (= people (addObj people (Person true 6 (Position (.. click x) (.. click y))))))))
+
+  (on (intersects (prev people) (prev hospital)) 
+    (= people (updateObj people (--> obj (updateObj obj "health" 6)) (--> obj (intersects obj hospital)))))  
+
+  (on (intersects (prev people) (prev diseasePool1)) 
+    (= people (updateObj people (--> obj (updateObj obj "health" 3)) (--> obj (& (intersects obj diseasePool1) (> (.. obj health) 3))))))  
+
+  (on (intersects (prev people) (prev diseasePool2)) 
+    (= people (updateObj people (--> obj (updateObj obj "health" 2)) (--> obj (& (intersects obj diseasePool2) (> (.. obj health) 2))))))  
+
+  (on (intersects (prev people) (prev diseasePool3)) 
+    (= people (updateObj people (--> obj (updateObj obj "health" 1)) (--> obj (& (intersects obj diseasePool3) (> (.. obj health) 1))))))  
+
+  (on (intersects (prev people) (prev diseasePool4)) 
+    (= people (updateObj people (--> obj (updateObj obj "health" 0)) (--> obj (intersects obj diseasePool4)))))  
+
+)`)
+  }
+
+  function toggleClick() {
+    div = document.getElementById("button-div")
+    if (div.style.display == "none") {
+      div.style.display = "block";
+    } else {
+      div.style.display = "none";
+    }
   }
 
   function randomClick() {
