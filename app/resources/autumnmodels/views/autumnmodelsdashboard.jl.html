@@ -55,6 +55,8 @@
         <button id="double-count-2-button" class="control-button example-button">DOUBLE COUNT II</button>
         <button id="swap-button" class="control-button example-button">SWAP</button>
         <button id="disease-2-button" class="control-button example-button">DISEASE II</button>
+        <button id="jump-button" class="control-button example-button">JUMP</button>
+        <button id="bullets-button" class="control-button example-button">BULLETS</button>
         <button id="random-button" style="background-color: orange !important" class="control-button example-button">RANDOM SCENE</button>
         <button id="random-button-2" style="background-color: orange !important" class="control-button example-button">RANDOM PROGRAM</button>
         <button id="random-button-3" style="background-color: orange !important" class="control-button example-button">RANDOM GROUPED PROGRAM</button>
@@ -148,6 +150,8 @@
       document.getElementById("double-count-2-button").addEventListener("click", doubleCount2Click);
       document.getElementById("swap-button").addEventListener("click", swapClick);
       document.getElementById("disease-2-button").addEventListener("click", disease2Click);
+      document.getElementById("jump-button").addEventListener("click", jumpClick);
+      document.getElementById("bullets-button").addEventListener("click", bulletsClick);
       document.getElementById("toggle-button").addEventListener("click", toggleClick);
       document.getElementById("random-button").addEventListener("click", randomClick);
       document.getElementById("random-button-2").addEventListener("click", randomClick2);
@@ -203,6 +207,8 @@
         doubleCount2Button = document.getElementById("double-count-2-button");
         swapButton = document.getElementById("swap-button");
         disease2Button = document.getElementById("disease-2-button");
+        jumpButton = document.getElementById("jump-button");
+        bulletsButton = document.getElementById("bullets-button");
         randomButton = document.getElementById("random-button");
         randomButton2 = document.getElementById("random-button-2");
         randomButton3 = document.getElementById("random-button-3");
@@ -256,6 +262,8 @@
           doubleCount2Button.classList.add("disabled");
           swapButton.classList.add("disabled");
           disease2Button.classList.add("disabled");
+          jumpButton.classList.add("disabled");
+          bulletsButton.classList.add("disabled");
           plugButton.classList.add("disabled");
           iceButton.classList.add("disabled");
           tetrisButton.classList.add("disabled");
@@ -372,6 +380,8 @@
           doubleCount2Button.classList.remove("disabled");
           swapButton.classList.remove("disabled");
           disease2Button.classList.remove("disabled");
+          jumpButton.classList.remove("disabled");
+          bulletsButton.classList.remove("disabled");
           tetrisButton.classList.remove("disabled");
           hatchButton.classList.remove("disabled");
           snakeButton.classList.remove("disabled");
@@ -2510,6 +2520,78 @@
   (on (intersects (prev people) (prev diseasePool4)) 
     (= people (updateObj people (--> obj (updateObj obj "health" 0)) (--> obj (intersects obj diseasePool4)))))  
 
+)`)
+  }
+
+  function bulletsClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  (object Particle (Cell 0 0 "blue"))
+  (object Bullet (: dir String) (Cell 0 0 "red"))
+  
+  (: particle Particle)
+  (= particle (initnext (Particle (Position 8 8)) (prev particle)))
+  
+  (: bullets (List Bullet))
+  (= bullets (initnext (list) (prev bullets)))
+  
+  (: dir String)
+  (= dir (initnext "none" (prev dir)))
+  
+  (on true (= bullets (updateObj bullets (--> obj (moveLeft obj)) (--> obj (== (.. obj dir) "left")))))
+  (on true (= bullets (updateObj bullets (--> obj (moveRight obj)) (--> obj (== (.. obj dir) "right")))))
+  (on true (= bullets (updateObj bullets (--> obj (moveUp obj)) (--> obj (== (.. obj dir) "up")))))
+  (on true (= bullets (updateObj bullets (--> obj (moveDown obj)) (--> obj (== (.. obj dir) "down")))))
+  
+  (on left (let ((= dir "left")
+                 (= particle (moveLeft particle)))))
+  (on right (let ((= dir "right")
+                  (= particle (moveRight particle)))))
+  (on up (let ((= dir "up")
+               (= particle (moveUp particle)))))
+  (on down (let ((= dir "down")
+                 (= particle (moveDown particle)))))
+ 
+  
+  (on (& clicked (== dir "left")) (= bullets (addObj bullets (Bullet "left" (.. (moveLeft particle) origin)))))
+  (on (& clicked (== dir "right")) (= bullets (addObj bullets (Bullet "right" (.. (moveRight particle) origin)))))
+  (on (& clicked (== dir "up")) (= bullets (addObj bullets (Bullet "up" (.. (moveUp particle) origin)))))
+  (on (& clicked (== dir "down")) (= bullets (addObj bullets (Bullet "down" (.. (moveDown particle) origin)))))
+)`)
+  }
+
+  function jumpClick() {
+    myCodeMirror.setValue(`(program
+  (= GRID_SIZE 16)
+  (= background "black")
+  
+  (object Jumper (map (--> pos (Cell pos "red")) (rect (Position 0 0) (Position 1 1))))
+  (object Stop (: gold Bool) (list (Cell 0 0 (if gold then "gold" else "blue")) (Cell 1 0 (if gold then "gold" else "blue"))))
+  
+  
+  (: jumper Jumper)
+  (= jumper (initnext (Jumper (Position 0 (- GRID_SIZE 2))) (moveDownNoCollision (prev jumper))))
+
+  (: stop Stop)
+  (= stop (initnext (Stop false (Position (- (/ GRID_SIZE 2) 1) 2)) (prev stop)))
+  
+  (: time Int)
+  (= time (initnext 0 (+ (prev time) 1)))
+
+  (: energy Int)
+  (= energy (initnext 0 (prev energy)))
+  
+  (on left (= jumper (moveLeftNoCollision (prev jumper))))
+  (on right (= jumper (moveRightNoCollision (prev jumper))))
+  
+  (on (& (<= (prev energy) 10) (== (.. (.. (prev jumper) origin) y) (- GRID_SIZE 2)))
+  	  (= energy (+ energy 1)))
+
+  (on clicked (let ((= jumper (move (prev jumper) 0 (* -1 energy))) 
+                    (= energy 0))))
+ 
+  (on (intersects (prev jumper) (adjacentObjs (prev stop))) 
+      (= stop (updateObj stop "gold" (! (.. stop gold)))))  
 )`)
   }
 
