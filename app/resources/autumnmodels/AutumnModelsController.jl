@@ -11,9 +11,12 @@ using DataStructures
 using Statistics: median
 using SExpressions
 using Distributions: Categorical
+using JLD 
+using Dates
 
 MODS = Dict{Int, Any}(); 
-HISTORY = Dict{Int, Dict{Int, Any}}()
+HISTORY = Dict{Int, Any}()
+EVENTS = Dict{Int, Any}()
 
 function autumnmodels()
   redirect(:playground)
@@ -73,6 +76,9 @@ function step()
   MODS[clientid] = (aex, env_)
   background = env_.state.scene.background  
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  push!(HISTORY[clientid], vcat(background, cells))
+  push!(EVENTS[clientid], "nothing")
+
   json(vcat(background, cells))
   #json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))))) : []))
 end
@@ -88,10 +94,16 @@ function startautumn()
   @show typeof(new_aex)
   new_aex, env_ = start(new_aex)
   MODS[clientid] = (new_aex, env_)
+  HISTORY[clientid] = []
+  EVENTS[clientid] = []
+
   # println(state.time)
   grid_size = env_.GRID_SIZE isa AbstractArray ? [env_.GRID_SIZE] : [[env_.GRID_SIZE, env_.GRID_SIZE]]
   background = env_.state.scene.background
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  push!(HISTORY[clientid], vcat(background, cells))
+  push!(EVENTS[clientid], "nothing")
+
   json(vcat(grid_size, background, cells))
   # json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].init(nothing)) : []))
 end
@@ -100,10 +112,15 @@ function clicked()
   # println("click")
   clientid = parse(Int64, @params(:clientid))
   aex, env = MODS[clientid]
-  env_ = step(aex, env, (click=Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))),))
+  x = @params(:x)
+  y = @params(:y)
+  env_ = step(aex, env, (click=Click(parse(Int64, x), parse(Int64, y)),))
   MODS[clientid] = (aex, env_)
   background = env_.state.scene.background  
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  push!(HISTORY[clientid], vcat(background, cells))
+  push!(EVENTS[clientid], "click $(x) $(y)")
+
   json(vcat(background, cells))
   #json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].next(MODS[clientid].Click(parse(Int64, @params(:x)), parse(Int64, @params(:y))))) : []))
 end
@@ -116,6 +133,9 @@ function up()
   MODS[clientid] = (aex, env_)
   background = env_.state.scene.background  
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  push!(HISTORY[clientid], vcat(background, cells))
+  push!(EVENTS[clientid], "up")
+
   json(vcat(background, cells))
 end
 
@@ -127,6 +147,9 @@ function down()
   MODS[clientid] = (aex, env_)
   background = env_.state.scene.background  
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  push!(HISTORY[clientid], vcat(background, cells))
+  push!(EVENTS[clientid], "down")
+
   json(vcat(background, cells))
 end
 
@@ -138,6 +161,9 @@ function right()
   MODS[clientid] = (aex, env_)
   background = env_.state.scene.background  
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  push!(HISTORY[clientid], vcat(background, cells))
+  push!(EVENTS[clientid], "right")
+
   json(vcat(background, cells))
 end
 
@@ -149,6 +175,9 @@ function left()
   MODS[clientid] = (aex, env_)
   background = env_.state.scene.background  
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  push!(HISTORY[clientid], vcat(background, cells))
+  push!(EVENTS[clientid], "left")
+
   json(vcat(background, cells))
 end
 
@@ -157,6 +186,19 @@ function replay()
   clientid = parse(Int64, @params(:clientid))
   json(HISTORY[clientid])
   # json(Dict(key => map(particle -> [particle.position.x, particle.position.y, particle.color], filter(particle -> particle.render, particles)) for (key, particles) in history))
+end
+
+function save()
+  log_dir = "/Users/riadas/Documents/urop/today_temp/CausalDiscovery.jl/logged_observations"
+  clientid = parse(Int64, @params(:clientid))
+  curr_time = Dates.format(Dates.now(), "yyyy-mm-dd HH:MM:SS")
+  JLD.save("$(log_dir)/time_$(curr_time)_client_$(clientid).jld", "observations", HISTORY[clientid])
+  JLD.save("$(log_dir)/time_$(curr_time)_client_$(clientid)_EVENTS.jld", "observations", EVENTS[clientid])
+  open("$(log_dir)/time_$(curr_time)_client_$(clientid)_EVENTS.txt","w") do io
+    println(io, join(EVENTS[clientid], "\n"))
+  end
+  
+  json([])
 end
 
 function synthesize()
@@ -927,7 +969,7 @@ const builtInDict = Dict([
                           new_obj = typeof(obj)(constructor_values...)
                           setproperty!(new_obj, :id, obj.id)
                           setproperty!(new_obj, :alive, obj.alive)
-                          setproperty!(new_obj, :changed, obj.changed)
+                          setproperty!(new_obj, :changed, true)
 
                           setproperty!(new_obj, Symbol(field), value)
                           state.objectsCreated -= 1    
@@ -1348,7 +1390,16 @@ const builtInDict = Dict([
                             GRID_SIZE_X = GRID_SIZE
                             GRID_SIZE_Y = GRID_SIZE
                           end
-                          nums = [(GRID_SIZE_X * start.y + start.x):(GRID_SIZE_X * stop.y + stop.x);]
+                          translated_start = GRID_SIZE_X * start.y + start.x 
+                          translated_stop = GRID_SIZE_X * stop.y + stop.x
+                          if translated_start < translated_stop
+                            ordered_start = translated_start
+                            ordered_end = translated_end
+                          else
+                            ordered_start = translated_end
+                            ordered_end = translated_start
+                          end
+                          nums = [ordered_start:ordered_end;]
                           reduce(&, map(num -> isFree(Position(num % GRID_SIZE_X, floor(Int, num / GRID_SIZE_X))), nums))
                         end
 
@@ -1361,7 +1412,16 @@ const builtInDict = Dict([
                             GRID_SIZE_X = GRID_SIZE
                             GRID_SIZE_Y = GRID_SIZE
                           end
-                          nums = [(GRID_SIZE_X * start.y + start.x):(GRID_SIZE_X * stop.y + stop.x);]
+                          translated_start = GRID_SIZE_X * start.y + start.x 
+                          translated_stop = GRID_SIZE_X * stop.y + stop.x
+                          if translated_start < translated_stop
+                            ordered_start = translated_start
+                            ordered_end = translated_end
+                          else
+                            ordered_start = translated_end
+                            ordered_end = translated_start
+                          end
+                          nums = [ordered_start:ordered_end;]
                           reduce(&, map(num -> isFree(Position(num % GRID_SIZE_X, floor(Int, num / GRID_SIZE_X)), object), nums))
                         end
 
@@ -2423,7 +2483,7 @@ function updateObj(@nospecialize(obj::NamedTuple), field::String, value, @nospec
   new_obj = typeof(obj)(constructor_values...)
   setproperty!(new_obj, :id, obj.id)
   setproperty!(new_obj, :alive, obj.alive)
-  setproperty!(new_obj, :changed, obj.changed)
+  setproperty!(new_obj, :changed, true)
 
   setproperty!(new_obj, Symbol(field), value)
   state.objectsCreated -= 1    
@@ -2850,7 +2910,16 @@ function isFree(start::Position, stop::Position, @nospecialize(state::NamedTuple
     GRID_SIZE_X = GRID_SIZE
     GRID_SIZE_Y = GRID_SIZE
   end
-  nums = [(GRID_SIZE_X * start.y + start.x):(GRID_SIZE_X * stop.y + stop.x);]
+  translated_start = GRID_SIZE_X * start.y + start.x 
+  translated_stop = GRID_SIZE_X * stop.y + stop.x
+  if translated_start < translated_stop
+    ordered_start = translated_start
+    ordered_end = translated_end
+  else
+    ordered_start = translated_end
+    ordered_end = translated_start
+  end
+  nums = [ordered_start:ordered_end;]
   reduce(&, map(num -> isFree(Position(num % GRID_SIZE_X, floor(Int, num / GRID_SIZE_X)), state), nums))
 end
 
@@ -2863,7 +2932,16 @@ function isFree(start::Position, stop::Position, @nospecialize(object::NamedTupl
     GRID_SIZE_X = GRID_SIZE
     GRID_SIZE_Y = GRID_SIZE
   end
-  nums = [(GRID_SIZE_X * start.y + start.x):(GRID_SIZE_X * stop.y + stop.x);]
+  translated_start = GRID_SIZE_X * start.y + start.x 
+  translated_stop = GRID_SIZE_X * stop.y + stop.x
+  if translated_start < translated_stop
+    ordered_start = translated_start
+    ordered_end = translated_end
+  else
+    ordered_start = translated_end
+    ordered_end = translated_start
+  end
+  nums = [ordered_start:ordered_end;]
   reduce(&, map(num -> isFree(Position(num % GRID_SIZE_X, floor(Int, num / GRID_SIZE_X)), object, state), nums))
 end
 
@@ -3488,6 +3566,7 @@ function interpret_updateObj(args, @nospecialize(Γ::NamedTuple))
     field_string = args[2]
     new_value = args[3]
     new_obj = update(obj, Symbol(field_string), new_value)
+    new_obj = update(new_obj, :changed, true)
 
     # update render 
     object_type = Γ[:object_types][obj.type]
@@ -3520,6 +3599,9 @@ function interpret_removeObj(args, @nospecialize(Γ::NamedTuple))
     pred, Γ = interpret(AExpr(:call, func, item), Γ) 
     if pred == false 
       push!(new_list, item)
+    else
+      new_item = update(update(item, :alive, false), :changed, true)
+      push!(new_list, new_item)
     end
   end
   new_list, Γ
