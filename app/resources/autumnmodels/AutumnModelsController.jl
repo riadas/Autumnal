@@ -102,7 +102,7 @@ function startautumn()
   background = env_.state.scene.background
   cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
   push!(HISTORY[clientid], vcat(background, cells))
-  push!(EVENTS[clientid], "nothing")
+  # push!(EVENTS[clientid], "nothing")
 
   json(vcat(grid_size, background, cells))
   # json(map(particle -> [particle.position.x, particle.position.y, particle.color], haskey(MODS, clientid) ? filter(particle -> particle.render, MODS[clientid].init(nothing)) : []))
@@ -188,15 +188,42 @@ function replay()
   # json(Dict(key => map(particle -> [particle.position.x, particle.position.y, particle.color], filter(particle -> particle.render, particles)) for (key, particles) in history))
 end
 
+# function save()
+#   log_dir = "/Users/riadas/Documents/urop/today_temp/CausalDiscovery.jl/logged_observations"
+#   clientid = parse(Int64, @params(:clientid))
+#   curr_time = Dates.format(Dates.now(), "yyyy-mm-dd HH:MM:SS")
+#   JLD.save("$(log_dir)/time_$(curr_time)_client_$(clientid).jld", "observations", HISTORY[clientid])
+#   JLD.save("$(log_dir)/time_$(curr_time)_client_$(clientid)_EVENTS.jld", "observations", EVENTS[clientid])
+#   open("$(log_dir)/time_$(curr_time)_client_$(clientid)_EVENTS.txt","w") do io
+#     println(io, join(EVENTS[clientid], "\n"))
+#   end
+  
+#   json([])
+# end
+
+const log_dir = "/Users/riadas/Documents/urop/today_temp/CausalDiscovery.jl/saved/"
+
 function save()
-  log_dir = "/Users/riadas/Documents/urop/today_temp/CausalDiscovery.jl/logged_observations"
+  # get params 
   clientid = parse(Int64, @params(:clientid))
-  curr_time = Dates.format(Dates.now(), "yyyy-mm-dd HH:MM:SS")
-  JLD.save("$(log_dir)/time_$(curr_time)_client_$(clientid).jld", "observations", HISTORY[clientid])
-  JLD.save("$(log_dir)/time_$(curr_time)_client_$(clientid)_EVENTS.jld", "observations", EVENTS[clientid])
-  open("$(log_dir)/time_$(curr_time)_client_$(clientid)_EVENTS.txt","w") do io
-    println(io, join(EVENTS[clientid], "\n"))
+  model_name = @params(:model)
+  grid_size = parse(Int64, @params(:gridsize))
+
+  # create model directory in saved/
+  directory = string(log_dir, model_name)
+  if !isdir(directory)
+    mkdir(directory)
   end
+
+  # create data dict 
+  data = Dict(["observations" => HISTORY[clientid], 
+               "user_events" => EVENTS[clientid],
+               "grid_size" => grid_size])
+
+  # save file 
+  index = 1 + length(filter(x -> occursin(".jld", x), readdir(directory)))
+  file_path = string(directory, "/", index, ".jld")
+  JLD.save(file_path, data)
   
   json([])
 end

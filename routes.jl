@@ -23,6 +23,8 @@ route("/step", AutumnModelsController.step, method = GET, named=:step)
 
 route("/replay", AutumnModelsController.replay, method = GET, named=:replay)
 
+route("/save", AutumnModelsController.save, method = GET, named=:save)
+
 route("/random", AutumnModelsController.random, method = GET, named=:random)
 
 route("/random2", AutumnModelsController.random2, method = GET, named=:random2)

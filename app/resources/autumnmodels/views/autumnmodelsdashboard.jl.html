@@ -74,8 +74,8 @@
               <button id="play-button" class="control-button" type="submit" id="run" style="margin-right: 10px;">▶</button>
               <button id="restart-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;">↻</button>
               <button id="save-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;"><i class="fa fa-floppy-o" aria-hidden="true"></i></button>
+              <button id="history-button" class="control-button" type="submit" style="font-size: 15px; font-weight: bold;"><i class="fa fa-history" aria-hidden="true"></i></button>
               <button id="toggle-button" class="control-button">TOGGLE</button>
-              <button id="history-button" class="control-button" type="submit" style="visibility: hidden; font-size: 15px; font-weight: bold;"><i class="fa fa-history" aria-hidden="true"></i></button>
           </div>
         </div>
       </div>
@@ -89,12 +89,14 @@
       // global frontend variables
       var not_run_yet = true;
       var intervalID = -1;
-      var timestep = 300; // 300 
-      var historytimestep = 500;
+      var timestep = 300; // 1200000; // 300 
+      var historytimestep = 300;
       var compiled = false;
       var client_id = getRandomInt(1, 10000);
       console.log("client_id: "+client_id);
       var grid_size = [16, 16];
+      var model_name = "";
+      var saved = false;
       var history_mode = false;
       var historyIntervalID = -1;
       var history_response = '{}';
@@ -160,6 +162,7 @@
 
 
       document.getElementById("history-button").addEventListener("click", historyClick);
+      document.getElementById("save-button").addEventListener("click", saveClick);
 
       // assign button styles
       updateButtonStyles();
@@ -218,6 +221,13 @@
         restartButton = document.getElementById("restart-button");
         saveButton = document.getElementById("save-button");
         historyButton = document.getElementById("history-button");
+        toggleButton = document.getElementById("toggle-button");
+
+        if (saved) {
+          saveButton.classList.add("disabled");
+        } else {
+          saveButton.classList.remove("disabled");
+        }
 
         if (compiled) {
           compileButton.innerHTML = "RESET <i style='font-size: medium' class='fa fa-code' aria-hidden='true'></i>";
@@ -279,6 +289,7 @@
             saveButton.classList.remove("history-mode");
             historyButton.classList.remove("history-mode");
             compileButton.classList.remove("history-mode");
+            toggleButton.classList.remove("history-mode");
 
             playButton.classList.remove("disabled");
             if (intervalID == -1) {
@@ -310,6 +321,7 @@
             saveButton.classList.add("history-mode");
             historyButton.classList.add("history-mode");
             compileButton.classList.add("history-mode");
+            toggleButton.classList.remove("history-mode");
 
             if (historyIntervalID == -1) {
               console.log("updateButtonStyles historyIntervalID == -1");
@@ -395,7 +407,8 @@
       }
 
       function updateCellStyles(xml_response) { 
-        //console.log(xml_response);
+        console.log("updateCellStyles")
+        console.log(xml_response);
         xml_json = JSON.parse(xml_response);
         Array.from(document.getElementsByClassName("cell")).forEach(function (cell) { 
           cell.style.background = xml_json[0] == "#ffffff00" ? xml_json[0] : "linear-gradient(45deg, "+colorToRGBA(xml_json[0], 0.6)+", "+colorToRGBA(xml_json[0], 0.6)+")"
@@ -411,6 +424,7 @@
 
       function compileClick() {
         history_mode = false;  
+        saved = false;
 
         console.log("compileClick")
         var xhr = new XMLHttpRequest(); 
@@ -524,7 +538,7 @@
                     updateCellStyles(JSON.stringify(xhr_json.slice(1,xhr_json.length)));
                     intervalID = setInterval(step, timestep);
                     updateButtonStyles();
-                    console.log("here?")
+                    console.log("here?");
                 }
               };
               console.log("hello");
@@ -661,6 +675,28 @@
         xhr.send();
       }
 
+      function saveClick() {
+        if (history_mode && !(saved)) {
+          var xhr = new XMLHttpRequest();
+
+          xhr.open("GET", host + '/save?clientid='+client_id+"&model="+model_name+"&gridsize="+grid_size[0], true);
+            //Send the proper header information along with the request
+            xhr.setRequestHeader("Content-Type", "application/json");
+
+          xhr.onreadystatechange = function () { // Call a function when the state changes.
+            if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+              // Request finished. Do processing here.
+              console.log("success!");
+              console.log("xhr.response: "+JSON.stringify(xhr.response));
+              saved = true;
+              updateButtonStyles();
+            }
+          };
+          xhr.send();
+          
+        }
+      }
+
       function historyClick() {
         if (!history_mode) {
           history_mode = true;
@@ -697,7 +733,12 @@
         if (history_index < Object.keys(JSON.parse(history_response)).length) {
           console.log(history_response);
           console.log(JSON.parse(history_response)[history_index])
-          updateCellStyles(JSON.stringify(JSON.parse(history_response)[history_index]));
+          ret_val = JSON.parse(history_response)[history_index]
+          console.log("here: history_index")
+          console.log(history_index)
+          console.log("here: ret_val")
+          console.log(JSON.stringify(ret_val))
+          updateCellStyles(JSON.stringify(ret_val));
           history_index++;
         } else {
           clearInterval(historyIntervalID);
@@ -769,6 +810,7 @@
       "yellow":"#ffff00","yellowgreen":"#9acd32"};
 
       function antsClick() {
+        model_name = "ants";
       myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   
@@ -790,6 +832,7 @@
     }
 
     function particlesClick() {
+      model_name = "particles";
       myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   
@@ -805,6 +848,7 @@
     }
 
     function lightClick() {
+      model_name = "lights";
       myCodeMirror.setValue(`(program
   (= GRID_SIZE 10)
 
@@ -818,6 +862,7 @@
     }
 
     function magnetsClick() {
+      model_name = "magnets_i";
       myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   
@@ -847,6 +892,7 @@
     }
 
     function plugClick() {
+      model_name = "plug";
       myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
 
@@ -887,6 +933,7 @@
     }
 
     function iceClick() {
+      model_name = "ice";
       myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   (object CelestialBody (: day Bool) (list (Cell 0 0 (if day then "gold" else "gray"))
@@ -926,6 +973,7 @@
     }
 
   function tetrisClick() {
+    model_name = "tetris";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   (= background "black")
@@ -967,6 +1015,7 @@
   }
 
   function hatchClick() {
+    model_name = "egg";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
 
@@ -1061,6 +1110,7 @@
   }
 
   function snakeClick() {
+    model_name = "snake";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   
@@ -1097,6 +1147,7 @@
   }
 
   function magnets2Click() {
+    model_name = "magnets_ii";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
 
@@ -1134,6 +1185,7 @@
   }
 
   function magnets3Click() { 
+    model_name = "magents_iii";
     myCodeMirror.setValue(`(program
     (= GRID_SIZE 16) 
   
@@ -1171,6 +1223,7 @@
   }
 
   function lockClick() { 
+    model_name = "lock";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
 
@@ -1200,6 +1253,7 @@
   }
 
   function bbqClick() { 
+    model_name = "bbq";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
 
@@ -1232,6 +1286,7 @@
   }
 
   function bottleClick() { 
+    model_name = "bottle";
     myCodeMirror.setValue(`(program 
   (= GRID_SIZE 16)
 
@@ -1275,6 +1330,7 @@
   }
 
   function diseaseClick() { 
+    model_name = "disease";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   
@@ -1304,6 +1360,7 @@
   }
 
   function balls1Click() { 
+    model_name = "balls1";
     myCodeMirror.setValue(`(program 
   (= GRID_SIZE 16)
 
@@ -1380,6 +1437,7 @@
   }
 
   function balls2Click() { 
+    model_name = "balls2";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
 
@@ -1459,6 +1517,7 @@
   }
 
   function spaceInvadersClick() {
+    model_name = "space_invaders";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   
@@ -1522,6 +1581,7 @@
   }
 
   function gameOfLifeClick() {
+    model_name = "gol";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   
@@ -1552,6 +1612,7 @@
   }
 
   function sokobanClick() {
+    model_name = "sokoban_i";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 8)
   
@@ -1598,6 +1659,7 @@
   }
 
   function sokobanClick2() {
+    model_name = "sokoban_ii";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 8)
   
@@ -1668,6 +1730,7 @@
   }
 
   function growClick() {
+    model_name = "grow";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 8)
   
@@ -1713,6 +1776,7 @@
   }
 
   function marioClick() {
+    model_name = "mario";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   (= background "skyblue")
@@ -1762,6 +1826,7 @@
   }
 
   function sandClick() {
+    model_name = "sand";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 10)
   
@@ -1804,6 +1869,7 @@
   }
 
   function gravityClick() {
+    model_name = "gravity_i";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   (= background "black")
@@ -1847,6 +1913,7 @@
   }
 
   function gravity2Click() {
+    model_name="gravity_ii";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   (= background "black")
@@ -1896,6 +1963,7 @@
   }
 
   function gravity3Click() {
+    model_name = "gravity_iii";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 19)
   (= background "black")
@@ -1925,6 +1993,7 @@
   }
 
   function gravity4Click() {
+    model_name = "gravity_iv";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   (= background "black")
@@ -1979,6 +2048,7 @@
   }
 
   function chargeClick() {
+    model_name = "charge";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   (= background "black")
@@ -2015,6 +2085,7 @@
   }
 
   function eggClick() {
+    model_name = "egg";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   (= background "black")
@@ -2061,6 +2132,7 @@
   }
 
   function balloonClick() {
+    model_name = "balloon";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   (= background "skyblue")
@@ -2127,6 +2199,7 @@
   }
 
   function windClick() {
+    model_name = "wind";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 17)
   (= background "darkblue")
@@ -2168,6 +2241,7 @@
   }
 
   function paintClick() {
+    model_name = "paint";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   
@@ -2189,6 +2263,7 @@
   }
 
   function chaseClick() {
+    model_name = "chase";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   
@@ -2217,6 +2292,7 @@
   }
 
   function countClick() {
+    model_name = "count";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 19)
   (= background "black")
@@ -2249,6 +2325,7 @@
   }
 
   function arcSlackClick() {
+    model_name = "arc_slack";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   
@@ -2280,6 +2357,7 @@
   }
 
   function rinkClick() {
+    model_name = "rink";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 28)
   (= background "black")
@@ -2321,6 +2399,7 @@
   }
 
   function doubleCountClick() {
+    model_name = "double_1";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 19)
   (= background "black")
@@ -2361,6 +2440,7 @@
   }
 
   function doubleCount2Click() {
+    model_name = "double_2";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE (list 25 1))
   (= background "black")
@@ -2392,6 +2472,7 @@
   }
 
   function swapClick() {
+    model_name = "swap";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 40)
   (= background "black")
@@ -2468,6 +2549,7 @@
   }
   
   function disease2Click() {
+    model_name = "disease_2";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 30)
   (= background "black")
@@ -2524,6 +2606,7 @@
   }
 
   function bulletsClick() {
+    model_name = "bullets";
     myCodeMirror.setValue(`(program
   (= GRID_SIZE 16)
   (object Particle (Cell 0 0 "blue"))
