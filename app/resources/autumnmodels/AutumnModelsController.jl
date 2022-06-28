@@ -11,6 +11,7 @@ using DataStructures
 using Statistics: median
 using SExpressions
 using Distributions: Categorical
+using Setfield
 using JLD 
 using Dates
 
@@ -75,7 +76,7 @@ function step()
   env_ = step(aex, env, empty_env())
   MODS[clientid] = (aex, env_)
   background = env_.state.scene.background  
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :renderScene, env_.state.scene), env_)[1])
   push!(HISTORY[clientid], vcat(background, cells))
   push!(EVENTS[clientid], "nothing")
 
@@ -98,9 +99,10 @@ function startautumn()
   EVENTS[clientid] = []
 
   # println(state.time)
-  grid_size = env_.GRID_SIZE isa AbstractArray ? [env_.GRID_SIZE] : [[env_.GRID_SIZE, env_.GRID_SIZE]]
+  @show env_.current_var_values
+  grid_size = env_.current_var_values[:GRID_SIZE] isa AbstractArray ? env_.current_var_values[:GRID_SIZE] : [[env_.current_var_values[:GRID_SIZE], env_.current_var_values[:GRID_SIZE]]]
   background = env_.state.scene.background
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :renderScene, env_.state.scene), env_)[1])
   push!(HISTORY[clientid], vcat(background, cells))
   # push!(EVENTS[clientid], "nothing")
 
@@ -117,7 +119,7 @@ function clicked()
   env_ = step(aex, env, (click=Click(parse(Int64, x), parse(Int64, y)),))
   MODS[clientid] = (aex, env_)
   background = env_.state.scene.background  
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :renderScene, env_.state.scene), env_)[1])
   push!(HISTORY[clientid], vcat(background, cells))
   push!(EVENTS[clientid], "click $(x) $(y)")
 
@@ -132,7 +134,7 @@ function up()
   env_ = step(aex, env, (up=true,))
   MODS[clientid] = (aex, env_)
   background = env_.state.scene.background  
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :renderScene, env_.state.scene), env_)[1])
   push!(HISTORY[clientid], vcat(background, cells))
   push!(EVENTS[clientid], "up")
 
@@ -146,7 +148,7 @@ function down()
   env_ = step(aex, env, (down=true,))
   MODS[clientid] = (aex, env_)
   background = env_.state.scene.background  
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :renderScene, env_.state.scene), env_)[1])
   push!(HISTORY[clientid], vcat(background, cells))
   push!(EVENTS[clientid], "down")
 
@@ -160,7 +162,7 @@ function right()
   env_ = step(aex, env, (right=true,))
   MODS[clientid] = (aex, env_)
   background = env_.state.scene.background  
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :renderScene, env_.state.scene), env_)[1])
   push!(HISTORY[clientid], vcat(background, cells))
   push!(EVENTS[clientid], "right")
 
@@ -174,7 +176,7 @@ function left()
   env_ = step(aex, env, (left=true,))
   MODS[clientid] = (aex, env_)
   background = env_.state.scene.background  
-  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :render, env_.state.scene), env_)[1])
+  cells = map(cell -> [cell.position.x, cell.position.y, cell.color], interpret(AExpr(:call, :renderScene, env_.state.scene), env_)[1])
   push!(HISTORY[clientid], vcat(background, cells))
   push!(EVENTS[clientid], "left")
 
@@ -201,7 +203,7 @@ end
 #   json([])
 # end
 
-const log_dir = "/Users/riadas/Documents/urop/today_temp/CausalDiscovery.jl/saved/"
+const log_dir = "/Users/riadas/Documents/urop/today_temp/CausalDiscovery.jl/saved_test_traces/"
 
 function save()
   # get params 
@@ -414,7 +416,7 @@ end
 # binary operators
 binaryOperators = map(string, [:+, :-, :/, :*, :&, :|, :>=, :<=, :>, :<, :(==), :!=, :%, :&&])
 
-abstract type Object end
+# abstract type Object end
 # ----- Compile Helper Functions ----- 
 
 function compile(expr::AExpr, data::Dict{String, Any}, parent::Union{AExpr, Nothing}=nothing)::Expr
@@ -2232,29 +2234,16 @@ end
 
 # autumnstdlib.jl 
 
-update_nt(@nospecialize(Γ::NamedTuple), x::Symbol, v) = merge(Γ, NamedTuple{(x,)}((v,)))
-
-abstract type Object end
-abstract type KeyPress end
-
-struct Left <: KeyPress end
-struct Right <: KeyPress end
-struct Up <: KeyPress end
-struct Down <: KeyPress end
-
 struct Click
   x::Int
   y::Int                    
 end
 
-Click(x, y, @nospecialize(state::NamedTuple)) = Click(x, y)
 
 struct Position
   x::Int
   y::Int
 end
-
-Position(x, y, @nospecialize(state::NamedTuple)) = Position(x, y) 
 
 struct Cell 
   position::Position
@@ -2262,12 +2251,79 @@ struct Cell
   opacity::Float64
 end
 
+struct Object 
+  id::Int 
+  origin::Position
+  type::Symbol
+  alive::Bool 
+  changed::Bool
+  custom_fields::Dict{Symbol, Union{Int, String, Bool}}
+  render::Union{Nothing, AbstractArray}
+end
+
+struct ObjectType
+  render::Union{Nothing, AExpr, AbstractArray}
+  fields::Array{AExpr}
+end
+
+mutable struct Scene 
+  objects::Array{Object}
+  background::String
+end
+
+mutable struct State 
+  time::Int 
+  objectsCreated::Int 
+  rng::AbstractRNG
+  scene::Scene 
+  object_types::Dict{Symbol, ObjectType}
+  histories::Dict{Symbol, Dict{Int, Union{Int, String, Bool, Position, Object, AbstractArray}}}
+end
+
+
+mutable struct Env 
+  left::Bool 
+  right::Bool 
+  up::Bool 
+  down::Bool
+  click::Union{Nothing, Click}
+  current_var_values::Dict{Symbol, Union{Object, Int, Bool, String, Position, State, AbstractArray}}
+  lifted::Dict{Symbol, Union{AExpr, BigInt, Int, String}}
+  on_clauses::Dict{Symbol, Array{Union{AExpr, Symbol}}}
+  state::State
+end
+
+function update_nt(object::Object, x::Symbol, v)
+  if x == :id 
+    object = @set object.id = v
+  elseif x == :origin 
+    object = @set object.origin = v
+  elseif x == :type 
+    object = @set object.type = v
+  elseif x == :alive 
+    object = @set object.alive = v
+  elseif x == :changed 
+    object = @set object.changed = v
+  elseif x == :custom_fields 
+    object = @set object.custom_fields = v
+  elseif x == :render
+    object = @set object.render = v
+  else
+    object = deepcopy(object)
+    object.custom_fields[x] = v
+  end
+  object
+end
+
+Click(x, y, @nospecialize(state::State)) = Click(x, y)
+Position(x, y, @nospecialize(state::State)) = Position(x, y) 
+
 Cell(position::Position, color::String) = Cell(position, color, 0.8)
 Cell(x::Int, y::Int, color::String) = Cell(Position(floor(Int, x), floor(Int, y)), color, 0.8)
 # Cell(x::Int, y::Int, color::String, opacity::Float64) = Cell(Position(floor(Int, x), floor(Int, y)), color, opacity)
 
-Cell(x, y, color::String, @nospecialize(state::NamedTuple)) = Cell(floor(Int, x), floor(Int, y), color)
-Cell(position::Position, color::String, @nospecialize(state::NamedTuple)) = Cell(position::Position, color::String)
+Cell(x, y, color::String, @nospecialize(state::State)) = Cell(floor(Int, x), floor(Int, y), color)
+Cell(position::Position, color::String, @nospecialize(state::State)) = Cell(position::Position, color::String)
 
 # struct Scene
 #   objects::Array{Object}
@@ -2280,7 +2336,7 @@ Cell(position::Position, color::String, @nospecialize(state::NamedTuple)) = Cell
 #   vcat(map(obj -> render(obj), filter(obj -> obj.alive, scene.objects))...)
 # end
 
-function prev(@nospecialize(obj::NamedTuple), @nospecialize(state))
+function prev(obj::Object, @nospecialize(state))
   prev_objects = filter(o -> o.id == obj.id, state.scene.objects)
   if prev_objects != []
     prev_objects[1]                            
@@ -2289,62 +2345,71 @@ function prev(@nospecialize(obj::NamedTuple), @nospecialize(state))
   end
 end
 
-function render(@nospecialize(obj::NamedTuple), @nospecialize(state=nothing))::Array{Cell}
-  if !(:id in keys(obj))
-    vcat(map(o -> render(o), filter(x -> x.alive, obj.objects))...)
-  else
-    if obj.alive
-      map(cell -> Cell(move(cell.position, obj.origin), cell.color), obj.render)
+function render(obj::Object, state::Union{State, Nothing}=nothing)::Array{Cell}
+  if obj.alive
+    if isnothing(obj.render)
+      render = state.object_types[obj.type].render
+      map(cell -> Cell(move(cell.position, obj.origin), cell.color), render)
     else
-      []
+      map(cell -> Cell(move(cell.position, obj.origin), cell.color), obj.render)
     end
+  else
+    []
   end
 end
 
+function renderScene(@nospecialize(scene::Scene), state::Union{State, Nothing}=nothing)
+  vcat(map(o -> render(o, state), filter(x -> x.alive, scene.objects))...)
+end
 
-function occurred(click, @nospecialize(state=nothing))
+function occurred(click, state::Union{State, Nothing}=nothing)
   !isnothing(click)
 end
 
-function uniformChoice(freePositions, @nospecialize(state::NamedTuple))
+function uniformChoice(freePositions, @nospecialize(state::State))
   freePositions[rand(state.rng, Categorical(ones(length(freePositions))/length(freePositions)))]
 end
 
-function uniformChoice(freePositions, n::Union{Int, BigInt}, @nospecialize(state::NamedTuple))
+function uniformChoice(freePositions, n::Union{Int, BigInt}, @nospecialize(state::State))
   map(idx -> freePositions[idx], rand(state.rng, Categorical(ones(length(freePositions))/length(freePositions)), n))
 end
 
-function min(arr, @nospecialize(state=nothing))
+function min(arr, state::Union{State, Nothing}=nothing)
   Base.min(arr...)
 end
 
-function range(start::Int, stop::Int, @nospecialize(state=nothing))
+function range(start::Int, stop::Int, state::Union{State, Nothing}=nothing)
   [start:stop;]
 end
 
-function isWithinBounds(@nospecialize(obj::NamedTuple), @nospecialize(state::NamedTuple))::Bool
+function isWithinBounds(obj::Object, @nospecialize(state::State))::Bool
   # # println(filter(cell -> !isWithinBounds(cell.position),render(obj)))
-  length(filter(cell -> !isWithinBounds(cell.position, state), render(obj))) == 0
+  length(filter(cell -> !isWithinBounds(cell.position, state), render(obj, state))) == 0
 end
 
-function clicked(click::Union{Click, Nothing}, @nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::Bool
+function isOutsideBounds(obj::Object, @nospecialize(state::State))::Bool
+  # # println(filter(cell -> !isWithinBounds(cell.position),render(obj)))
+  length(filter(cell -> isWithinBounds(cell.position, state), render(obj, state))) == 0
+end
+
+function clicked(click::Union{Click, Nothing}, object::Object, @nospecialize(state::State))::Bool
   if isnothing(click)
     false
   else
-    GRID_SIZE = state.GRID_SIZEHistory[0]
+    GRID_SIZE = state.histories[:GRID_SIZE][0]
     if GRID_SIZE isa AbstractArray 
       GRID_SIZE_X = GRID_SIZE[1]
-      nums = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, render(object))
+      nums = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, render(object, state))
       (GRID_SIZE_X * click.y + click.x) in nums
     else
-      nums = map(cell -> GRID_SIZE*cell.position.y + cell.position.x, render(object))
+      nums = map(cell -> GRID_SIZE*cell.position.y + cell.position.x, render(object, state))
       (GRID_SIZE * click.y + click.x) in nums
     end
 
   end
 end
 
-function clicked(click::Union{Click, Nothing}, @nospecialize(objects::AbstractArray), @nospecialize(state::NamedTuple))  
+function clicked(click::Union{Click, Nothing}, @nospecialize(objects::AbstractArray), @nospecialize(state::State))  
   # # println("LOOK AT ME")
   # # println(reduce(&, map(obj -> clicked(click, obj), objects)))
   if isnothing(click)
@@ -2354,7 +2419,7 @@ function clicked(click::Union{Click, Nothing}, @nospecialize(objects::AbstractAr
   end
 end
 
-function objClicked(click::Union{Click, Nothing}, @nospecialize(objects::AbstractArray), @nospecialize(state=nothing))::Union{NamedTuple, Nothing}
+function objClicked(click::Union{Click, Nothing}, @nospecialize(objects::AbstractArray), state::Union{State, Nothing}=nothing)::Union{Object, Nothing}
   # # println(click)
   if isnothing(click)
     nothing
@@ -2369,7 +2434,7 @@ function objClicked(click::Union{Click, Nothing}, @nospecialize(objects::Abstrac
 
 end
 
-function clicked(click::Union{Click, Nothing}, x::Int, y::Int, @nospecialize(state::NamedTuple))::Bool
+function clicked(click::Union{Click, Nothing}, x::Int, y::Int, @nospecialize(state::State))::Bool
   if click == nothing
     false
   else
@@ -2377,7 +2442,7 @@ function clicked(click::Union{Click, Nothing}, x::Int, y::Int, @nospecialize(sta
   end
 end
 
-function clicked(click::Union{Click, Nothing}, pos::Position, @nospecialize(state::NamedTuple))::Bool
+function clicked(click::Union{Click, Nothing}, pos::Position, @nospecialize(state::State))::Bool
   if click == nothing
     false
   else
@@ -2385,66 +2450,84 @@ function clicked(click::Union{Click, Nothing}, pos::Position, @nospecialize(stat
   end
 end
 
-function intersects(@nospecialize(obj1::NamedTuple), @nospecialize(obj2::NamedTuple), @nospecialize(state::NamedTuple))::Bool
-  GRID_SIZE = state.GRID_SIZEHistory[0]
+function pushConfiguration(arrow::Position, @nospecialize(obj1::Object), @nospecialize(obj2::Object), @nospecialize(state::State))
+  pushConfiguration(arrow, obj1, [obj2], state)
+end
+
+function pushConfiguration(arrow::Position, @nospecialize(obj1::Object), @nospecialize(obj2::AbstractArray), @nospecialize(state::State))
+  println("pushConfiguration: obj1 id = $(obj1.id), time = $(state.time)")
+  moveIntersects(arrow, obj1, obj2, state) && isFree(move(move(obj1, arrow, state), arrow, state).origin, state)
+end
+
+function pushConfiguration(arrow::Position, @nospecialize(obj1::Object), @nospecialize(obj2::AbstractArray), @nospecialize(obj3::AbstractArray), @nospecialize(state::State))
+  moveIntersects(arrow, obj1, obj2, state) && intersects(move(move(obj1, arrow, state), arrow, state), obj3, state)
+end
+
+function moveIntersects(arrow::Position, @nospecialize(obj1::Object), @nospecialize(obj2::Object), @nospecialize(state::State)) 
+  (arrow != Position(0, 0)) && intersects(move(obj1, arrow, state), obj2, state)
+end
+
+function moveIntersects(arrow::Position, @nospecialize(obj::Object), @nospecialize(objects::AbstractArray), @nospecialize(state::State)) 
+  (arrow != Position(0, 0)) && intersects(move(obj, arrow, state), objects, state)
+end
+
+function intersects(@nospecialize(obj1::Object), @nospecialize(obj2::Object), @nospecialize(state::State))::Bool
+  GRID_SIZE = state.histories[:GRID_SIZE][0]
   if GRID_SIZE isa AbstractArray 
     GRID_SIZE_X = GRID_SIZE[1]
     GRID_SIZE_Y = GRID_SIZE[2]
-    nums1 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, render(obj1))
-    nums2 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, render(obj2))
+    nums1 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, render(obj1, state))
+    nums2 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, render(obj2, state))
     length(intersect(nums1, nums2)) != 0
   else
-    nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj1))
-    nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj2))
+    nums1 = map(cell -> state.histories[:GRID_SIZE][0]*cell.position.y + cell.position.x, render(obj1, state))
+    nums2 = map(cell -> state.histories[:GRID_SIZE][0]*cell.position.y + cell.position.x, render(obj2, state))
     length(intersect(nums1, nums2)) != 0
   end
 end
 
-function intersects(@nospecialize(obj1::NamedTuple), @nospecialize(obj2::AbstractArray), @nospecialize(state::NamedTuple))::Bool
-  GRID_SIZE = state.GRID_SIZEHistory[0]
+function intersects(@nospecialize(obj1::Object), @nospecialize(obj2::AbstractArray), @nospecialize(state::State))::Bool
+  GRID_SIZE = state.histories[:GRID_SIZE][0]
   if GRID_SIZE isa AbstractArray 
     GRID_SIZE_X = GRID_SIZE[1]
-    nums1 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, render(obj1))
-    nums2 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
+    nums1 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, render(obj1, state))
+    nums2 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, vcat(map(o -> render(o, state), obj2)...))
     length(intersect(nums1, nums2)) != 0
   else
-    nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj1))
-    nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
+    nums1 = map(cell -> state.histories[:GRID_SIZE][0]*cell.position.y + cell.position.x, render(obj1, state))
+    nums2 = map(cell -> state.histories[:GRID_SIZE][0]*cell.position.y + cell.position.x, vcat(map(o -> render(o, state), obj2)...))
     length(intersect(nums1, nums2)) != 0
   end
 end
 
-function intersects(@nospecialize(obj2::AbstractArray), @nospecialize(obj1::NamedTuple), @nospecialize(state::NamedTuple))::Bool
-  GRID_SIZE = state.GRID_SIZEHistory[0] 
+function intersects(@nospecialize(obj2::AbstractArray), @nospecialize(obj1::Object), @nospecialize(state::State))::Bool
+  GRID_SIZE = state.histories[:GRID_SIZE][0] 
   if GRID_SIZE isa AbstractArray 
     GRID_SIZE_X = GRID_SIZE[1]
-    nums1 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, render(obj1))
-    nums2 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
+    nums1 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, render(obj1, state))
+    nums2 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, vcat(map(o -> render(o, state), obj2)...))
     length(intersect(nums1, nums2)) != 0
   else
-    nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, render(obj1))
-    nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
+    nums1 = map(cell -> state.histories[:GRID_SIZE][0]*cell.position.y + cell.position.x, render(obj1, state))
+    nums2 = map(cell -> state.histories[:GRID_SIZE][0]*cell.position.y + cell.position.x, vcat(map(o -> render(o, state), obj2)...))
     length(intersect(nums1, nums2)) != 0
   end
 end
 
-function intersects(@nospecialize(obj1::AbstractArray), @nospecialize(obj2::AbstractArray), @nospecialize(state::NamedTuple))::Bool
-  # # println("INTERSECTS")
-  # # @show typeof(obj1) 
-  # # @show typeof(obj2) 
+function intersects(@nospecialize(obj1::AbstractArray), @nospecialize(obj2::AbstractArray), @nospecialize(state::State))::Bool
   if (length(obj1) == 0) || (length(obj2) == 0)
     false  
-  elseif (obj1[1] isa NamedTuple) && (obj2[1] isa NamedTuple)
+  elseif (obj1[1] isa Object) && (obj2[1] isa Object)
     # # println("MADE IT")
-    GRID_SIZE = state.GRID_SIZEHistory[0]
+    GRID_SIZE = state.histories[:GRID_SIZE][0]
     if GRID_SIZE isa AbstractArray 
       GRID_SIZE_X = GRID_SIZE[1]
-      nums1 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, vcat(map(render, obj1)...))
-      nums2 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
+      nums1 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, vcat(map(o -> render(o, state), obj1)...))
+      nums2 = map(cell -> GRID_SIZE_X*cell.position.y + cell.position.x, vcat(map(o -> render(o, state), obj2)...))
       length(intersect(nums1, nums2)) != 0
     else
-      nums1 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj1)...))
-      nums2 = map(cell -> state.GRID_SIZEHistory[0]*cell.position.y + cell.position.x, vcat(map(render, obj2)...))
+      nums1 = map(cell -> state.histories[:GRID_SIZE][0]*cell.position.y + cell.position.x, vcat(map(o -> render(o, state), obj1)...))
+      nums2 = map(cell -> state.histories[:GRID_SIZE][0]*cell.position.y + cell.position.x, vcat(map(o -> render(o, state), obj2)...))
       length(intersect(nums1, nums2)) != 0
     end
   else
@@ -2452,24 +2535,24 @@ function intersects(@nospecialize(obj1::AbstractArray), @nospecialize(obj2::Abst
   end
 end
 
-function intersects(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::Bool
+function intersects(object::Object, @nospecialize(state::State))::Bool
   objects = state.scene.objects
   intersects(object, objects, state)
 end
 
-function addObj(@nospecialize(list::AbstractArray), @nospecialize(obj::NamedTuple), @nospecialize(state=nothing))
+function addObj(@nospecialize(list::AbstractArray), obj::Object, state::Union{State, Nothing}=nothing)
   obj = update_nt(obj, :changed, true)
   new_list = vcat(list, obj)
   new_list
 end
 
-function addObj(@nospecialize(list::AbstractArray), @nospecialize(objs::AbstractArray), @nospecialize(state=nothing))
+function addObj(@nospecialize(list::AbstractArray), @nospecialize(objs::AbstractArray), state::Union{State, Nothing}=nothing)
   objs = map(obj -> update_nt(obj, :changed, true), objs)
   new_list = vcat(list, objs)
   new_list
 end
 
-function removeObj(@nospecialize(list::AbstractArray), @nospecialize(obj::NamedTuple), @nospecialize(state=nothing))
+function removeObj(@nospecialize(list::AbstractArray), obj::Object, state::Union{State, Nothing}=nothing)
   new_list = deepcopy(list)
   for x in filter(o -> o.id == obj.id, new_list)
     index = findall(o -> o.id == x.id, new_list)[1]
@@ -2480,7 +2563,7 @@ function removeObj(@nospecialize(list::AbstractArray), @nospecialize(obj::NamedT
   new_list
 end
 
-function removeObj(@nospecialize(list::AbstractArray), fn, @nospecialize(state=nothing))
+function removeObj(@nospecialize(list::AbstractArray), fn, state::Union{State, Nothing}=nothing)
   new_list = deepcopy(list)
   for x in filter(obj -> fn(obj), new_list)
     index = findall(o -> o.id == x.id, new_list)[1]
@@ -2491,7 +2574,7 @@ function removeObj(@nospecialize(list::AbstractArray), fn, @nospecialize(state=n
   new_list
 end
 
-function removeObj(@nospecialize(obj::NamedTuple), @nospecialize(state=nothing))
+function removeObj(obj::Object, state::Union{State, Nothing}=nothing)
   new_obj = deepcopy(obj)
   new_obj = update_nt(update_nt(new_obj, :alive, false), :changed, true)
   # new_obj.alive = false
@@ -2499,7 +2582,7 @@ function removeObj(@nospecialize(obj::NamedTuple), @nospecialize(state=nothing))
   # new_obj
 end
 
-function updateObj(@nospecialize(obj::NamedTuple), field::String, value, @nospecialize(state=nothing))
+function updateObj(obj::Object, field::String, value, state::Union{State, Nothing}=nothing)
   fields = fieldnames(typeof(obj))
   custom_fields = fields[5:end-1]
   origin_field = (fields[2],)
@@ -2517,11 +2600,11 @@ function updateObj(@nospecialize(obj::NamedTuple), field::String, value, @nospec
   new_obj
 end
 
-function filter_fallback(@nospecialize(obj::NamedTuple), @nospecialize(state=nothing))
+function filter_fallback(obj::Object, state::Union{State, Nothing}=nothing)
   true
 end
 
-# function updateObj(@nospecialize(list::AbstractArray), map_fn, filter_fn, @nospecialize(state=nothing))
+# function updateObj(@nospecialize(list::AbstractArray), map_fn, filter_fn, state::Union{State, Nothing}=nothing)
 #   orig_list = filter(obj -> !filter_fn(obj), list)
 #   filtered_list = filter(filter_fn, list)
 #   new_filtered_list = map(map_fn, filtered_list)
@@ -2529,7 +2612,7 @@ end
 #   vcat(orig_list, new_filtered_list)
 # end
 
-# function updateObj(@nospecialize(list::AbstractArray), map_fn, @nospecialize(state=nothing))
+# function updateObj(@nospecialize(list::AbstractArray), map_fn, state::Union{State, Nothing}=nothing)
 #   orig_list = filter(obj -> false, list)
 #   filtered_list = filter(obj -> true, list)
 #   new_filtered_list = map(map_fn, filtered_list)
@@ -2537,12 +2620,12 @@ end
 #   vcat(orig_list, new_filtered_list)
 # end
 
-function adjPositions(position::Position, @nospecialize(state::NamedTuple))::Array{Position}
+function adjPositions(position::Position, @nospecialize(state::State))::Array{Position}
   filter(x -> isWithinBounds(x, state), [Position(position.x, position.y + 1), Position(position.x, position.y - 1), Position(position.x + 1, position.y), Position(position.x - 1, position.y)])
 end
 
-function isWithinBounds(position::Position, @nospecialize(state::NamedTuple))::Bool
-  GRID_SIZE = state.GRID_SIZEHistory[0] 
+function isWithinBounds(position::Position, @nospecialize(state::State))::Bool
+  GRID_SIZE = state.histories[:GRID_SIZE][0] 
   if GRID_SIZE isa AbstractArray 
     GRID_SIZE_X = GRID_SIZE[1]
     GRID_SIZE_Y = GRID_SIZE[2]
@@ -2553,11 +2636,15 @@ function isWithinBounds(position::Position, @nospecialize(state::NamedTuple))::B
   (position.x >= 0) && (position.x < GRID_SIZE_X) && (position.y >= 0) && (position.y < GRID_SIZE_Y)                  
 end
 
-function isFree(position::Position, @nospecialize(state::NamedTuple))::Bool
-  length(filter(cell -> cell.position.x == position.x && cell.position.y == position.y, render(state.scene))) == 0
+function isOutsideBounds(position::Position, @nospecialize(state::State))::Bool
+  !isWithinBounds(position, state)
 end
 
-function isFree(click::Union{Click, Nothing}, @nospecialize(state::NamedTuple))::Bool
+function isFree(position::Position, @nospecialize(state::State))::Bool
+  length(filter(cell -> cell.position.x == position.x && cell.position.y == position.y, renderScene(state.scene, state))) == 0
+end
+
+function isFree(click::Union{Click, Nothing}, @nospecialize(state::State))::Bool
   if click == nothing
     false
   else
@@ -2565,7 +2652,11 @@ function isFree(click::Union{Click, Nothing}, @nospecialize(state::NamedTuple)):
   end
 end
 
-function rect(pos1::Position, pos2::Position, @nospecialize(state=nothing))
+function isFree(positions::Array{Position}, @nospecialize(state::State))::Bool 
+  foldl(|, map(pos -> isFree(pos, state), positions), init=false)
+end
+
+function rect(pos1::Position, pos2::Position, state::Union{State, Nothing}=nothing)
   min_x = pos1.x 
   max_x = pos2.x 
   min_y = pos1.y
@@ -2580,7 +2671,7 @@ function rect(pos1::Position, pos2::Position, @nospecialize(state=nothing))
   positions
 end
 
-function unitVector(position1::Position, position2::Position, @nospecialize(state::NamedTuple))::Position
+function unitVector(position1::Position, position2::Position, @nospecialize(state::State))::Position
   deltaX = position2.x - position1.x
   deltaY = position2.y - position1.y
   if (floor(Int, abs(sign(deltaX))) == 1 && floor(Int, abs(sign(deltaY))) == 1)
@@ -2591,167 +2682,201 @@ function unitVector(position1::Position, position2::Position, @nospecialize(stat
   end
 end
 
-function unitVector(object1::NamedTuple, object2::NamedTuple, @nospecialize(state::NamedTuple))::Position
+function unitVector(object1::Object, object2::Object, @nospecialize(state::State))::Position
   position1 = object1.origin
   position2 = object2.origin
   unitVector(position1, position2, state)
 end
 
-function unitVector(@nospecialize(object::NamedTuple), position::Position, @nospecialize(state::NamedTuple))::Position
+function unitVector(object::Object, position::Position, @nospecialize(state::State))::Position
   unitVector(object.origin, position, state)
 end
 
-function unitVector(position::Position, @nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::Position
+function unitVector(position::Position, object::Object, @nospecialize(state::State))::Position
   unitVector(position, object.origin, state)
 end
 
-function unitVector(position::Position, @nospecialize(state::NamedTuple))::Position
+function unitVector(position::Position, @nospecialize(state::State))::Position
   unitVector(Position(0,0), position, state)
 end 
 
-function displacement(position1::Position, position2::Position, @nospecialize(state=nothing))::Position
+function displacement(position1::Position, position2::Position, state::Union{State, Nothing}=nothing)::Position
   Position(floor(Int, position2.x - position1.x), floor(Int, position2.y - position1.y))
 end
 
-function displacement(cell1::Cell, cell2::Cell, @nospecialize(state=nothing))::Position
+function displacement(cell1::Cell, cell2::Cell, state::Union{State, Nothing}=nothing)::Position
   displacement(cell1.position, cell2.position)
 end
 
-function adjacent(position1::Position, position2::Position, @nospecialize(state=nothing))::Bool
-  displacement(position1, position2) in [Position(0,1), Position(1, 0), Position(0, -1), Position(-1, 0)]
+function adjacent(position1::Position, position2::Position, unitSize::Int, state::Union{State, Nothing}=nothing)::Bool
+  displacement(position1, position2) in [Position(0, unitSize), Position(unitSize, 0), Position(0, -unitSize), Position(-unitSize, 0)]
 end
 
-function adjacent(cell1::Cell, cell2::Cell, @nospecialize(state=nothing))::Bool
-  adjacent(cell1.position, cell2.position)
+function adjacent(cell1::Cell, cell2::Cell, unitSize::Int, state::Union{State, Nothing}=nothing)::Bool
+  adjacent(cell1.position, cell2.position, unitSize)
 end
 
-function adjacent(cell::Cell, cells::AbstractArray, @nospecialize(state=nothing))
-  length(filter(x -> adjacent(cell, x), cells)) != 0
+function adjacent(cell::Cell, cells::Array{Cell}, unitSize::Int, state::Union{State, Nothing}=nothing)
+  length(filter(x -> adjacent(cell, x, unitSize), cells)) != 0
 end
 
-function adjacentObjs(@nospecialize(obj::NamedTuple), @nospecialize(state::NamedTuple))
-  filter(o -> adjacent(o.origin, obj.origin) && (obj.id != o.id), state.scene.objects)
+function adjacentObjs(obj::Object, unitSize::Int, @nospecialize(state::State))
+  filter(o -> adjacent(o.origin, obj.origin, unitSize) && (obj.id != o.id), state.scene.objects)
 end
 
-function adjacentObjsDiag(@nospecialize(obj::NamedTuple), @nospecialize(state::NamedTuple))
+function adjacentObjsDiag(obj::Object, @nospecialize(state::State))
   filter(o -> adjacentDiag(o.origin, obj.origin) && (obj.id != o.id), state.scene.objects)
 end
 
-function adjacentDiag(position1::Position, position2::Position, @nospecialize(state=nothing))
+function adjacentDiag(position1::Position, position2::Position, state::Union{State, Nothing}=nothing)
   displacement(position1, position2) in [Position(0,1), Position(1, 0), Position(0, -1), Position(-1, 0),
                                          Position(1,1), Position(1, -1), Position(-1, 1), Position(-1, -1)]
 end
 
-function rotate(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
+function adj(@nospecialize(obj1::Object), @nospecialize(obj2::Object), unitSize::Int, @nospecialize(state::State)) 
+  filter(o -> o.id == obj2.id, adjacentObjs(obj1, unitSize, state)) != []
+end
+
+function adj(@nospecialize(obj1::Object), @nospecialize(obj2::AbstractArray), unitSize::Int, @nospecialize(state::State)) 
+  filter(o -> o.id in map(x -> x.id, obj2), adjacentObjs(obj1, unitSize, state)) != []
+end
+
+function adj(@nospecialize(obj1::AbstractArray), @nospecialize(obj2::AbstractArray), unitSize::Int, @nospecialize(state::State)) 
+  obj1_adjacentObjs = vcat(map(x -> adjacentObjs(x, unitSize, state), obj1)...)
+  intersect(map(x -> x.id, obj1_adjacentObjs), map(x -> x.id, obj2)) != []  
+end
+
+function rotate(object::Object, state::Union{State, Nothing}=nothing)::Object
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :render, map(x -> Cell(rotate(x.position), x.color), new_object.render))
   new_object
 end
 
-function rotate(position::Position, @nospecialize(state=nothing))::Position
+function rotate(position::Position, state::Union{State, Nothing}=nothing)::Position
   Position(-position.y, position.x)
  end
 
-function rotateNoCollision(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple
+function rotateNoCollision(object::Object, @nospecialize(state::State))::Object
   (isWithinBounds(rotate(object), state) && isFree(rotate(object), object, state)) ? rotate(object) : object
 end
 
-function move(position1::Position, position2::Position, @nospecialize(state=nothing))
+function move(position1::Position, position2::Position, state::Union{State, Nothing}=nothing)
   Position(position1.x + position2.x, position1.y + position2.y)
 end
 
-function move(position::Position, cell::Cell, @nospecialize(state=nothing))
+function move(position::Position, cell::Cell, state::Union{State, Nothing}=nothing)
   Position(position.x + cell.position.x, position.y + cell.position.y)
 end
 
-function move(cell::Cell, position::Position, @nospecialize(state=nothing))
+function move(cell::Cell, position::Position, state::Union{State, Nothing}=nothing)
   Position(position.x + cell.position.x, position.y + cell.position.y)
 end
 
-function move(@nospecialize(object::NamedTuple), position::Position, @nospecialize(state=nothing))
+function move(object::Object, position::Position, state::Union{State, Nothing}=nothing)
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, move(object.origin, position))
   new_object
 end
 
-function move(@nospecialize(object::NamedTuple), x::Int, y::Int, @nospecialize(state=nothing))::NamedTuple
+function move(object::Object, x::Int, y::Int, state::Union{State, Nothing}=nothing)::Object
   move(object, Position(x, y))                          
 end
 
 # ----- begin left/right move ----- #
 
-function moveLeft(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
+function moveLeft(object::Object, state::Union{State, Nothing}=nothing)::Object
   move(object, Position(-1, 0))                          
 end
 
-function moveRight(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
+function moveRight(object::Object, state::Union{State, Nothing}=nothing)::Object
   move(object, Position(1, 0))                          
 end
 
-function moveUp(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
+function moveUp(object::Object, state::Union{State, Nothing}=nothing)::Object
   move(object, Position(0, -1))                          
 end
 
-function moveDown(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
+function moveDown(object::Object, state::Union{State, Nothing}=nothing)::Object
   move(object, Position(0, 1))                          
 end
 
 # ----- end left/right move ----- #
 
-function moveNoCollision(@nospecialize(object::NamedTuple), position::Position, @nospecialize(state::NamedTuple))::NamedTuple
+function moveNoCollision(object::Object, position::Position, @nospecialize(state::State))::Object
   (isWithinBounds(move(object, position), state) && isFree(move(object, position.x, position.y), object, state)) ? move(object, position.x, position.y) : object 
 end
 
-function moveNoCollision(@nospecialize(object::NamedTuple), x::Int, y::Int, @nospecialize(state::NamedTuple))
+function moveNoCollision(object::Object, x::Int, y::Int, @nospecialize(state::State))
   (isWithinBounds(move(object, x, y), state) && isFree(move(object, x, y), object, state)) ? move(object, x, y) : object 
+end
+
+function moveNoCollisionColor(object::Object, position::Position, color::String, @nospecialize(state::State))::Object
+  new_object = move(object, position) 
+  matching_color_objects = filter(obj -> intersects(new_object, obj, state) && (color in map(cell -> cell.color, render(obj, state))), state.scene.objects)
+  if matching_color_objects == []
+    new_object
+  else
+    object 
+  end
+end
+
+function moveNoCollisionColor(object::Object, x::Int, y::Int, color::String, @nospecialize(state::State))::Object
+  new_object = move(object, Position(x, y)) 
+  matching_color_objects = filter(obj -> intersects(new_object, obj, state) && (color in map(cell -> cell.color, render(obj, state))), state.scene.objects)
+  if matching_color_objects == []
+    new_object
+  else
+    object 
+  end
 end
 
 # ----- begin left/right moveNoCollision ----- #
 
-function moveLeftNoCollision(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple
+function moveLeftNoCollision(object::Object, @nospecialize(state::State))::Object
   (isWithinBounds(move(object, -1, 0), state) && isFree(move(object, -1, 0), object, state)) ? move(object, -1, 0) : object 
 end
 
-function moveRightNoCollision(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple
-  (isWithinBounds(move(object, 1, 0), state) && isFree(move(object, 1, 0), object, state)) ? move(object, 1, 0) : object 
+function moveRightNoCollision(object::Object, @nospecialize(state::State))::Object
+  x = (isWithinBounds(move(object, 1, 0), state) && isFree(move(object, 1, 0), object, state)) ? move(object, 1, 0) : object 
+  x
 end
 
-function moveUpNoCollision(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple
+function moveUpNoCollision(object::Object, @nospecialize(state::State))::Object
   (isWithinBounds(move(object, 0, -1), state) && isFree(move(object, 0, -1), object, state)) ? move(object, 0, -1) : object 
 end
 
-function moveDownNoCollision(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple
+function moveDownNoCollision(object::Object, @nospecialize(state::State))::Object
   (isWithinBounds(move(object, 0, 1), state) && isFree(move(object, 0, 1), object, state)) ? move(object, 0, 1) : object 
 end
 
 # ----- end left/right moveNoCollision ----- #
 
-function moveWrap(@nospecialize(object::NamedTuple), position::Position, @nospecialize(state::NamedTuple))::NamedTuple
+function moveWrap(object::Object, position::Position, @nospecialize(state::State))::Object
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, moveWrap(object.origin, position.x, position.y, state))
   new_object
 end
 
-function moveWrap(cell::Cell, position::Position, @nospecialize(state::NamedTuple))
+function moveWrap(cell::Cell, position::Position, @nospecialize(state::State))
   moveWrap(cell.position, position.x, position.y, state)
 end
 
-function moveWrap(position::Position, cell::Cell, @nospecialize(state::NamedTuple))
+function moveWrap(position::Position, cell::Cell, @nospecialize(state::State))
   moveWrap(cell.position, position, state)
 end
 
-function moveWrap(@nospecialize(object::NamedTuple), x::Int, y::Int, @nospecialize(state::NamedTuple))::NamedTuple
+function moveWrap(object::Object, x::Int, y::Int, @nospecialize(state::State))::Object
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, moveWrap(object.origin, x, y, state))
   new_object
 end
 
-function moveWrap(position1::Position, position2::Position, @nospecialize(state::NamedTuple))::Position
+function moveWrap(position1::Position, position2::Position, @nospecialize(state::State))::Position
   moveWrap(position1, position2.x, position2.y, state)
 end
 
-function moveWrap(position::Position, x::Int, y::Int, @nospecialize(state::NamedTuple))::Position
-  GRID_SIZE = state.GRID_SIZEHistory[0]
+function moveWrap(position::Position, x::Int, y::Int, @nospecialize(state::State))::Position
+  GRID_SIZE = state.histories[:GRID_SIZE][0]
   if GRID_SIZE isa AbstractArray 
     GRID_SIZE_X = GRID_SIZE[1]
     GRID_SIZE_Y = GRID_SIZE[2]
@@ -2766,25 +2891,25 @@ end
 
 # ----- begin left/right moveWrap ----- #
 
-function moveLeftWrap(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
+function moveLeftWrap(object::Object, state::Union{State, Nothing}=nothing)::Object
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, moveWrap(object.origin, -1, 0, state))
   new_object
 end
   
-function moveRightWrap(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
+function moveRightWrap(object::Object, state::Union{State, Nothing}=nothing)::Object
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, moveWrap(object.origin, 1, 0, state))
   new_object
 end
 
-function moveUpWrap(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
+function moveUpWrap(object::Object, state::Union{State, Nothing}=nothing)::Object
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, moveWrap(object.origin, 0, -1, state))
   new_object
 end
 
-function moveDownWrap(@nospecialize(object::NamedTuple), @nospecialize(state=nothing))::NamedTuple
+function moveDownWrap(object::Object, state::Union{State, Nothing}=nothing)::Object
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, moveWrap(object.origin, 0, 1, state))
   new_object
@@ -2792,7 +2917,7 @@ end
 
 # ----- end left/right moveWrap ----- #
 
-function randomPositions(GRID_SIZE, n::Int, @nospecialize(state=nothing))::Array{Position}
+function randomPositions(GRID_SIZE, n::Int, state::Union{State, Nothing}=nothing)::Array{Position}
   if GRID_SIZE isa AbstractArray 
     GRID_SIZE_X = GRID_SIZE[1]
     GRID_SIZE_Y = GRID_SIZE[2]
@@ -2804,39 +2929,277 @@ function randomPositions(GRID_SIZE, n::Int, @nospecialize(state=nothing))::Array
   end
 end
 
-function distance(position1::Position, position2::Position, @nospecialize(state=nothing))::Int
+function distance(position1::Position, position2::Position, state::Union{State, Nothing}=nothing)::Int
   abs(position1.x - position2.x) + abs(position1.y - position2.y)
 end
 
-function distance(object1::NamedTuple, object2::NamedTuple, @nospecialize(state=nothing))::Int
+function distance(object1::Object, object2::Object, state::Union{State, Nothing}=nothing)::Int
   position1 = object1.origin
   position2 = object2.origin
   distance(position1, position2)
 end
 
-function distance(@nospecialize(object::NamedTuple), position::Position, @nospecialize(state=nothing))::Int
+function distance(object::Object, position::Position, state::Union{State, Nothing}=nothing)::Int
   distance(object.origin, position)
 end
 
-function distance(position::Position, @nospecialize(object::NamedTuple), @nospecialize(state=nothing))::Int
+function distance(position::Position, object::Object, state::Union{State, Nothing}=nothing)::Int
   distance(object.origin, position)
 end
 
-function closest(@nospecialize(object::NamedTuple), type::Symbol, @nospecialize(state::NamedTuple))::Position
+function distance(object::Object, @nospecialize(objects::AbstractArray), state::Union{State, Nothing}=nothing)::Int
+  if objects == []
+    typemax(Int)
+  else
+    distances = map(obj -> distance(object, obj), objects)
+    minimum(distances)
+  end
+end
+
+function distance(@nospecialize(objects1::AbstractArray), @nospecialize(objects2::AbstractArray), state::Union{State, Nothing}=nothing)::Int
+  if objects1 == [] || objects2 == []
+    typemax(Int)
+  else
+    distances = vcat(map(obj -> distance(obj, objects2), objects1)...)
+    minimum(distances)
+  end
+end
+
+
+function firstWithDefault(@nospecialize(arr::AbstractArray), state::Union{State, Nothing}=nothing) 
+  if arr == [] 
+    Position(-30, -30)
+  else 
+    first(arr)
+  end
+end
+
+function farthestRandom(object::Object, @nospecialize(types::AbstractArray), unit_size::Int, @nospecialize(state::State))::Position
+  choices = [farthestLeft(object, types, unit_size, state), 
+             farthestRight(object, types, unit_size, state), 
+             farthestDown(object, types, unit_size, state), 
+             farthestUp(object, types, unit_size, state)]
+
+  nonzero_positions = filter(p -> p != Position(0, 0), choices)
+
+  # println("farthestRandom")
+  # @show nonzero_positions 
+
+  if nonzero_positions == [] 
+    Position(0, 0)
+  else
+    rand(nonzero_positions)
+  end
+end
+
+function farthestLeft(object::Object, @nospecialize(types::AbstractArray), unit_size::Int, @nospecialize(state::State))::Position 
+  orig_position = closestRight(object, types, unit_size, state)
+  if orig_position == Position(unit_size, 0)
+    Position(-unit_size, 0)
+  else
+    objects_of_type = filter(obj -> (obj.type in types) && (obj.alive), state.scene.objects)
+    if length(objects_of_type) == 0 
+      Position(0, 0)
+    else
+      min_distance = min(map(obj -> distance(object, obj), objects_of_type))
+      objects_of_min_distance = filter(obj -> distance(object, obj) == min_distance, objects_of_type)
+      if objects_of_min_distance[1].origin.x == object.origin.x
+        Position(-unit_size, 0)
+      else
+        Position(0, 0)
+      end
+    end
+  end
+end
+
+function farthestRight(object::Object, @nospecialize(types::AbstractArray), unit_size::Int, @nospecialize(state::State))::Position
+  orig_position = closestLeft(object, types, unit_size, state)
+  if orig_position == Position(-unit_size, 0) 
+    Position(unit_size, 0)
+  else
+    objects_of_type = filter(obj -> (obj.type in types) && (obj.alive), state.scene.objects)
+    if length(objects_of_type) == 0 
+      Position(0, 0)
+    else
+      min_distance = min(map(obj -> distance(object, obj), objects_of_type))
+      objects_of_min_distance = filter(obj -> distance(object, obj) == min_distance, objects_of_type)
+      if objects_of_min_distance[1].origin.x == object.origin.x
+        Position(unit_size, 0)
+      else
+        Position(0, 0)
+      end
+    end
+  end
+end
+
+function farthestUp(object::Object, @nospecialize(types::AbstractArray), unit_size::Int, @nospecialize(state::State))::Position
+  orig_position = closestDown(object, types, unit_size, state)
+  if orig_position == Position(0, unit_size) 
+    Position(0, -unit_size)
+  else
+    objects_of_type = filter(obj -> (obj.type in types) && (obj.alive), state.scene.objects)
+    if length(objects_of_type) == 0 
+      Position(0, 0)
+    else
+      min_distance = min(map(obj -> distance(object, obj), objects_of_type))
+      objects_of_min_distance = filter(obj -> distance(object, obj) == min_distance, objects_of_type)
+      if objects_of_min_distance[1].origin.y == object.origin.y
+        Position(0, -unit_size)
+      else
+        Position(0, 0)
+      end
+    end
+  end
+end
+
+function farthestDown(object::Object, @nospecialize(types::AbstractArray), unit_size::Int, @nospecialize(state::State))::Position
+  orig_position = closestUp(object, types, unit_size, state)
+  if orig_position == Position(0, -unit_size) 
+    Position(0, unit_size)
+  else
+    objects_of_type = filter(obj -> (obj.type in types) && (obj.alive), state.scene.objects)
+    if length(objects_of_type) == 0 
+      Position(0, 0)
+    else
+      min_distance = min(map(obj -> distance(object, obj), objects_of_type))
+      objects_of_min_distance = filter(obj -> distance(object, obj) == min_distance, objects_of_type)
+      if objects_of_min_distance[1].origin.y == object.origin.y
+        Position(0, unit_size)
+      else
+        Position(0, 0)
+      end
+    end
+  end
+end
+
+function closest(object::Object, type::Symbol, @nospecialize(state::State))::Position
   objects_of_type = filter(obj -> (obj.type == type) && (obj.alive), state.scene.objects)
   if length(objects_of_type) == 0
     object.origin
   else
     min_distance = min(map(obj -> distance(object, obj), objects_of_type))
-    filter(obj -> distance(object, obj) == min_distance, objects_of_type)[1].origin
+    objects_of_min_distance = filter(obj -> distance(object, obj) == min_distance, objects_of_type)
+    sort(objects_of_min_distance, by=o -> (o.origin.x, o.origin.y))[1].origin
   end
 end
 
-function mapPositions(constructor, GRID_SIZE, filterFunction, args, @nospecialize(state=nothing))::Union{NamedTuple, Array{<:NamedTuple}}
+function closest(object::Object, @nospecialize(types::AbstractArray), @nospecialize(state::State))::Position
+  objects_of_type = filter(obj -> (obj.type in types) && (obj.alive), state.scene.objects)
+  if length(objects_of_type) == 0
+    object.origin
+  else
+    min_distance = min(map(obj -> distance(object, obj), objects_of_type))
+    objects_of_min_distance = filter(obj -> distance(object, obj) == min_distance, objects_of_type)
+    sort(objects_of_min_distance, by=o -> (o.origin.x, o.origin.y))[1].origin
+  end
+end
+
+function closestRandom(object::Object, @nospecialize(types::AbstractArray), unit_size::Int, @nospecialize(state::State))::Position
+  choices = [closestLeft(object, types, unit_size, state), 
+             closestRight(object, types, unit_size, state), 
+             closestDown(object, types, unit_size, state), 
+             closestUp(object, types, unit_size, state)]
+
+  nonzero_positions = filter(p -> p != Position(0, 0), choices)
+
+  # println("closestRandom")
+  # @show nonzero_positions 
+
+  if nonzero_positions == [] 
+    Position(0, 0)
+  else
+    rand(nonzero_positions)
+  end
+end
+
+function closestLeft(object::Object, @nospecialize(types::AbstractArray), unit_size::Int, @nospecialize(state::State))::Position
+  objects_of_type = filter(obj -> (obj.type in types) && (obj.alive), state.scene.objects)
+  if length(objects_of_type) == 0
+    Position(0, 0)
+  else
+    min_distance = min(map(obj -> distance(object, obj), objects_of_type))
+    objects_of_min_distance = filter(obj -> distance(object, obj) == min_distance, objects_of_type)
+    negative_x_displacements = filter(x -> x < 0, map(o -> (o.origin.x - object.origin.x), objects_of_min_distance))
+    if length(negative_x_displacements) > 0
+      Position(-unit_size, 0)
+    else
+      Position(0, 0)        
+    end
+  end
+end
+
+function closestRight(object::Object, @nospecialize(types::AbstractArray), unit_size::Int, @nospecialize(state::State))::Position
+  objects_of_type = filter(obj -> (obj.type in types) && (obj.alive), state.scene.objects)
+  if length(objects_of_type) == 0
+    Position(0, 0)
+  else
+    min_distance = min(map(obj -> distance(object, obj), objects_of_type))
+    objects_of_min_distance = filter(obj -> distance(object, obj) == min_distance, objects_of_type)
+    positive_x_displacements = filter(x -> x > 0, map(o -> (o.origin.x - object.origin.x), objects_of_min_distance))
+    if length(positive_x_displacements) > 0
+      Position(unit_size, 0)
+    else
+      Position(0, 0)        
+    end
+  end
+end
+
+function closestUp(object::Object, @nospecialize(types::AbstractArray), unit_size::Int, @nospecialize(state::State))::Position
+  # @show object 
+  # @show types 
+  # @show state   
+  
+  objects_of_type = filter(obj -> (obj.type in types) && (obj.alive), state.scene.objects)
+  # @show objects_of_type 
+  if length(objects_of_type) == 0
+    Position(0, 0)
+  else
+    min_distance = min(map(obj -> distance(object, obj), objects_of_type))
+    objects_of_min_distance = filter(obj -> distance(object, obj) == min_distance, objects_of_type)
+    negative_y_displacements = filter(x -> x < 0, map(o -> (o.origin.y - object.origin.y), objects_of_min_distance))
+
+    # @show min_distance 
+    # @show objects_of_min_distance 
+    # @show negative_y_displacements 
+
+    if length(negative_y_displacements) > 0
+      Position(0, -unit_size)
+    else
+      Position(0, 0)
+    end
+  end
+end
+
+function closestDown(object::Object, @nospecialize(types::AbstractArray), unit_size::Int, @nospecialize(state::State))::Position
+  # @show object 
+  # @show types 
+  # @show state 
+  objects_of_type = filter(obj -> (obj.type in types) && (obj.alive), state.scene.objects)
+  # @show objects_of_type 
+  if length(objects_of_type) == 0
+    Position(0, 0)
+  else
+    min_distance = min(map(obj -> distance(object, obj), objects_of_type))
+    objects_of_min_distance = filter(obj -> distance(object, obj) == min_distance, objects_of_type)
+    positive_y_displacements = filter(x -> x > 0, map(o -> (o.origin.y - object.origin.y), objects_of_min_distance))
+
+    # @show min_distance 
+    # @show objects_of_min_distance 
+    # @show positive_y_displacements 
+
+    if length(positive_y_displacements) > 0
+      Position(0, unit_size)
+    else
+      Position(0, 0)
+    end
+  end
+end
+
+function mapPositions(constructor, GRID_SIZE, filterFunction, args, state::Union{State, Nothing}=nothing)::AbstractArray
   map(pos -> constructor(args..., pos), filter(filterFunction, allPositions(GRID_SIZE)))
 end
 
-function allPositions(GRID_SIZE, @nospecialize(state=nothing))
+function allPositions(GRID_SIZE, state::Union{State, Nothing}=nothing)
   if GRID_SIZE isa AbstractArray 
     GRID_SIZE_X = GRID_SIZE[1]
     GRID_SIZE_Y = GRID_SIZE[2]
@@ -2848,21 +3211,21 @@ function allPositions(GRID_SIZE, @nospecialize(state=nothing))
   end
 end
 
-function updateOrigin(@nospecialize(object::NamedTuple), new_origin::Position, @nospecialize(state=nothing))::NamedTuple
+function updateOrigin(object::Object, new_origin::Position, state::Union{State, Nothing}=nothing)::Object
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :origin, new_origin)
   new_object
 end
 
-function updateAlive(@nospecialize(object::NamedTuple), new_alive::Bool, @nospecialize(state=nothing))::NamedTuple
+function updateAlive(object::Object, new_alive::Bool, state::Union{State, Nothing}=nothing)::Object
   new_object = deepcopy(object)
   new_object = update_nt(new_object, :alive, new_alive)
   new_object
 end
 
-function nextLiquid(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple 
+function nextLiquid(object::Object, @nospecialize(state::State))::Object
   # # println("nextLiquid")
-  GRID_SIZE = state.GRID_SIZEHistory[0]
+  GRID_SIZE = state.histories[:GRID_SIZE][0]
   if GRID_SIZE isa AbstractArray 
     GRID_SIZE_X = GRID_SIZE[1]
     GRID_SIZE_Y = GRID_SIZE[2]
@@ -2913,23 +3276,23 @@ function nextLiquid(@nospecialize(object::NamedTuple), @nospecialize(state::Name
   new_object
 end
 
-function nextSolid(@nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::NamedTuple 
+function nextSolid(object::Object, @nospecialize(state::State))::Object 
   # # println("nextSolid")
   new_object = deepcopy(object)
-  if (isWithinBounds(move(object, Position(0, 1)), state) && reduce(&, map(x -> isFree(x, object, state), map(cell -> move(cell.position, Position(0, 1)), render(object)))))
+  if (isWithinBounds(move(object, Position(0, 1)), state) && reduce(&, map(x -> isFree(x, object, state), map(cell -> move(cell.position, Position(0, 1)), render(object, state)))))
     new_object = update_nt(new_object, :origin, move(object.origin, Position(0, 1)))
   end
   new_object
 end
 
-function closest(@nospecialize(object::NamedTuple), positions::Array{Position}, @nospecialize(state=nothing))::Position
+function closest(object::Object, positions::Array{Position}, state::Union{State, Nothing}=nothing)::Position
   closestDistance = sort(map(pos -> distance(pos, object.origin), positions))[1]
   closest = filter(pos -> distance(pos, object.origin) == closestDistance, positions)[1]
   closest
 end
 
-function isFree(start::Position, stop::Position, @nospecialize(state::NamedTuple))::Bool 
-  GRID_SIZE = state.GRID_SIZEHistory[0]
+function isFree(start::Position, stop::Position, @nospecialize(state::State))::Bool 
+  GRID_SIZE = state.histories[:GRID_SIZE][0]
   if GRID_SIZE isa AbstractArray 
     GRID_SIZE_X = GRID_SIZE[1]
     GRID_SIZE_Y = GRID_SIZE[2]
@@ -2950,8 +3313,8 @@ function isFree(start::Position, stop::Position, @nospecialize(state::NamedTuple
   reduce(&, map(num -> isFree(Position(num % GRID_SIZE_X, floor(Int, num / GRID_SIZE_X)), state), nums))
 end
 
-function isFree(start::Position, stop::Position, @nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))::Bool 
-  GRID_SIZE = state.GRID_SIZEHistory[0]
+function isFree(start::Position, stop::Position, object::Object, @nospecialize(state::State))::Bool 
+  GRID_SIZE = state.histories[:GRID_SIZE][0]
   if GRID_SIZE isa AbstractArray 
     GRID_SIZE_X = GRID_SIZE[1]
     GRID_SIZE_Y = GRID_SIZE[2]
@@ -2972,17 +3335,17 @@ function isFree(start::Position, stop::Position, @nospecialize(object::NamedTupl
   reduce(&, map(num -> isFree(Position(num % GRID_SIZE_X, floor(Int, num / GRID_SIZE_X)), object, state), nums))
 end
 
-function isFree(position::Position, @nospecialize(object::NamedTuple), @nospecialize(state::NamedTuple))
+function isFree(position::Position, object::Object, @nospecialize(state::State))
   length(filter(cell -> cell.position.x == position.x && cell.position.y == position.y, 
-  render((objects=filter(obj -> obj.id != object.id , state.scene.objects), background=state.scene.background)))) == 0
+  renderScene(Scene(filter(obj -> obj.id != object.id , state.scene.objects), state.scene.background), state))) == 0
 end
 
-function isFree(@nospecialize(object::NamedTuple), @nospecialize(orig_object::NamedTuple), @nospecialize(state::NamedTuple))::Bool
-  reduce(&, map(x -> isFree(x, orig_object, state), map(cell -> cell.position, render(object))))
+function isFree(object::Object, @nospecialize(orig_object::Object), @nospecialize(state::State))::Bool
+  reduce(&, map(x -> isFree(x, orig_object, state), map(cell -> cell.position, render(object, state))))
 end
 
-function allPositions(@nospecialize(state::NamedTuple))
-  GRID_SIZE = state.GRID_SIZEHistory[0]
+function allPositions(@nospecialize(state::State))
+  GRID_SIZE = state.histories[:GRID_SIZE][0]
   if GRID_SIZE isa AbstractArray 
     GRID_SIZE_X = GRID_SIZE[1]
     GRID_SIZE_Y = GRID_SIZE[2]
@@ -2994,7 +3357,7 @@ function allPositions(@nospecialize(state::NamedTuple))
   map(num -> Position(num % GRID_SIZE_X, floor(Int, num / GRID_SIZE_X)), nums)
 end
 
-function unfold(A, @nospecialize(state=nothing))
+function unfold(A, state::Union{State, Nothing}=nothing)
   V = []
   for x in A
       for elt in x
@@ -3003,6 +3366,7 @@ function unfold(A, @nospecialize(state=nothing))
   end
   V
 end
+
 
 # interpretutils.jl 
 
@@ -3044,10 +3408,48 @@ empty_env() = NamedTuple()
 std_env() = empty_env()
 
 "Produces new environment Γ' s.t. `Γ(x) = v` (and everything else unchanged)"
-# update(@nospecialize(Γ::NamedTuple), x::Symbol, v) = merge(Γ, NamedTuple{(x,)}((v,)))
+# update(@nospecialize(Γ::Env), x::Symbol, v) = merge(Γ, NamedTuple{(x,)}((v,)))
 
-function update(@nospecialize(Γ::NamedTuple), x::Symbol, @nospecialize(v)) 
-  merge(Γ, NamedTuple{(x,)}((v,)))
+# function update(@nospecialize(Γ::Env), x::Symbol, @nospecialize(v)) 
+#   merge(Γ, NamedTuple{(x,)}((v,)))
+# end
+
+function update(Γ::Env, x::Symbol, v)::Env 
+  setfield!(Γ, x, v)
+  Γ
+end
+
+function update(Γ::State, x::Symbol, v)::State 
+  setfield!(Γ, x, v)
+  Γ
+end
+
+function update(Γ::Scene, x::Symbol, v)::Scene 
+  setfield!(Γ, x, v)
+  Γ
+end
+
+function update(Γ::Object, x::Symbol, v)::Object 
+  if x == :id 
+    Γ = @set Γ.id = v
+  elseif x == :type 
+    Γ = @set Γ.type = v
+  elseif x == :alive 
+    Γ = @set Γ.alive = v
+  elseif x == :changed 
+    Γ = @set Γ.changed = v
+  elseif x == :custom_fields 
+    Γ = @set Γ.custom_fields = v
+  elseif x == :render
+    Γ = @set Γ.render = v
+  elseif x == :origin 
+    Γ = @set Γ.origin = v
+  else
+    # println("yeet")
+    Γ = deepcopy(Γ)
+    Γ.custom_fields[x] = v
+  end
+  Γ
 end
 
 # primitive function handling 
@@ -3069,11 +3471,11 @@ prim_to_func = Dict(:+ => +,
 isprim(f) = f in keys(prim_to_func)
 # primapl(f, x...) = (prim_to_func[f](x[1:end-1]...), x[end])
 
-function primapl(f, x, @nospecialize(Γ::NamedTuple)) 
+function primapl(f, x, @nospecialize(Γ::Env)) 
   prim_to_func[f](x), Γ
 end
 
-function primapl(f, x1, x2, @nospecialize(Γ::NamedTuple))
+function primapl(f, x1, x2, @nospecialize(Γ::Env))
   prim_to_func[f](x1, x2), Γ
 end
 
@@ -3081,13 +3483,17 @@ lib_to_func = Dict(:Position => Position,
                    :Cell => Cell,
                    :Click => Click,
                    :render => render, 
+                   :renderScene => renderScene, 
                    :occurred => occurred,
                    :uniformChoice => uniformChoice, 
                    :min => min,
                    :isWithinBounds => isWithinBounds, 
+                   :isOutsideBounds => isOutsideBounds,
                    :clicked => clicked, 
                    :objClicked => objClicked, 
                    :intersects => intersects, 
+                   :moveIntersects => moveIntersects,
+                   :pushConfiguration => pushConfiguration,
                    :addObj => addObj, 
                    :removeObj => removeObj, 
                    :updateObj => updateObj,
@@ -3101,14 +3507,16 @@ lib_to_func = Dict(:Position => Position,
                    :adjacent => adjacent, 
                    :adjacentObjs => adjacentObjs, 
                    :adjacentObjsDiag => adjacentObjsDiag,
-                   :rotate => rotate, 
-                   :rotateNoCollision => rotateNoCollision, 
+                   :adj => adj,
+                  #  :rotate => rotate, 
+                  #  :rotateNoCollision => rotateNoCollision, 
                    :move => move, 
                    :moveLeft => moveLeft, 
                    :moveRight => moveRight, 
                    :moveUp => moveUp, 
                    :moveDown => moveDown, 
                    :moveNoCollision => moveNoCollision, 
+                   :moveNoCollisionColor => moveNoCollisionColor, 
                    :moveLeftNoCollision => moveLeftNoCollision, 
                    :moveRightNoCollision => moveRightNoCollision, 
                    :moveDownNoCollision => moveDownNoCollision, 
@@ -3120,7 +3528,17 @@ lib_to_func = Dict(:Position => Position,
                    :moveDownWrap => moveDownWrap, 
                    :randomPositions => randomPositions, 
                    :distance => distance,
-                   :closest => closest, 
+                   :closest => closest,
+                   :closestRandom => closestRandom,
+                   :closestLeft => closestLeft,
+                   :closestRight => closestRight,
+                   :closestUp => closestUp,
+                   :closestDown => closestDown, 
+                   :farthestRandom => farthestRandom,
+                   :farthestLeft => farthestLeft,
+                   :farthestRight => farthestRight,
+                   :farthestUp => farthestUp,
+                   :farthestDown => farthestDown, 
                    :mapPositions => mapPositions, 
                    :allPositions => allPositions, 
                    :updateOrigin => updateOrigin, 
@@ -3128,15 +3546,16 @@ lib_to_func = Dict(:Position => Position,
                    :nextLiquid => nextLiquid, 
                    :nextSolid => nextSolid,
                    :unfold => unfold,
-                   :prev => prev
-                )
+                   :prev => prev,
+                   :firstWithDefault => firstWithDefault,
+                  )
 islib(f) = f in keys(lib_to_func)
 
 # library function handling 
-function libapl(f, args, @nospecialize(Γ::NamedTuple))
-  # # # println("libapl")
-  # # # @showf 
-  # # # @showargs 
+function libapl(f, args, @nospecialize(Γ::Env))
+  # println("libapl")
+  # @show f 
+  # @show args 
 
   if f == :clicked && (length(args) == 0)
     interpret(f, Γ)
@@ -3160,8 +3579,10 @@ function libapl(f, args, @nospecialize(Γ::NamedTuple))
     else
       if f == :updateObj 
         interpret_updateObj(args, Γ)
-      else # f == :removeObj 
+      elseif f == :removeObj 
         interpret_removeObj(args, Γ)
+      else 
+        lib_to_func[f](map(x -> interpret(x, Γ)[1], args)..., Γ.state), Γ
       end
     end
   end
@@ -3180,10 +3601,7 @@ julia_lib_to_func = Dict(:get => get,
                          :count => count,)
 isjulialib(f) = f in keys(julia_lib_to_func)
 
-function julialibapl(f, args, @nospecialize(Γ::NamedTuple))
-  # # # println("julialibapl")
-  # # # @showf 
-  # # # @showargs 
+function julialibapl(f, args, @nospecialize(Γ::Env))
   if !(f in [:map, :filter])
     julia_lib_to_func[f](args...), Γ
   elseif f == :map 
@@ -3193,7 +3611,7 @@ function julialibapl(f, args, @nospecialize(Γ::NamedTuple))
   end
 end
 
-function interpret(aex::AExpr, @nospecialize(Γ::NamedTuple))
+function interpret(aex::AExpr, @nospecialize(Γ::Env))
   arr = [aex.head, aex.args...]
   # # # # # # println()
   # # # # # # println("Env:")
@@ -3202,54 +3620,56 @@ function interpret(aex::AExpr, @nospecialize(Γ::NamedTuple))
   # next(x) = interpret(x, Γ)
   isaexpr(x) = x isa AExpr
   t = MLStyle.@match arr begin
-    [:if, c, t, e]                                              => let (v, Γ2) = interpret(c, Γ) 
-                                                                       if v == true
-                                                                         interpret(t, Γ2)
-                                                                       else
-                                                                         interpret(e, Γ2)
-                                                                       end
-                                                                   end
-    [:assign, x, v::AExpr] && if v.head == :initnext end        => interpret_init_next(x, v, Γ)
-    [:assign, x, v::Union{AExpr, Symbol}]                       => let (v2, Γ_) = interpret(v, Γ)
-                                                                    # # # @showv 
-                                                                    # # # @showx
-                                                                     interpret(AExpr(:assign, x, v2), Γ_)
-                                                                   end
-    [:assign, x, v]                                             => let
-                                                                     # # @showx 
-                                                                     # # @showv 
-                                                                     if x in fieldnames(typeof(Γ))
-                                                                      # # println("here") 
-                                                                      # # @showΓ[x]
-                                                                     end
-                                                                     # # @showupdate(Γ, x, v)[x]
-                                                                     # # println("returning")
-                                                                     (aex, update(Γ, x, v)) 
-                                                                   end
-    [:list, args...]                                            => interpret_list(args, Γ)
-    [:typedecl, args...]                                        => (aex, Γ)
-    [:let, args...]                                             => interpret_let(args, Γ) 
-    [:lambda, args...]                                          => (args, Γ)
-    [:fn, args...]                                              => (args, Γ)
-    [:call, f, arg1] && if isprim(f) end                        => let (new_arg, Γ2) = interpret(arg1, Γ)
-                                                                     primapl(f, new_arg, Γ2)
-                                                                   end
+    [:if, c, t, e]                                                    => let (v, Γ2) = interpret(c, Γ) 
+                                                                            if v == true
+                                                                              interpret(t, Γ2)
+                                                                            else
+                                                                              interpret(e, Γ2)
+                                                                            end
+                                                                        end
+    [:assign, x, v::AExpr] && if v.head == :initnext end              => interpret_init_next(x, v, Γ)
+    [:assign, x, v::Union{AExpr, Symbol}]                             => let (v2, Γ_) = interpret(v, Γ)
+                                                                          # # # @showv 
+                                                                          # # # @showx
+                                                                          interpret(AExpr(:assign, x, v2), Γ_)
+                                                                         end
+    [:assign, x, v]                                                   => let
+                                                                          # # @showx 
+                                                                          # # @showv 
+                                                                          if x in fieldnames(typeof(Γ))
+                                                                            # # println("here") 
+                                                                            # # @showΓ[x]
+                                                                          end
+                                                                          # # @showupdate(Γ, x, v)[x]
+                                                                          # # println("returning")
+                                                                          # @show v isa AbstractArray
+                                                                          Γ.current_var_values[x] = v isa BigInt ? convert(Int, v) : v
+                                                                          (aex, Γ) 
+                                                                         end
+    [:list, args...]                                                  => interpret_list(args, Γ)
+    [:typedecl, args...]                                              => (aex, Γ)
+    [:let, args...]                                                   => interpret_let(args, Γ) 
+    [:lambda, args...]                                                => (args, Γ)
+    [:fn, args...]                                                    => (args, Γ)
+    [:call, f, arg1] && if isprim(f) end                              => let (new_arg, Γ2) = interpret(arg1, Γ)
+                                                                             primapl(f, new_arg, Γ2)
+                                                                         end
                                                                     
-    [:call, f, arg1, arg2] && if isprim(f) end                  => let (new_arg1, Γ2) = interpret(arg1, Γ)
-                                                                       (new_arg2, Γ2) = interpret(arg2, Γ2)
-                                                                       primapl(f, new_arg1, new_arg2, Γ2)
-                                                                   end
-    [:call, f, args...] && if f == :prev && args != [:obj] end  => interpret(AExpr(:call, Symbol(string(f, uppercasefirst(string(args[1])))), :state), Γ)
-    [:call, f, args...] && if islib(f) end                      => interpret_lib(f, args, Γ)
-    [:call, f, args...] && if isjulialib(f) end                 => interpret_julia_lib(f, args, Γ)
-    [:call, f, args...] && if f in keys(Γ[:object_types]) end   => interpret_object_call(f, args, Γ)
-    [:call, f, args...]                                         => interpret_call(f, args, Γ)
+    [:call, f, arg1, arg2] && if isprim(f) end                        => let (new_arg1, Γ2) = interpret(arg1, Γ)
+                                                                             (new_arg2, Γ2) = interpret(arg2, Γ2)
+                                                                             primapl(f, new_arg1, new_arg2, Γ2)
+                                                                         end
+    [:call, f, args...] && if f == :prev && args != [:obj] end        => interpret(AExpr(:call, Symbol(string(f, uppercasefirst(string(args[1])))), :state), Γ)
+    [:call, f, args...] && if islib(f) end                            => interpret_lib(f, args, Γ)
+    [:call, f, args...] && if isjulialib(f) end                       => interpret_julia_lib(f, args, Γ)
+    [:call, f, args...] && if f in keys(Γ.state.object_types) end     => interpret_object_call(f, args, Γ)
+    [:call, f, args...]                                               => interpret_call(f, args, Γ)
      
-    [:field, x, fieldname]                                      => interpret_field(x, fieldname, Γ)
-    [:object, args...]                                          => interpret_object(args, Γ)
-    [:on, args...]                                              => interpret_on(args, Γ)
-    [args...]                                                   => error(string("Invalid AExpr Head: ", aex.head))
-    _                                                           => error("Could not interpret $arr")
+    [:field, x, fieldname]                                            => interpret_field(x, fieldname, Γ)
+    [:object, args...]                                                => interpret_object(args, Γ)
+    [:on, args...]                                                    => interpret_on(args, Γ)
+    [args...]                                                         => error(string("Invalid AExpr Head: ", aex.head))
+    _                                                                 => error("Could not interpret $arr")
   end
   # # # # # # println("FINSIH", arr)
   # # # # # @show(t)
@@ -3258,26 +3678,37 @@ function interpret(aex::AExpr, @nospecialize(Γ::NamedTuple))
   t
 end
 
-function interpret(x::Symbol, @nospecialize(Γ::NamedTuple))
-  # # # @showkeys(Γ)
+function interpret(x::Symbol, @nospecialize(Γ::Env))
   if x == Symbol("false")
     false, Γ
   elseif x == Symbol("true")
     true, Γ
+  elseif x == :left 
+    Γ.left, Γ
+  elseif x == :right 
+    Γ.right, Γ
+  elseif x == :up
+    Γ.up, Γ
+  elseif x == :down 
+    Γ.down, Γ
+  elseif x == :click 
+    Γ.click, Γ
   elseif x == :clicked 
     interpret(AExpr(:call, :occurred, :click), Γ)
-  elseif x in keys(Γ[:object_types])
+  elseif x in keys(Γ.state.object_types)
     x, Γ
-  elseif x in keys(Γ)
+  elseif x == :state 
+    Γ.state, Γ
+  elseif x in keys(Γ.current_var_values)
     # # # @showeval(:($(Γ).$(x)))
-    eval(:($(Γ).$(x))), Γ
+    Γ.current_var_values[x], Γ
   else
     error("Could not interpret $x")
   end
 end
 
 # if x is not an AExpr or a Symbol, it is just a value (return it)
-function interpret(x, @nospecialize(Γ::NamedTuple))
+function interpret(x, @nospecialize(Γ::Env))
   if x isa BigInt 
     (convert(Int, x), Γ)
   else
@@ -3285,7 +3716,7 @@ function interpret(x, @nospecialize(Γ::NamedTuple))
   end
 end 
 
-function interpret_list(args, @nospecialize(Γ::NamedTuple))
+function interpret_list(args, @nospecialize(Γ::Env))
   new_list = []
   for arg in args
     new_arg, Γ = interpret(arg, Γ)
@@ -3294,10 +3725,10 @@ function interpret_list(args, @nospecialize(Γ::NamedTuple))
   new_list, Γ
 end
 
-function interpret_lib(f, args, @nospecialize(Γ::NamedTuple))
-  # # # println("INTERPRET_LIB")
-  # # # @showf 
-  # # # @showargs 
+function interpret_lib(f, args, @nospecialize(Γ::Env))
+  # println("INTERPRET_LIB")
+  # @show f 
+  # @show args 
   new_args = []
   for arg in args 
     new_arg, Γ = interpret(arg, Γ)
@@ -3307,14 +3738,19 @@ function interpret_lib(f, args, @nospecialize(Γ::NamedTuple))
   libapl(f, new_args, Γ)
 end
 
-function interpret_julia_lib(f, args, @nospecialize(Γ::NamedTuple))
+function interpret_julia_lib(f, args, @nospecialize(Γ::Env))
   # println("INTERPRET_JULIA_LIB")
   # @show f 
   # @show args
   new_args = []
-  for arg in args 
-    # # # @showarg 
-    new_arg, Γ = interpret(arg, Γ)
+  for i in 1:length(args)
+    arg = args[i] 
+    # # # @showarg
+    if f == :get && i == 2 && args[i] isa Symbol
+      new_arg = arg
+    else
+      new_arg, Γ = interpret(arg, Γ)
+    end
     # # # @shownew_arg 
     # # # @showΓ
     push!(new_args, new_arg)
@@ -3323,20 +3759,24 @@ function interpret_julia_lib(f, args, @nospecialize(Γ::NamedTuple))
   julialibapl(f, new_args, Γ)
 end
 
-function interpret_field(x, f, @nospecialize(Γ::NamedTuple))
+function interpret_field(x, f, @nospecialize(Γ::Env))
   # # # # println("INTERPRET_FIELD")
   # # # # @showkeys(Γ)
   # # # # @showx 
   # # # # @showf 
   val, Γ2 = interpret(x, Γ)
-  if val isa NamedTuple 
-    (val[f], Γ2)
+  if val isa Object
+    if f in [:id, :origin, :type, :alive, :changed, :render]
+      (getfield(val, f), Γ2)
+    else
+      (val.custom_fields[f], Γ2)
+    end
   else
-    (eval(:($(val).$(f))), Γ2)
+    (getfield(val, f), Γ2)
   end
 end
 
-function interpret_let(args::AbstractArray, @nospecialize(Γ::NamedTuple))
+function interpret_let(args::AbstractArray, @nospecialize(Γ::Env))
   Γ2 = Γ
   if length(args) > 0
     for arg in args[1:end-1] # all lines in let except last
@@ -3359,23 +3799,25 @@ function interpret_let(args::AbstractArray, @nospecialize(Γ::NamedTuple))
   end
 end
 
-function interpret_call(f, params, @nospecialize(Γ::NamedTuple))
+# used for lambda function calls!
+function interpret_call(f, params, @nospecialize(Γ::Env))
   func, Γ = interpret(f, Γ)
   func_args = func[1]
   func_body = func[2]
 
-  # construct environment 
+  # construct environment
+  old_current_var_values = copy(Γ.current_var_values) 
   Γ2 = Γ
   if func_args isa AExpr 
     for i in 1:length(func_args.args)
       param_name = func_args.args[i]
       param_val, Γ2 = interpret(params[i], Γ2)
-      Γ2 = update(Γ2, param_name, param_val)
+      Γ2.current_var_values[param_name] = param_val
     end
   elseif func_args isa Symbol
     param_name = func_args
     param_val, Γ2 = interpret(params[1], Γ2)
-    Γ2 = update(Γ2, param_name, param_val)
+    Γ2.current_var_values[param_name] = param_val
   else
     error("Could not interpret $(func_args)")
   end
@@ -3386,57 +3828,67 @@ function interpret_call(f, params, @nospecialize(Γ::NamedTuple))
   # return value and original environment, except with state updated 
   Γ = update(Γ, :state, update(Γ.state, :objectsCreated, Γ2.state.objectsCreated))
   # # # # # println("DONE")
+  Γ.current_var_values = old_current_var_values
   (v, Γ)
 end
 
-function interpret_object_call(f, args, @nospecialize(Γ::NamedTuple))
+function interpret_object_call(f, args, @nospecialize(Γ::Env))
   # # # # # println("BEFORE")
   # # # # # @showΓ.state.objectsCreated 
   new_state = update(Γ.state, :objectsCreated, Γ.state.objectsCreated + 1)
   Γ = update(Γ, :state, new_state)
 
   origin, Γ = interpret(args[end], Γ)
-  object_repr = (origin=origin, type=f, alive=true, changed=false, id=Γ.state.objectsCreated)
+  # object_repr = (origin=origin, type=f, alive=true, changed=false, id=Γ.state.objectsCreated)
 
+  old_current_var_values = copy(Γ.current_var_values)
   Γ2 = Γ
-  fields = Γ2.object_types[f][:fields]
+  fields = Γ2.state.object_types[f].fields
+  field_values = Dict()
   for i in 1:length(fields)
     field_name = fields[i].args[1]
     field_value, Γ2 = interpret(args[i], Γ2)
-    object_repr = update(object_repr, field_name, field_value)
-    Γ2 = update(Γ2, field_name, field_value)
+    field_values[field_name] = field_value
+    # object_repr = update(object_repr, field_name, field_value)
+    Γ2.current_var_values[field_name] = field_value
   end
-
-  render, Γ2 = interpret(Γ.object_types[f][:render], Γ2)
-  render = render isa AbstractArray ? render : [render]
-  object_repr = update(object_repr, :render, render)
+  # @show f
+  # @show field_values 
+  if length(fields) == 0 
+    object_repr = Object(Γ.state.objectsCreated, origin, f, true, false, field_values, nothing)  
+  else
+    render, Γ2 = interpret(Γ.state.object_types[f].render, Γ2)
+    render = render isa AbstractArray ? render : [render]
+    object_repr = Object(Γ.state.objectsCreated, origin, f, true, false, field_values, render)
+  end
+  Γ.current_var_values = old_current_var_values
   # # # # # println("AFTER")
   # # # # # @showΓ.state.objectsCreated 
   (object_repr, Γ)  
 end
 
-function interpret_init_next(var_name, var_val, @nospecialize(Γ::NamedTuple))
+function interpret_init_next(var_name, var_val, @nospecialize(Γ::Env))
   # # # println("INTERPRET INIT NEXT")
   init_func = var_val.args[1]
   next_func = var_val.args[2]
 
   Γ2 = Γ
-  if !(var_name in keys(Γ2)) # variable not initialized; use init clause
+  if !(var_name in keys(Γ2.current_var_values)) # variable not initialized; use init clause
     # # # println("HELLO")
     # initialize var_name
     var_val, Γ2 = interpret(init_func, Γ2)
-    Γ2 = update(Γ2, var_name, var_val)
+    Γ2.current_var_values[var_name] = var_val
 
     # construct history variable in state 
-    new_state = update(Γ2.state, Symbol(string(var_name, "History")), Dict())
-    Γ2 = update(Γ2, :state, new_state)
+    Γ2.state.histories[Symbol(string(var_name))] = Dict()
+    # Γ2 = update(Γ2, :state, new_state)
 
     # construct prev function 
-    _, Γ2 = interpret(AExpr(:assign, Symbol(string(:prev, uppercasefirst(string(var_name)))), parseautumn("""(fn (state) (get (.. state $(string(var_name, "History"))) (- (.. state time) 1) -1))""")), Γ2) 
+    _, Γ2 = interpret(AExpr(:assign, Symbol(string(:prev, uppercasefirst(string(var_name)))), parseautumn("""(fn (state) (get (get (.. state histories) $(string(var_name)) -1) (- (.. state time) 1) $(var_name)))""")), Γ2) 
 
   elseif Γ.state.time > 0 # variable initialized; use next clause if simulation time > 0  
     # update var_val 
-    var_val = Γ[var_name]
+    var_val = Γ.current_var_values[var_name]
     if var_val isa Array 
       changed_val = filter(x -> x.changed, var_val) # values changed by on-clauses
       unchanged_val = filter(x -> !x.changed, var_val) # values unchanged by on-clauses; apply default behavior
@@ -3454,8 +3906,8 @@ function interpret_init_next(var_name, var_val, @nospecialize(Γ::NamedTuple))
       # # # # @showΓ.state.objectsCreated
       final_val = map(o -> update(o, :changed, false), filter(obj -> obj.alive, vcat(changed_val, default_val)))
     else # variable is not an array
-      if var_name in keys(Γ[:on_clauses])
-        events = Γ[:on_clauses][var_name]
+      if var_name in keys(Γ.on_clauses)
+        events = Γ.on_clauses[var_name]
       else
         events = []
       end
@@ -3472,36 +3924,44 @@ function interpret_init_next(var_name, var_val, @nospecialize(Γ::NamedTuple))
         final_val = var_val
       end
     end
-    Γ2 = update(Γ, var_name, final_val)
+    Γ2.current_var_values[var_name] = final_val
   end
   (AExpr(:assign, var_name, var_val), Γ2)
 end
 
-function interpret_object(args, @nospecialize(Γ::NamedTuple))
+function interpret_object(args, @nospecialize(Γ::Env))
   object_name = args[1]
   object_fields = args[2:end-1]
   object_render = args[end]
 
-  # construct object creation function 
-  object_tuple = (render=object_render, fields=object_fields)
-  Γ = update(Γ, :object_types, update(Γ[:object_types], object_name, object_tuple))
+  # construct object creation function
+  if length(object_fields) == 0
+    render, _ = interpret(object_render, Γ)
+    if !(render isa AbstractArray) 
+      render = [render]
+    end
+    object_tuple = ObjectType(render, object_fields)
+  else
+    object_tuple = ObjectType(object_render, object_fields)
+  end
+  Γ.state.object_types[object_name] = object_tuple
   (AExpr(:object, args...), Γ)
 end
 
-function interpret_on(args, @nospecialize(Γ::NamedTuple))
-  # # # println("INTERPRET ON")
+function interpret_on(args, @nospecialize(Γ::Env))
+  # println("INTERPRET ON")
   event = args[1]
   update_ = args[2]
-  # # # @showevent 
-  # # # @showupdate_
+  # @show event 
+  # @show update_
   Γ2 = Γ
   if Γ2.state.time == 0 
     if update_.head == :assign
       var_name = update_.args[1]
-      if !(var_name in keys(Γ2[:on_clauses]))
-        Γ2 = update(Γ2, :on_clauses, update(Γ2[:on_clauses], var_name, [event]))
+      if !(var_name in keys(Γ2.on_clauses))
+        Γ2.on_clauses[var_name] = [event]
       else
-        Γ2 = update(Γ2, :on_clauses, update(Γ2[:on_clauses], var_name, vcat(event, Γ2[:on_clauses][var_name])))
+        Γ2.on_clauses[var_name] = vcat(event, Γ2.on_clauses[var_name])
       end
     elseif update_.head == :let 
       assignments = update_.args
@@ -3509,10 +3969,10 @@ function interpret_on(args, @nospecialize(Γ::NamedTuple))
         if (assignments[end] isa AExpr) && (assignments[end].head == :assign)
           for a in assignments 
             var_name = a.args[1]
-            if !(var_name in keys(Γ2[:on_clauses]))
-              Γ2 = update(Γ2, :on_clauses, update(Γ2[:on_clauses], var_name, [event]))
+            if !(var_name in keys(Γ2.on_clauses))
+              Γ2.on_clauses[var_name] = [event]
             else
-              Γ2 = update(Γ2, :on_clauses, update(Γ2[:on_clauses], var_name, vcat(event, Γ2[:on_clauses][var_name])))
+              Γ2.on_clauses[var_name] = vcat(event, Γ2.on_clauses[var_name])
             end
           end
         end
@@ -3542,7 +4002,7 @@ function interpret_on(args, @nospecialize(Γ::NamedTuple))
 end
 
 # evaluate updateObj on arguments that include functions 
-function interpret_updateObj(args, @nospecialize(Γ::NamedTuple))
+function interpret_updateObj(args, @nospecialize(Γ::Env))
   # println("MADE IT!")
   Γ2 = Γ
   numFunctionArgs = count(x -> x == true, map(arg -> (arg isa AbstractArray) && (length(arg) == 2) && (arg[1] isa AExpr || arg[1] isa Symbol) && (arg[2] isa AExpr || arg[2] isa Symbol), args))
@@ -3595,21 +4055,24 @@ function interpret_updateObj(args, @nospecialize(Γ::NamedTuple))
     new_obj = update(obj, Symbol(field_string), new_value)
     new_obj = update(new_obj, :changed, true)
 
-    # update render 
-    object_type = Γ[:object_types][obj.type]
+    # update render
+    object_type = Γ.state.object_types[obj.type]
     
+    old_current_var_values = copy(Γ.current_var_values)
     Γ3 = Γ2
-    fields = object_type[:fields]
+    fields = object_type.fields
     for i in 1:length(fields)
       field_name = fields[i].args[1]
-      field_value = new_obj[field_name]
-      Γ3 = update(Γ3, field_name, field_value)
+      field_value = new_obj.custom_fields[field_name]
+      Γ3.current_var_values[field_name] = field_value
     end
-  
-    render, Γ3 = interpret(Γ.object_types[obj.type][:render], Γ3)
-    render = render isa AbstractArray ? render : [render]
-    new_obj = update(new_obj, :render, render)
 
+    if length(fields) != 0 
+      render, Γ3 = interpret(Γ.state.object_types[obj.type].render, Γ3)
+      render = render isa AbstractArray ? render : [render]
+      new_obj = update(new_obj, :render, render)
+    end  
+    Γ2.current_var_values = old_current_var_values
     new_obj, Γ2
     # Γ2 = update(Γ2, :state, update(Γ2.state, :objectsCreated, Γ2.state.objectsCreated + 1))
   else
@@ -3617,7 +4080,7 @@ function interpret_updateObj(args, @nospecialize(Γ::NamedTuple))
   end
 end
 
-function interpret_removeObj(args, @nospecialize(Γ::NamedTuple))
+function interpret_removeObj(args, @nospecialize(Γ::Env))
   # # # @showargs
   list, Γ = interpret(args[1], Γ)
   func = args[2]
@@ -3634,7 +4097,7 @@ function interpret_removeObj(args, @nospecialize(Γ::NamedTuple))
   new_list, Γ
 end
 
-function interpret_julia_map(args, @nospecialize(Γ::NamedTuple))
+function interpret_julia_map(args, @nospecialize(Γ::Env))
   new_list = []
   map_func = args[1]
   list, Γ = interpret(args[2], Γ)
@@ -3645,7 +4108,7 @@ function interpret_julia_map(args, @nospecialize(Γ::NamedTuple))
   new_list, Γ
 end
 
-function interpret_julia_filter(args, @nospecialize(Γ::NamedTuple))
+function interpret_julia_filter(args, @nospecialize(Γ::Env))
   new_list = []
   filter_func = args[1]
   list, Γ = interpret(args[2], Γ)
@@ -3658,9 +4121,10 @@ function interpret_julia_filter(args, @nospecialize(Γ::NamedTuple))
   new_list, Γ
 end
 
+
 # interpret.jl
 
-function interpret_program(aex, @nospecialize(Γ::NamedTuple))
+function interpret_program(aex, Γ::Env)
   aex.head == :program || error("Must be a program aex")
   for line in aex.args
     v, Γ = interpret(line, Γ)
@@ -3670,14 +4134,16 @@ end
 
 function start(aex::AExpr, rng=Random.GLOBAL_RNG)
   aex.head == :program || error("Must be a program aex")
-  env = (object_types=empty_env(), 
-         on_clauses=empty_env(),
-         left=false, 
-         right=false,
-         up=false,
-         down=false,
-         click=nothing, 
-         state=(time=0, objectsCreated=0, rng=rng, scene=empty_env()))
+  # env = (on_clauses=empty_env(),
+  #        left=false, 
+  #        right=false,
+  #        up=false,
+  #        down=false,
+  #        click=nothing, 
+  #        state=(time=0, objectsCreated=0, rng=rng, scene=empty_env(), object_types=empty_env()))
+
+  env = Env(false, false, false, false, nothing, Dict(), Dict(), Dict(), State(0, 0, rng, Scene([], "white"), Dict(), Dict()))
+
   lines = aex.args 
 
   # reorder program lines
@@ -3700,29 +4166,30 @@ function start(aex::AExpr, rng=Random.GLOBAL_RNG)
   for line in lifted_lines
     var_name = line.args[1] 
     # construct history variable in state
-    new_state = update(env.state, Symbol(string(var_name, "History")), Dict())
-    env = update(env, :state, new_state)
+    # new_state = update(env.state, Symbol(string(var_name, "History")), Dict())
+    env.state.histories[var_name] = Dict()
+    # env = update(env, :state, new_state)
 
     # construct prev function 
-    _, env = interpret(AExpr(:assign, Symbol(string(:prev, uppercasefirst(string(var_name)))), parseautumn("""(fn () (get (.. state $(string(var_name, "History"))) (- (.. state time) 1) $(var_name)))""")), env) 
+    _, env = interpret(AExpr(:assign, Symbol(string(:prev, uppercasefirst(string(var_name)))), parseautumn("""(fn () (get (.. (.. state histories) $(string(var_name))) (- (.. state time) 1) $(var_name)))""")), env) 
   end
 
   # add background to scene 
   background_assignments = filter(l -> l.args[1] == :background, lifted_lines)
   background = background_assignments != [] ? background_assignments[end].args[2] : "#ffffff00"
-  env = update(env, :state, update(env.state, :scene, update(env.state.scene, :background, background)))
+  env.state.scene.background = background
 
 
   # initialize scene.objects 
-  env = update(env, :state, update(env.state, :scene, update(env.state.scene, :objects, [])))
+  # env = update(env, :state, update(env.state, :scene, update(env.state.scene, :objects, [])))
 
   # initialize lifted variables
-  env = update(env, :lifted, empty_env()) 
+  # env = update(env, :lifted, empty_env()) 
   for line in lifted_lines
     var_name = line.args[1]
-    env = update(env, :lifted, update(env.lifted, var_name, line.args[2])) 
+    env.lifted[var_name] = line.args[2] 
     if var_name in [:GRID_SIZE, :background]
-      env = update(env, var_name, interpret(line.args[2], env)[1])
+      env.current_var_values[var_name] = interpret(line.args[2], env)[1]
     end
   end 
 
@@ -3736,7 +4203,7 @@ function start(aex::AExpr, rng=Random.GLOBAL_RNG)
   AExpr(:program, reordered_lines...), env_
 end
 
-function step(aex::AExpr, @nospecialize(env::NamedTuple), user_events=(click=nothing, left=false, right=false, down=false, up=false))::NamedTuple
+function step(aex::AExpr, env::Env, user_events=(click=nothing, left=false, right=false, down=false, up=false))::Env
   # update env with user event 
   for user_event in keys(user_events)
     if !isnothing(user_events[user_event])
@@ -3753,7 +4220,7 @@ function step(aex::AExpr, @nospecialize(env::NamedTuple), user_events=(click=not
 end
 
 """Update the history variables, scene, and time fields of env_.state"""
-function update_state(@nospecialize(env_::NamedTuple))
+function update_state(env_::Env)
   # reset user events 
   for user_event in [:left, :right, :up, :down]
     env_ = update(env_, user_event, false)
@@ -3761,21 +4228,26 @@ function update_state(@nospecialize(env_::NamedTuple))
   env_ = update(env_, :click, nothing)
 
   # add updated variable values to history
-  for key in filter(sym -> occursin("History", string(sym)), keys(env_.state))
-    var_name = Symbol(replace(string(key), "History" => ""))
-    env_.state[key][env_.state.time] = env_[var_name]
+  for key in keys(env_.state.histories)    
+    env_.state.histories[key][env_.state.time] = env_.current_var_values[key]
+  
+    # delete earlier times stored in history, since we only use prev up to 1 level back
+    if env_.state.time > 0
+      delete!(env_.state.histories, env_.state.time - 1)
+    end
+
   end
 
   # update lifted variables 
   for var_name in keys(env_.lifted)
-    env_ = update(env_, var_name, interpret(env_.lifted[var_name], env_)[1])
+    env_.current_var_values[var_name] = interpret(env_.lifted[var_name], env_)[1]
   end
 
   # update scene.objects 
   new_scene_objects = []
-  for key in keys(env_)
-    if !(key in [:state, :object_types, :on_clauses, :lifted]) && ((env_[key] isa NamedTuple && (:id in keys(env_[key]))) || (env_[key] isa AbstractArray && (length(env_[key]) > 0) && (env_[key][1] isa NamedTuple)))
-      object_val = env_[key]
+  for key in keys(env_.current_var_values)
+    if ((env_.current_var_values[key] isa Object) || (env_.current_var_values[key] isa AbstractArray && (length(env_.current_var_values[key]) > 0) && (env_.current_var_values[key][1] isa Object)))
+      object_val = env_.current_var_values[key]
       if object_val isa AbstractArray 
         push!(new_scene_objects, object_val...)
       else
@@ -3783,14 +4255,14 @@ function update_state(@nospecialize(env_::NamedTuple))
       end
     end
   end
-  env_ = update(env_, :state, update(env_.state, :scene, update(env_.state.scene, :objects, new_scene_objects)))
+  env_.state.scene.objects = new_scene_objects
 
   # update time 
   new_state = update(env_.state, :time, env_.state.time + 1)
   env_ = update(env_, :state, new_state)
 end
 
-function interpret_over_time(aex::AExpr, iters, user_events=[])::NamedTuple
+function interpret_over_time(aex::AExpr, iters, user_events=[])::Env
   new_aex, env_ = start(aex)
   if user_events == []
     for i in 1:iters
@@ -3806,24 +4278,44 @@ function interpret_over_time(aex::AExpr, iters, user_events=[])::NamedTuple
   env_
 end
 
-function interpret_over_time_observations(aex::AExpr, iters, user_events=[])
-  scenes = []
+function interpret_over_time_variable(aex::AExpr, var_name, iters, user_events=[])
+  variable_values = []
   new_aex, env_ = start(aex)
-  push!(scenes, env_.state.scene)
+  push!(variable_values, env_.state.histories[var_name][env_.state.time])
   if user_events == []
     for i in 1:iters
       # # @show i
       env_ = step(new_aex, env_)
-      push!(scenes, env_.state.scene)
+      push!(variable_values, env_.state.histories[var_name][env_.state.time])
     end
   else
     for i in 1:iters
       # # @show i
       env_ = step(new_aex, env_, user_events[i])
-      push!(scenes, env_.state.scene)
+      push!(variable_values, env_.state.histories[var_name][env_.state.time])
     end
   end
-  map(s -> render_scene(s), scenes)
+  variable_values
+end
+
+function interpret_over_time_observations(aex::AExpr, iters, user_events=[])
+  scenes = []
+  new_aex, env_ = start(aex)
+  push!(scenes, AutumnStandardLibrary.renderScene(env_.state.scene, env_.state))
+  if user_events == []
+    for i in 1:iters
+      # # @show i
+      env_ = step(new_aex, env_)
+      push!(scenes, AutumnStandardLibrary.renderScene(env_.state.scene, env_.state))
+    end
+  else
+    for i in 1:iters
+      # # @show i
+      env_ = step(new_aex, env_, user_events[i])
+      push!(scenes, AutumnStandardLibrary.renderScene(env_.state.scene, env_.state))
+    end
+  end
+  scenes
 end
 
 end
