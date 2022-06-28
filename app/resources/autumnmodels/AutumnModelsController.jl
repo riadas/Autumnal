@@ -203,7 +203,7 @@ end
 #   json([])
 # end
 
-const log_dir = "/Users/riadas/Documents/urop/today_temp/CausalDiscovery.jl/saved_test_traces/"
+const log_dir = "saved_test_traces_user_study/" # "/Users/riadas/Documents/urop/today_temp/CausalDiscovery.jl/saved_test_traces/"
 
 function save()
   # get params 
