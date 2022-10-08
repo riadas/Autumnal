@@ -466,8 +466,20 @@
         })
       } 
     
-      labeled_names = []
-      numbered_names = [...Array(document.getElementsByClassName("example-button").length).keys()].map(x => (x + 1).toString());
+      var labeled_names = ['PARTICLES', 'ANTS', 'LIGHTS', 'MAGNETS', 'WATER PLUG', 'ICE', 'DISEASE', 'SPACE INVADERS', 'SOKOBAN', 'GROW', 'MARIO', 'SAND', 'GRAVITY', 'GRAVITY II', 'GRAVITY III', 'GRAVITY IV', 'WIND', 'PAINT', 'CHASE', 'COINS', 'COUNT I', 'COUNT II', 'COUNT III', 'COUNT IV', 'COUNT V', 'ICE RINK', 'DOUBLE COUNT I', 'DOUBLE COUNT II', 'JUMP', 'BULLETS', 'LEVELS', 'SYNTHESIZE']
+      var numbered_names = [...Array(document.getElementsByClassName("example-button").length).keys()].map(x => (x + 1).toString());
+      index = 0;
+      Array.from(document.getElementsByClassName("example-button")).forEach(function (button) {
+        //console.log(cell.id)
+        button.style.width = button.offsetWidth;
+        button.style.color = "black";
+        console.log("yo");
+        console.log(button.style.width);
+        console.log(button.innerText);
+        button.innerText = numbered_names[index]; 
+        index++;
+      });
+      
       function toggleLabelsClick() {
         current_names = []
         Array.from(document.getElementsByClassName("example-button")).forEach(function (button) {
